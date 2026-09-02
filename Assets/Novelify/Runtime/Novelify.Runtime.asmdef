@@ -1,7 +1,7 @@
 {
 	"name": "Novelify.Runtime",
 	"rootNamespace": "Novelify",
-	"references": [ "Unity.ugui", "Unity.TextMeshPro" ],
+	"references": [ "Unity.ugui", "Unity.TextMeshPro", "Unity.InputSystem" ],
 	"includePlatforms": [],
 	"excludePlatforms": [],
 	"allowUnsafeCode": false,

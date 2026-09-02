@@ -14,9 +14,9 @@ namespace Novelify
     [Serializable]
     public class RuntimeDialogueNode
     {
-        public string nodeID;
+        public string NodeID;
         public string SpeakerName;
         public string DialogueText;
-        public string NodeID;
+        public string NextNodeID;
     }
 }
