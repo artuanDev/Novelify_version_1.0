@@ -1,0 +1,11 @@
+{
+	"name": "Novelify.Runtime",
+	"rootNamespace": "Novelify",
+	"references": [ "Unity.ugui", "Unity.TextMeshPro" ],
+	"includePlatforms": [],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": false,
+	"autoReferenced": true,
+	"noEngineReferences": false
+}

@@ -1,3 +1,5 @@
 ﻿<Solution>
+  <Project Path="Novelify.Editor.csproj" />
   <Project Path="Unity.2D.Welcome.csproj" />
+  <Project Path="Novelify.Runtime.csproj" />
 </Solution>
