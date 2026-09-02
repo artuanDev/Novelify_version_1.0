@@ -55,7 +55,10 @@ namespace Novelify.Editor
                 {
                     ProcessDialogueNode(dialogueNode, runtimeNode, nodeIDMap);
                 }
-
+                else if(iNode is ChoiceNode choiceNode)
+                {
+                    ProcessChoiceNode(choiceNode, runtimeNode, nodeIDMap);
+                }
                 //you need to add the current runtime node to the list, if not they won´t be detected
                 runtimeGraph.AllNodes.Add(runtimeNode);
             }
@@ -77,6 +80,29 @@ namespace Novelify.Editor
             if(nextNodePort != null)
             {
                 runtimeNode.NextNodeID = nodeIDMap[nextNodePort.GetNode()];
+            }
+        }
+
+        private void ProcessChoiceNode(ChoiceNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
+        {
+            runtimeNode.SpeakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
+            runtimeNode.DialogueText = GetOptionValue<string>(node.GetNodeOptionByName("Dialogue"));
+            
+            //we get the choices option via checking if they start with "Choice"
+            var choiceOutputPorts = node.GetOutputPorts().Where(p => p.Name.StartsWith("Choice "));
+
+            foreach (var outputPort in choiceOutputPorts)
+            {
+                var index = outputPort.Name.Substring("Choice ".Length);
+                var textPort = node.GetInputPortByName($"Choice Text {index}");
+
+                var choiceData = new ChoiceData
+                {
+                    ChoiceText = GetPortValue<string>(textPort),
+                    DestinationNodeID = outputPort.FirstConnectedPort != null ? nodeIDMap[outputPort.FirstConnectedPort.GetNode()] : null
+                };
+
+                runtimeNode.Choices.Add(choiceData);
             }
         }
 

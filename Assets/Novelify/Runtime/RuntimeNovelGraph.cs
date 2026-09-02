@@ -17,6 +17,15 @@ namespace Novelify
         public string NodeID;
         public string SpeakerName;
         public string DialogueText;
+        public List<ChoiceData> Choices = new List<ChoiceData>();
         public string NextNodeID;
     }
+
+    [Serializable]
+    public class ChoiceData
+    {
+        public string ChoiceText;
+        public string DestinationNodeID;
+    }
+
 }
