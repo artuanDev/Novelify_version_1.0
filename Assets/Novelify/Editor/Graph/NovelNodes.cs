@@ -2,8 +2,6 @@ using UnityEngine;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using System;
-using UnityEngine.UI;
-using System.ComponentModel;
 
 namespace Novelify.Editor
 {
@@ -36,11 +34,15 @@ namespace Novelify.Editor
             context.AddInputPort("in").Build();
             context.AddOutputPort("out").Build();
 
-            context.AddInputPort<string>("Speaker").Build();
+            context.AddInputPort<NovelCharacter>("Speaker").Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
+            context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
+                .WithDefaultValue(new SpeakerPortraitOption())
+                .Build();
+
             context.AddOption("Dialogue", typeof(string))
                 .AsTextArea(3, 10)
                 .WithDefaultValue("")
@@ -56,7 +58,7 @@ namespace Novelify.Editor
         {
             context.AddInputPort("in").Build();
 
-            context.AddInputPort<string>("Speaker").Build();
+            context.AddInputPort<NovelCharacter>("Speaker").Build();
 
             var option = GetNodeOptionByName(optionID);
             option.TryGetValue(out int portCount);
@@ -69,6 +71,10 @@ namespace Novelify.Editor
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
+            context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
+                .WithDefaultValue(new SpeakerPortraitOption())
+                .Build();
+
             context.AddOption("Dialogue", typeof(string))
                 .AsTextArea(3, 10)
                 .WithDefaultValue("")

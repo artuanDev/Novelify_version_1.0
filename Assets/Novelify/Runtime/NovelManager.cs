@@ -14,6 +14,7 @@ namespace Novelify
         public GameObject DialoguePanel;
         public GameObject BackgroundChoicesPanel;
         public TextMeshProUGUI SpeakerNameText;
+        public Image SpeakerPortraitImage;
         public TextMeshProUGUI DialogueText;
 
         [Header("Choice Button UI")]
@@ -66,6 +67,7 @@ namespace Novelify
             _currentNode = _nodeLookup[nodeID];
             DialoguePanel.SetActive(true);
             SpeakerNameText.SetText(_currentNode.SpeakerName);
+            UpdateSpeakerPortrait(_currentNode.SpeakerPortrait);
             DialogueText.SetText(_currentNode.DialogueText);
             BackgroundChoicesPanel.SetActive(false);
 
@@ -110,10 +112,23 @@ namespace Novelify
             DialoguePanel.SetActive(false);
             _currentNode = null;
 
+            UpdateSpeakerPortrait(null);
+
             foreach (Transform child in ChoiceButtonContainer)
             {
                 Destroy(child.gameObject);
             }
+        }
+
+        private void UpdateSpeakerPortrait(Sprite portrait)
+        {
+            if(SpeakerPortraitImage == null)
+            {
+                return;
+            }
+
+            SpeakerPortraitImage.sprite = portrait;
+            SpeakerPortraitImage.enabled = portrait != null;
         }
     }
 }

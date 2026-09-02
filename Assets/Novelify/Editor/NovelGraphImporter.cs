@@ -10,6 +10,8 @@ namespace Novelify.Editor
     [ScriptedImporter(1, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
+        private NovelGraph _editorGraph;
+
         /*This method runs whenever an asset of th specified extension is imported,
         meaning it runs whenever we save the novelgraph editor or create it.
         */
@@ -17,6 +19,7 @@ namespace Novelify.Editor
         {
             //Because this is an editor script we can actually access the editor graph
             NovelGraph editorGraph = GraphDatabase.LoadGraphForImporter<NovelGraph>(ctx.assetPath);
+            _editorGraph = editorGraph;
 
             //We can then create an instance of the runtime novelgraph here since its a scriptable object
             RuntimeNovelGraph runtimeGraph = ScriptableObject.CreateInstance<RuntimeNovelGraph>();
@@ -71,7 +74,7 @@ namespace Novelify.Editor
         //Helper function that will process the node dialogue
         private void ProcessDialogueNode(DialogueNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
         {
-            runtimeNode.SpeakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
+            SetSpeaker(node, runtimeNode);
             runtimeNode.DialogueText = GetOptionValue<string>(node.GetNodeOptionByName("Dialogue"));
 
             //We get the next node until the chain is over
@@ -85,7 +88,7 @@ namespace Novelify.Editor
 
         private void ProcessChoiceNode(ChoiceNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
         {
-            runtimeNode.SpeakerName = GetPortValue<string>(node.GetInputPortByName("Speaker"));
+            SetSpeaker(node, runtimeNode);
             runtimeNode.DialogueText = GetOptionValue<string>(node.GetNodeOptionByName("Dialogue"));
             
             //we get the choices option via checking if they start with "Choice"
@@ -106,16 +109,51 @@ namespace Novelify.Editor
             }
         }
 
+        private void SetSpeaker(INode node, RuntimeDialogueNode runtimeNode)
+        {
+            NovelCharacter character = GetPortValue<NovelCharacter>(
+                node.GetInputPortByName("Speaker"));
+
+            runtimeNode.SpeakerName = character != null ? character.SpeakerName : string.Empty;
+            runtimeNode.SpeakerPortrait = character != null ? character.Portrait : null;
+        }
+
         //Get the port value no matter which type is it
         private T GetPortValue<T>(IPort port)
         {
             if (port == null) return default;
 
             //if a variable is connected to the port, take that node information
-            if(port.FirstConnectedPort.GetNode() is IVariableNode variableNode)
+            if(port.FirstConnectedPort?.GetNode() is IVariableNode variableNode)
             {
                 variableNode.Variable.TryGetDefaultValue(out T value);
                 return value;
+            }
+
+            // Resolve variables routed through Graph Toolkit portals as well as direct wires.
+            if (_editorGraph != null)
+            {
+                foreach (IVariable variable in _editorGraph.GetVariables())
+                {
+                    if (!variable.TryGetDefaultValue(out T portalValue))
+                    {
+                        continue;
+                    }
+
+                    var variableNodes = new List<IVariableNode>();
+                    variable.GetNodes(variableNodes);
+
+                    foreach (IVariableNode variableReferenceNode in variableNodes)
+                    {
+                        foreach (IPort outputPort in variableReferenceNode.GetOutputPorts())
+                        {
+                            if (_editorGraph.GetWire(outputPort, port) != null)
+                            {
+                                return portalValue;
+                            }
+                        }
+                    }
+                }
             }
 
             //If no variable is connected, then get the typed value
