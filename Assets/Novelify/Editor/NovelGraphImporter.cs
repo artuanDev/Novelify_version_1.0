@@ -112,9 +112,9 @@ namespace Novelify.Editor
             if (port == null) return default;
 
             //if a variable is connected to the port, take that node information
-            if(port.FirstConnectedPort.GetNode() is IVariable variableNode)
+            if(port.FirstConnectedPort.GetNode() is IVariableNode variableNode)
             {
-                variableNode.TryGetDefaultValue(out T value);
+                variableNode.Variable.TryGetDefaultValue(out T value);
                 return value;
             }
 

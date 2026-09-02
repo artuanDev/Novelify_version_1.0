@@ -81,7 +81,7 @@ namespace Novelify
                 {
                     Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
 
-                    TextMeshProUGUI buttonText = button.GetComponent<TextMeshProUGUI>();
+                    TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
                     if(buttonText != null)
                     {
                         buttonText.text = choice.ChoiceText;
