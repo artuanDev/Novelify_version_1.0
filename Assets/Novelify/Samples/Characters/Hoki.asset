@@ -17,9 +17,18 @@ MonoBehaviour:
   PortraitMouth: {fileID: 21300000, guid: f10d71592f6e45e46a65af37886c6e32, type: 3}
   PortraitFaceDetails: {fileID: 21300000, guid: 17ee3c8d55f1e1140839114e55ed1349, type: 3}
   PortraitEyes: {fileID: 21300000, guid: 0fb80943c16776d47999ff402cc6680c, type: 3}
+  PortraitMouthOpen: {fileID: 21300000, guid: b899607234571a946809a51cb71a492f, type: 3}
+  MouthFrameInterval: 0.12
+  MouthTimingVariation: 0.4
+  MouthPauseChance: 0.14
+  MouthPauseMultiplier: 1.85
+  PortraitEyesClosed: {fileID: 21300000, guid: 5c39dc969420c8848a13746b9ab9225f, type: 3}
+  BlinkIntervalMin: 2.5
+  BlinkIntervalMax: 5
+  BlinkDuration: 0.12
   TalkSound: {fileID: 8300000, guid: 645c0bb8a757aff4fbf3ff5060f61017, type: 3}
-  PitchMinVariation: -1
-  PitchMaxVariation: -1.5
+  PitchMinVariation: 0
+  PitchMaxVariation: 0
   PreviewWidth: 155
   PreviewHeight: 155
   PreviewZoom: 2.01

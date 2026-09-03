@@ -75,7 +75,7 @@ namespace Novelify.Editor
         private void ProcessDialogueNode(DialogueNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
         {
             SetSpeaker(node, runtimeNode);
-            runtimeNode.DialogueText = GetOptionValue<string>(node.GetNodeOptionByName("Dialogue"));
+            SetPresentationOptions(node, runtimeNode);
 
             //We get the next node until the chain is over
             var nextNodePort = node.GetOutputPortByName("out").FirstConnectedPort;
@@ -89,7 +89,7 @@ namespace Novelify.Editor
         private void ProcessChoiceNode(ChoiceNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
         {
             SetSpeaker(node, runtimeNode);
-            runtimeNode.DialogueText = GetOptionValue<string>(node.GetNodeOptionByName("Dialogue"));
+            SetPresentationOptions(node, runtimeNode);
             
             //we get the choices option via checking if they start with "Choice"
             var choiceOutputPorts = node.GetOutputPorts().Where(p => p.Name.StartsWith("Choice "));
@@ -117,11 +117,34 @@ namespace Novelify.Editor
             runtimeNode.SpeakerName = character != null ? character.SpeakerName : string.Empty;
             runtimeNode.PortraitBody = character != null ? character.PortraitBody : null;
             runtimeNode.PortraitEyes = character != null ? character.PortraitEyes : null;
+            runtimeNode.PortraitEyesClosed = character != null ? character.PortraitEyesClosed : null;
             runtimeNode.PortraitDetails = character != null ? character.PortraitFaceDetails : null;
             runtimeNode.PortraitMouth = character != null ? character.PortraitMouth : null;
+            runtimeNode.PortraitMouthOpen = character != null ? character.PortraitMouthOpen : null;
+            runtimeNode.MouthFrameInterval = character != null ? character.MouthFrameInterval : 0.12f;
+            runtimeNode.MouthTimingVariation = character != null ? character.MouthTimingVariation : 0.35f;
+            runtimeNode.MouthPauseChance = character != null ? character.MouthPauseChance : 0.12f;
+            runtimeNode.MouthPauseMultiplier = character != null ? character.MouthPauseMultiplier : 1.8f;
+            runtimeNode.BlinkIntervalMin = character != null ? character.BlinkIntervalMin : 2.5f;
+            runtimeNode.BlinkIntervalMax = character != null ? character.BlinkIntervalMax : 5f;
+            runtimeNode.BlinkDuration = character != null ? character.BlinkDuration : 0.12f;
             runtimeNode.TalkSound = character != null ? character.TalkSound : null;
             runtimeNode.PitchMinVariation = character != null ? character.PitchMinVariation : 0;
             runtimeNode.PitchMaxVariation = character != null ? character.PitchMaxVariation : 0;
+        }
+
+        private void SetPresentationOptions(INode node, RuntimeDialogueNode runtimeNode)
+        {
+            runtimeNode.DialogueText = GetOptionValue(
+                node.GetNodeOptionByName("Dialogue"), string.Empty);
+            runtimeNode.Emotion = GetOptionValue(
+                node.GetNodeOptionByName("Emotion"), CharacterEmotion.Neutral);
+            runtimeNode.ShowTextImmediately = GetOptionValue(
+                node.GetNodeOptionByName("Show Text Immediately"), false);
+            runtimeNode.AnimateMouth = GetOptionValue(
+                node.GetNodeOptionByName("Animate Mouth"), true);
+            runtimeNode.AnimateBlinking = GetOptionValue(
+                node.GetNodeOptionByName("Animate Blinking"), true);
         }
 
         //Get the port value no matter which type is it
@@ -168,15 +191,14 @@ namespace Novelify.Editor
         }
 
         //Get the option value no matter which type is it
-        private T GetOptionValue<T>(INodeOption option)
+        private T GetOptionValue<T>(INodeOption option, T fallbackValue = default)
         {
-            if (option == null) return default;
+            if (option == null) return fallbackValue;
 
             /*Options don´t have connections and must be manually edited, so no need to access
             any node variable here*/
 
-            option.TryGetValue(out T value);
-            return value;
+            return option.TryGetValue(out T value) ? value : fallbackValue;
         }
     }
 }

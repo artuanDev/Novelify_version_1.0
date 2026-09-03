@@ -2,6 +2,20 @@ using UnityEngine;
 
 namespace Novelify
 {
+    public enum CharacterEmotion
+    {
+        Neutral,
+        Happy,
+        Sad,
+        Angry,
+        Surprised,
+        Afraid,
+        Disgusted,
+        Confused,
+        Embarrassed,
+        Excited
+    }
+
     [CreateAssetMenu(
         fileName = "New Novel Character",
         menuName = "Novelify/Character",
@@ -18,6 +32,42 @@ namespace Novelify
         public Sprite PortraitFaceDetails;
         public Sprite PortraitEyes;
 
+        [Header("Portrait Animation")]
+        [Tooltip("Alternate mouth sprite used while dialogue text is being revealed.")]
+        public Sprite PortraitMouthOpen;
+
+        [Min(0.02f)]
+        [Tooltip("Seconds between open and closed mouth frames.")]
+        public float MouthFrameInterval = 0.12f;
+
+        [Range(0f, 0.75f)]
+        [Tooltip("Random variation applied to each mouth frame's duration.")]
+        public float MouthTimingVariation = 0.35f;
+
+        [Range(0f, 0.5f)]
+        [Tooltip("Chance that the mouth briefly rests closed between spoken characters.")]
+        public float MouthPauseChance = 0.12f;
+
+        [Min(1f)]
+        [Tooltip("Length multiplier for natural mouth pauses.")]
+        public float MouthPauseMultiplier = 1.8f;
+
+        [Tooltip("Closed-eye sprite used for blinking.")]
+        public Sprite PortraitEyesClosed;
+
+        [Min(0.1f)]
+        [Tooltip("Minimum delay in seconds between blinks.")]
+        public float BlinkIntervalMin = 2.5f;
+
+        [Min(0.1f)]
+        [Tooltip("Maximum delay in seconds between blinks.")]
+        public float BlinkIntervalMax = 5f;
+
+        [Min(0.02f)]
+        [Tooltip("How long the closed-eye sprite remains visible during a blink.")]
+        public float BlinkDuration = 0.12f;
+
+        [Header("Voice")]
         [Tooltip("Talking sound that will play each character is displayed in the dialogue node")]
         public AudioClip TalkSound;
         public float PitchMinVariation = -0.05f;

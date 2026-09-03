@@ -47,6 +47,22 @@ namespace Novelify.Editor
                 .AsTextArea(3, 10)
                 .WithDefaultValue("")
                 .Build();
+
+            context.AddOption("Emotion", typeof(CharacterEmotion))
+                .WithDefaultValue(CharacterEmotion.Neutral)
+                .Build();
+
+            context.AddOption("Show Text Immediately", typeof(bool))
+                .WithDefaultValue(false)
+                .Build();
+
+            context.AddOption("Animate Mouth", typeof(bool))
+                .WithDefaultValue(true)
+                .Build();
+
+            context.AddOption("Animate Blinking", typeof(bool))
+                .WithDefaultValue(true)
+                .Build();
         }
     }
 
@@ -78,6 +94,22 @@ namespace Novelify.Editor
             context.AddOption("Dialogue", typeof(string))
                 .AsTextArea(3, 10)
                 .WithDefaultValue("")
+                .Build();
+
+            context.AddOption("Emotion", typeof(CharacterEmotion))
+                .WithDefaultValue(CharacterEmotion.Neutral)
+                .Build();
+
+            context.AddOption("Show Text Immediately", typeof(bool))
+                .WithDefaultValue(false)
+                .Build();
+
+            context.AddOption("Animate Mouth", typeof(bool))
+                .WithDefaultValue(true)
+                .Build();
+
+            context.AddOption("Animate Blinking", typeof(bool))
+                .WithDefaultValue(true)
                 .Build();
 
             context.AddOption(optionID, typeof(int)).Delayed().WithDefaultValue(2).Build();

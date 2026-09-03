@@ -62,10 +62,10 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: -409
-          y: 211
-          width: 2142
-          height: 728
+          x: -515
+          y: 146
+          width: 2248
+          height: 866
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 3633099837377684401
@@ -273,7 +273,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b1236d980d5d6b3250fc5e60aa0885cf
         m_Version: 2
-        m_Position: {x: -408.80164, y: 576.3682}
+        m_Position: {x: -514.6016, y: 586.94824}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -347,7 +347,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b389765536d32b81e167feaafd8b94f3
         m_Version: 2
-        m_Position: {x: -217.60802, y: 339.75766}
+        m_Position: {x: -323.40802, y: 350.33765}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -358,10 +358,18 @@ MonoBehaviour:
           - __option_Speaker Preview
           - __option_Dialogue
           - Speaker
+          - __option_Emotion
+          - __option_Show Text Immediately
+          - __option_Animate Mouth
+          - __option_Animate Blinking
           m_ValueList:
           - rid: 8564938349721158167
           - rid: 8564938349721158168
           - rid: 8564938349721158169
+          - rid: 8564938376450932867
+          - rid: 8564938376450932868
+          - rid: 8564938376450932869
+          - rid: 8564938376450932870
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -435,7 +443,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 18c18e5f8d62b88da2cf78ba589ba4d4
         m_Version: 2
-        m_Position: {x: -347.17734, y: 682.7295}
+        m_Position: {x: -452.97733, y: 693.30945}
         m_Title: Speaker
         m_Tooltip: 
         m_NodePreviewModel:
@@ -581,6 +589,10 @@ MonoBehaviour:
           - Speaker
           - Choice Text 0
           - Choice Text 1
+          - __option_Emotion
+          - __option_Show Text Immediately
+          - __option_Animate Mouth
+          - __option_Animate Blinking
           m_ValueList:
           - rid: 8564938376450932831
           - rid: 8564938376450932832
@@ -588,6 +600,10 @@ MonoBehaviour:
           - rid: 8564938376450932834
           - rid: 8564938376450932835
           - rid: 8564938376450932836
+          - rid: 8564938376450932871
+          - rid: 8564938376450932872
+          - rid: 8564938376450932873
+          - rid: 8564938376450932874
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -641,7 +657,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 6e80e2cc34f8e9c17b536859fec728ce
         m_Version: 2
-        m_Position: {x: -130.52753, y: 707.71}
+        m_Position: {x: -236.32751, y: 718.29004}
         m_Title: Hoki
         m_Tooltip: 
         m_NodePreviewModel:
@@ -779,7 +795,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: dd73788db63e5ff6a348ce41ad451a75
         m_Version: 2
-        m_Position: {x: 515.3856, y: 211.0954}
+        m_Position: {x: 513.63666, y: 146.38217}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -790,10 +806,18 @@ MonoBehaviour:
           - __option_Speaker Preview
           - __option_Dialogue
           - Speaker
+          - __option_Emotion
+          - __option_Show Text Immediately
+          - __option_Animate Mouth
+          - __option_Animate Blinking
           m_ValueList:
           - rid: 8564938376450932848
           - rid: 8564938376450932849
           - rid: 8564938376450932850
+          - rid: 8564938376450932875
+          - rid: 8564938376450932876
+          - rid: 8564938376450932877
+          - rid: 8564938376450932878
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -947,10 +971,18 @@ MonoBehaviour:
           - __option_Speaker Preview
           - __option_Dialogue
           - Speaker
+          - __option_Emotion
+          - __option_Show Text Immediately
+          - __option_Animate Mouth
+          - __option_Animate Blinking
           m_ValueList:
           - rid: 8564938376450932860
           - rid: 8564938376450932861
           - rid: 8564938376450932862
+          - rid: 8564938376450932879
+          - rid: 8564938376450932880
+          - rid: 8564938376450932881
+          - rid: 8564938376450932882
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1110,3 +1142,87 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: in
+    - rid: 8564938376450932867
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938376450932868
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938376450932869
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932870
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932871
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938376450932872
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938376450932873
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932874
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932875
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938376450932876
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938376450932877
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932878
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932879
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938376450932880
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938376450932881
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938376450932882
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1

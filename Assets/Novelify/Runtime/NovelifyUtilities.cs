@@ -8,26 +8,32 @@ namespace Novelify
     public class NovelifyUtilities : MonoBehaviour
     {
         public static IEnumerator ShowTextLetterByLetter(
-            string _text, TextMeshProUGUI _texDisplay,
-            AudioClip _talkSound, AudioSource _talkSoundSource,
-            float minPitchVariation = 0, float maxPitchVariation = 0)
+            string text, TextMeshProUGUI textDisplay,
+            AudioClip talkSound, AudioSource talkSoundSource,
+            float minPitchVariation = 0, float maxPitchVariation = 0,
+            Action<char> onCharacterShown = null)
         {
-            string current_text_shown = "";
+            text ??= string.Empty;
+            textDisplay.SetText(string.Empty);
+            string currentTextShown = string.Empty;
 
-            foreach (char letter in _text)
+            foreach (char letter in text)
             {
                 yield return new WaitForSeconds(0.14f);
 
-                _talkSoundSource.clip = _talkSound;
-                float pitchVariation = UnityEngine.Random.Range(minPitchVariation, maxPitchVariation);
-                _talkSoundSource.pitch += pitchVariation;
-                _talkSoundSource.Play();
+                if (talkSoundSource != null && talkSound != null && !char.IsWhiteSpace(letter))
+                {
+                    float minimumPitch = Mathf.Min(minPitchVariation, maxPitchVariation);
+                    float maximumPitch = Mathf.Max(minPitchVariation, maxPitchVariation);
+                    talkSoundSource.clip = talkSound;
+                    talkSoundSource.pitch = 1f + UnityEngine.Random.Range(minimumPitch, maximumPitch);
+                    talkSoundSource.Play();
+                }
 
-                current_text_shown += letter;
-                _texDisplay.text = current_text_shown;
+                currentTextShown += letter;
+                textDisplay.SetText(currentTextShown);
+                onCharacterShown?.Invoke(letter);
             }
-
-            yield return null;
         }
     }
 }
