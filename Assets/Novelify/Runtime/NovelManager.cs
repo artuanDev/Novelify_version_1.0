@@ -14,7 +14,10 @@ namespace Novelify
         public GameObject DialoguePanel;
         public GameObject BackgroundChoicesPanel;
         public TextMeshProUGUI SpeakerNameText;
-        public Image SpeakerPortraitImage;
+        public Image Speaker_Body;
+        public Image Speaker_Eyes;
+        public Image Speaker_Details;
+        public Image Speaker_Mouth;
         public TextMeshProUGUI DialogueText;
 
         [Header("Choice Button UI")]
@@ -67,7 +70,12 @@ namespace Novelify
             _currentNode = _nodeLookup[nodeID];
             DialoguePanel.SetActive(true);
             SpeakerNameText.SetText(_currentNode.SpeakerName);
-            UpdateSpeakerPortrait(_currentNode.SpeakerPortrait);
+            UpdateSpeakerPortrait(
+                _currentNode.PortraitBody,
+                _currentNode.PortraitEyes,
+                _currentNode.PortraitDetails,
+                _currentNode.PortraitMouth
+                );
             DialogueText.SetText(_currentNode.DialogueText);
             BackgroundChoicesPanel.SetActive(false);
 
@@ -112,7 +120,7 @@ namespace Novelify
             DialoguePanel.SetActive(false);
             _currentNode = null;
 
-            UpdateSpeakerPortrait(null);
+            UpdateSpeakerPortrait(null, null, null, null);
 
             foreach (Transform child in ChoiceButtonContainer)
             {
@@ -120,15 +128,23 @@ namespace Novelify
             }
         }
 
-        private void UpdateSpeakerPortrait(Sprite portrait)
+        private void UpdateSpeakerPortrait(
+            Sprite portrait_body, Sprite portrait_eyes, Sprite portrait_details, Sprite portrait_mouth)
         {
-            if(SpeakerPortraitImage == null)
+            if(Speaker_Body == null)
             {
                 return;
             }
 
-            SpeakerPortraitImage.sprite = portrait;
-            SpeakerPortraitImage.enabled = portrait != null;
+            Speaker_Body.sprite = portrait_body;
+            Speaker_Eyes.sprite = portrait_eyes;
+            Speaker_Details.sprite = portrait_details;
+            Speaker_Mouth.sprite = portrait_mouth;
+
+            Speaker_Body.enabled = portrait_body != null;
+            Speaker_Eyes.enabled = portrait_eyes != null;
+            Speaker_Details.enabled = portrait_details != null;
+            Speaker_Mouth.enabled = portrait_mouth != null;
         }
     }
 }

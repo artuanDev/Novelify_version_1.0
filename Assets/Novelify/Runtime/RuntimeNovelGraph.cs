@@ -16,7 +16,10 @@ namespace Novelify
     {
         public string NodeID;
         public string SpeakerName;
-        public Sprite SpeakerPortrait;
+        public Sprite PortraitBody;
+        public Sprite PortraitDetails;
+        public Sprite PortraitEyes;
+        public Sprite PortraitMouth;
         public string DialogueText;
         public List<ChoiceData> Choices = new List<ChoiceData>();
         public string NextNodeID;

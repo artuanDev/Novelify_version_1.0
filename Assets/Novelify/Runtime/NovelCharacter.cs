@@ -13,7 +13,10 @@ namespace Novelify
         public string SpeakerName;
 
         [Tooltip("Portrait displayed in the graph preview and by the Novel Manager at runtime.")]
-        public Sprite Portrait;
+        public Sprite PortraitBody;
+        public Sprite PortraitMouth;
+        public Sprite PortraitFaceDetails;
+        public Sprite PortraitEyes;
 
         [Header("Graph Preview")]
         [Range(80f, 220f)]

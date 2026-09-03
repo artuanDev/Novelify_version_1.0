@@ -115,7 +115,10 @@ namespace Novelify.Editor
                 node.GetInputPortByName("Speaker"));
 
             runtimeNode.SpeakerName = character != null ? character.SpeakerName : string.Empty;
-            runtimeNode.SpeakerPortrait = character != null ? character.Portrait : null;
+            runtimeNode.PortraitBody = character != null ? character.PortraitBody : null;
+            runtimeNode.PortraitEyes = character != null ? character.PortraitEyes : null;
+            runtimeNode.PortraitDetails = character != null ? character.PortraitFaceDetails : null;
+            runtimeNode.PortraitMouth = character != null ? character.PortraitMouth : null;
         }
 
         //Get the port value no matter which type is it

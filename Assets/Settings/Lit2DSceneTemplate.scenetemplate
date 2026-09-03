@@ -63,14 +63,20 @@ MonoBehaviour:
   description: Contains an orthographic camera and a Global Light 2D. Works with the 2D Renderer in Universal RP.
   preview: {fileID: -3604256930052969394}
   dependencies:
-  - dependency: {fileID: 3965311268370046156, guid: f607109f4322dbc4f8f4d6d85d1cda32, type: 3}
-    instantiationMode: 1
+  - dependency: {fileID: 2800000, guid: 0fb80943c16776d47999ff402cc6680c, type: 3}
+    instantiationMode: 0
+  - dependency: {fileID: 2800000, guid: 4b2475ccd3737bf4387437b1b821b8d2, type: 3}
+    instantiationMode: 0
   - dependency: {fileID: 2800000, guid: 3028dc075ba8c584d9bc7d1e0255e038, type: 3}
+    instantiationMode: 1
+  - dependency: {fileID: 3965311268370046156, guid: 02c96c9be2806b8439cdfc3b4b1768e7, type: 3}
     instantiationMode: 1
   - dependency: {fileID: 2800000, guid: ee148e281f3c41c5b4ff5f8a5afe5a6c, type: 3}
     instantiationMode: 1
   - dependency: {fileID: 2800000, guid: 2fd6421f253b4ef1a19526541f9ffc0c, type: 3}
     instantiationMode: 1
+  - dependency: {fileID: 2800000, guid: f10d71592f6e45e46a65af37886c6e32, type: 3}
+    instantiationMode: 0
   - dependency: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
     instantiationMode: 1
   - dependency: {fileID: 1035189596448814044, guid: 253e878b45e800e4ba565c78ede2518f, type: 3}
@@ -79,6 +85,8 @@ MonoBehaviour:
     instantiationMode: 1
   - dependency: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
     instantiationMode: 1
+  - dependency: {fileID: 2800000, guid: 17ee3c8d55f1e1140839114e55ed1349, type: 3}
+    instantiationMode: 0
   - dependency: {fileID: 12800000, guid: e3265ab4bf004d28a9537516768c1c75, type: 3}
     instantiationMode: 1
   templatePipeline: {fileID: 0}

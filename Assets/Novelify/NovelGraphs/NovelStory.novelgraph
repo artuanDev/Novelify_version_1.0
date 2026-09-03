@@ -495,7 +495,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b389765536d32b81e167feaafd8b94f3
         m_Version: 2
-        m_Position: {x: -71.83617, y: 318.49545}
+        m_Position: {x: -119.17734, y: 277.72946}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -652,7 +652,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: aa02673a327a2b3c41daad4bb44a35fa
         m_Version: 2
-        m_Position: {x: 191.57547, y: 328.86334}
+        m_Position: {x: 163.95981, y: 299.93265}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -809,7 +809,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: a749bef4ddac3988d7934fcfecd3a50e
         m_Version: 2
-        m_Position: {x: 431.7642, y: 433.62445}
+        m_Position: {x: 433.07922, y: 328.4218}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -966,7 +966,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 5b9f257bd383fe50b526e5a6dcdcdfb6
         m_Version: 2
-        m_Position: {x: 787.5209, y: 415}
+        m_Position: {x: 772.0209, y: 360.80002}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1076,7 +1076,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 9b9c66767c31f44777f46d2d6b6bfa3c
         m_Version: 2
-        m_Position: {x: 622.5072, y: 659.5816}
+        m_Position: {x: 621.5072, y: 692.5816}
         m_Title: Narrador
         m_Tooltip: 
         m_NodePreviewModel:
