@@ -54,9 +54,9 @@ namespace Novelify.Editor
                 var runtimeNode = new RuntimeDialogueNode { NodeID = nodeIDMap[iNode] };
 
                 //If the current node being used is dialogue node, then process the dialogue node
-                if(iNode is DialogueNode dialogueNode)
+                if(iNode is SimpleDialogueNode simpleDialogueNode)
                 {
-                    ProcessDialogueNode(dialogueNode, runtimeNode, nodeIDMap);
+                    ProcessDialogueNode(simpleDialogueNode, runtimeNode, nodeIDMap);
                 }
                 else if(iNode is ChoiceNode choiceNode)
                 {
@@ -72,7 +72,7 @@ namespace Novelify.Editor
         }
 
         //Helper function that will process the node dialogue
-        private void ProcessDialogueNode(DialogueNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
+        private void ProcessDialogueNode(SimpleDialogueNode node, RuntimeDialogueNode runtimeNode, Dictionary<INode, string> nodeIDMap)
         {
             SetSpeaker(node, runtimeNode);
             SetPresentationOptions(node, runtimeNode);

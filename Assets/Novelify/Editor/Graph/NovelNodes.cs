@@ -59,10 +59,10 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Story", "d_console.infoicon", "Dialogue",
+    [Node("Novelify/Story", "d_console.infoicon", "SimpleDialogue",
         "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
-    public class DialogueNode: Node
+    public class SimpleDialogueNode : Node
     {
         public override void OnEnable()
         {
@@ -82,25 +82,13 @@ namespace Novelify.Editor
             context.AddOutputPort("out")
                 .WithDisplayName("Continue")
                 .Build();
-
-            context.AddInputPort<NovelCharacter>("Speaker")
-                .WithTooltip("Character whose name, portrait, voice, and timing are used.")
-                .Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
-                .WithDefaultValue(new SpeakerPortraitOption())
-                .Build();
-
             context.AddOption("Dialogue", typeof(string))
                 .AsTextArea(3, 10)
                 .WithDefaultValue("")
-                .Build();
-
-            context.AddOption("Emotion", typeof(CharacterEmotion))
-                .WithDefaultValue(CharacterEmotion.Neutral)
                 .Build();
 
             context.AddOption("Show Text Immediately", typeof(bool))
@@ -109,6 +97,50 @@ namespace Novelify.Editor
 
             context.AddOption("Text Speed (Characters/Second)", typeof(float))
                 .WithDefaultValue(30f)
+                .Build();
+        }
+    }
+
+
+    [Serializable]
+    [Node("Novelify/Story", "d_console.infoicon", "Dialogue",
+        "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
+    [UseWithGraph(typeof(NovelGraph))]
+    public class DialogueNode: SimpleDialogueNode
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Character beat",
+                "Displays a spoken line with portrait and delivery controls.",
+                new Color32(56, 189, 248, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base .OnDefinePorts(context);
+
+            context.AddInputPort<NovelCharacter>("Speaker")
+                .WithTooltip("Character whose name, portrait, voice, and timing are used.")
+                .Build();
+
+            context.AddOutputPort<NovelCharacter>("Current Speaker")
+                .WithTooltip("Use this output to keep using the same speaker in the next node easily.")
+                .Build();
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+
+            context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
+                .WithDefaultValue(new SpeakerPortraitOption())
+                .Build();
+            base.OnDefineOptions(context);
+
+            context.AddOption("Emotion", typeof(CharacterEmotion))
+                .WithDefaultValue(CharacterEmotion.Neutral)
                 .Build();
 
             context.AddOption("Animate Mouth", typeof(bool))

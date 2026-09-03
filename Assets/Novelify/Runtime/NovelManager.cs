@@ -17,6 +17,7 @@ namespace Novelify
         [Header("UI Components")]
         public GameObject DialoguePanel;
         public GameObject BackgroundChoicesPanel;
+        public GameObject NameBackground;
         public TextMeshProUGUI SpeakerNameText;
         public Image Speaker_Body;
         public Image Speaker_Eyes;
@@ -100,6 +101,9 @@ namespace Novelify
             _currentNode = _nodeLookup[nodeID];
             DialoguePanel.SetActive(true);
             SpeakerNameText.SetText(_currentNode.SpeakerName);
+
+            NameBackground.SetActive(_currentNode.SpeakerName != "");
+
             UpdateSpeakerPortrait(
                 _currentNode.PortraitBody,
                 _currentNode.PortraitEyes,
