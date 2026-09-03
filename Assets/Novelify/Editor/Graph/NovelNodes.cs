@@ -64,6 +64,8 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph))]
     public class SimpleDialogueNode : Node
     {
+        internal const string SoundPortName = "Sound";
+
         public override void OnEnable()
         {
             base.OnEnable();
@@ -79,6 +81,12 @@ namespace Novelify.Editor
             context.AddInputPort("in")
                 .WithDisplayName("Enter")
                 .Build();
+
+            context.AddInputPort<AudioClip>(SoundPortName)
+                .WithDisplayName("Play Sound")
+                .WithTooltip("Sound to play when this node is shown.")
+                .Build();
+
             context.AddOutputPort("out")
                 .WithDisplayName("Continue")
                 .Build();
@@ -179,6 +187,11 @@ namespace Novelify.Editor
 
             context.AddInputPort<NovelCharacter>("Speaker")
                 .WithTooltip("Character presenting this decision.")
+                .Build();
+
+            context.AddInputPort<AudioClip>(SimpleDialogueNode.SoundPortName)
+                .WithDisplayName("Play Sound")
+                .WithTooltip("Sound to play when this node is shown.")
                 .Build();
 
             var option = GetNodeOptionByName(optionID);

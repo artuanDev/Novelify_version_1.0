@@ -135,6 +135,10 @@ namespace Novelify.Editor
 
         private void SetPresentationOptions(INode node, RuntimeDialogueNode runtimeNode)
         {
+            // Editor graph ports are not part of the runtime asset. Every value the
+            // player needs must be copied explicitly while importing the graph.
+            runtimeNode.PlaySound = GetPortValue<AudioClip>(
+                node.GetInputPortByName(SimpleDialogueNode.SoundPortName));
             runtimeNode.DialogueText = GetOptionValue(
                 node.GetNodeOptionByName("Dialogue"), string.Empty);
             runtimeNode.Emotion = GetOptionValue(
