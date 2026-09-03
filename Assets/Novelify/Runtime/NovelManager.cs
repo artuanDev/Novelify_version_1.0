@@ -27,6 +27,7 @@ namespace Novelify
         private Dictionary<string, RuntimeDialogueNode> _nodeLookup = new Dictionary<string, RuntimeDialogueNode>();
         private RuntimeDialogueNode _currentNode;
 
+
         private void Start()
         {
             foreach (var node in RuntimeGraph.AllNodes)
@@ -76,7 +77,9 @@ namespace Novelify
                 _currentNode.PortraitDetails,
                 _currentNode.PortraitMouth
                 );
-            DialogueText.SetText(_currentNode.DialogueText);
+
+            //DialogueText.SetText(_currentNode.DialogueText); //This shows the text inmediately
+            StartCoroutine(NovelifyUtilities.ShowTextLetterByLetter(_currentNode.DialogueText, DialogueText));
             BackgroundChoicesPanel.SetActive(false);
 
             foreach (Transform child in ChoiceButtonContainer)

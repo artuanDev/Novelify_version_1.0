@@ -300,7 +300,7 @@ MonoBehaviour:
     - rid: 8564938349721158168
       type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: ....
+        m_Value: Hola... Mi nombre es Hoki.
     - rid: 8564938349721158169
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
