@@ -34,7 +34,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Flow", "d_winbtn_win_close", "End",
+    [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
     public class EndNode: Node
