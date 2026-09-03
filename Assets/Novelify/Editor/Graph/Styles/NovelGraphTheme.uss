@@ -1,0 +1,64 @@
+/* Window-wide Novelify theme. Attached only to Graph Toolkit windows displaying NovelGraph. */
+.novelify-graph-window {
+    background-color: #080d19;
+    --selected-element-color: #7dd3fc;
+    --highlighted-element-color: #c084fc;
+}
+
+.novelify-graph-window .ge-graph-view,
+.novelify-graph-window #graph-view-container,
+.novelify-graph-window #content-view-container {
+    background-color: #080d19;
+}
+
+.novelify-graph-window GridBackground {
+    background-color: #080d19;
+    --spacing: 28;
+    --thick-lines: 5;
+    --line-color: #24324f;
+    --thick-line-color: #3b4c72;
+}
+
+.novelify-graph-window .ge-wire {
+    --wire-width: 3;
+    --wire-color: #94a3b8;
+}
+
+.novelify-graph-window .ge-wire:hover {
+    --wire-width: 4;
+    --wire-color: #f8fafc;
+}
+
+.novelify-graph-window .ge-blackboard {
+    background-color: #101827;
+    border-left-color: #334155;
+    border-right-color: #334155;
+    border-top-color: #334155;
+    border-bottom-color: #334155;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.novelify-graph-window .unity-toolbar {
+    background-color: #0f172a;
+    border-bottom-color: #26344f;
+    border-bottom-width: 1px;
+}
+
+.novelify-graph-window .unity-toolbar-button:hover {
+    background-color: #263553;
+}
+
+.novelify-graph-window .ge-port:hover {
+    --port-color: #f8fafc;
+}
+
+.novelify-graph-window .ge-placemat {
+    --placemat-border-color: #475569;
+}

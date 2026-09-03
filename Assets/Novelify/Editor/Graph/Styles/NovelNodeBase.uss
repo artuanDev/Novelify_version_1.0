@@ -1,0 +1,103 @@
+/* Shared cinematic card treatment used by every Novelify story node. */
+.ge-node {
+    min-width: 250px;
+    background-color: #141b2d;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: #475569;
+    border-right-color: #475569;
+    border-top-color: #475569;
+    border-bottom-color: #475569;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.ge-node:hover {
+    border-left-color: #94a3b8;
+    border-right-color: #94a3b8;
+    border-top-color: #94a3b8;
+    border-bottom-color: #94a3b8;
+}
+
+.ge-node:checked {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+}
+
+.ge-node #title-container {
+    min-height: 54px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 7px;
+    border-bottom-color: #334155;
+    border-bottom-width: 1px;
+}
+
+.ge-node #title-container #title {
+    color: #f8fafc;
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.ge-node #title-container #subtitle {
+    color: #a9b7cf;
+    font-size: 10px;
+}
+
+.ge-node #node-options {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 9px;
+}
+
+.ge-node #port-container {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.ge-node .unity-base-field {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.ge-node .unity-base-field__label {
+    color: #aebbd1;
+    font-size: 10px;
+}
+
+.ge-node .unity-base-field__input,
+.ge-node .unity-base-text-field__input {
+    background-color: #0b1220;
+    border-left-color: #34435f;
+    border-right-color: #34435f;
+    border-top-color: #34435f;
+    border-bottom-color: #34435f;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.ge-node .unity-base-text-field__input:focus {
+    border-left-color: #7dd3fc;
+    border-right-color: #7dd3fc;
+    border-top-color: #7dd3fc;
+    border-bottom-color: #7dd3fc;
+}
+
+.ge-node .ge-port #label {
+    color: #cbd5e1;
+    font-size: 10px;
+}

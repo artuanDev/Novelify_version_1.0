@@ -1,0 +1,23 @@
+@import url("NovelNodeBase.uss");
+
+.ge-node {
+    min-width: 190px;
+    background-color: #10211f;
+    border-left-color: #257b64;
+    border-right-color: #257b64;
+    border-top-color: #257b64;
+    border-bottom-color: #257b64;
+    --minimap-color: #34d399;
+}
+
+.ge-node #title-container {
+    background-color: #12352f;
+    border-bottom-color: #2e8069;
+}
+
+.ge-node:checked {
+    border-left-color: #6ee7b7;
+    border-right-color: #6ee7b7;
+    border-top-color: #6ee7b7;
+    border-bottom-color: #6ee7b7;
+}

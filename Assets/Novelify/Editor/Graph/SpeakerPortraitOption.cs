@@ -23,8 +23,8 @@ namespace Novelify.Editor
 
             var root = new VisualElement();
             root.style.alignItems = Align.Center;
-            root.style.marginTop = 2f;
-            root.style.marginBottom = 3f;
+            root.style.marginTop = 6f;
+            root.style.marginBottom = 8f;
 
             var viewport = new VisualElement
             {
@@ -34,7 +34,19 @@ namespace Novelify.Editor
             viewport.style.flexGrow = 0f;
             viewport.style.flexShrink = 0f;
             viewport.style.overflow = Overflow.Hidden;
-            viewport.style.backgroundColor = new Color(0.08f, 0.09f, 0.11f, 0.55f);
+            viewport.style.backgroundColor = (Color)new Color32(8, 13, 26, 255);
+            viewport.style.borderTopWidth = 1f;
+            viewport.style.borderRightWidth = 1f;
+            viewport.style.borderBottomWidth = 1f;
+            viewport.style.borderLeftWidth = 1f;
+            viewport.style.borderTopColor = (Color)new Color32(71, 85, 105, 255);
+            viewport.style.borderRightColor = (Color)new Color32(71, 85, 105, 255);
+            viewport.style.borderBottomColor = (Color)new Color32(71, 85, 105, 255);
+            viewport.style.borderLeftColor = (Color)new Color32(71, 85, 105, 255);
+            viewport.style.borderTopLeftRadius = 10f;
+            viewport.style.borderTopRightRadius = 10f;
+            viewport.style.borderBottomLeftRadius = 10f;
+            viewport.style.borderBottomRightRadius = 10f;
 
             var previewBody = new Image
             {
@@ -50,13 +62,13 @@ namespace Novelify.Editor
             };
             var previewDetails = new Image
             {
-                name = "speaker-portrait-eyes-preview",
+                name = "speaker-portrait-details-preview",
                 scaleMode = ScaleMode.ScaleAndCrop,
                 pickingMode = PickingMode.Ignore
             };
             var previewMouth = new Image
             {
-                name = "speaker-portrait-eyes-preview",
+                name = "speaker-portrait-mouth-preview",
                 scaleMode = ScaleMode.ScaleAndCrop,
                 pickingMode = PickingMode.Ignore
             };
@@ -68,6 +80,8 @@ namespace Novelify.Editor
             var emptyLabel = new Label("Connect a Character variable to Speaker");
             emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             emptyLabel.style.whiteSpace = WhiteSpace.Normal;
+            emptyLabel.style.color = (Color)new Color32(148, 163, 184, 255);
+            emptyLabel.style.fontSize = 11f;
             emptyLabel.style.paddingLeft = 8f;
             emptyLabel.style.paddingRight = 8f;
             emptyLabel.style.position = Position.Absolute;
@@ -76,10 +90,45 @@ namespace Novelify.Editor
             emptyLabel.style.top = 0f;
             emptyLabel.style.bottom = 0f;
 
+            var portraitBadge = new Label("PORTRAIT");
+            portraitBadge.style.position = Position.Absolute;
+            portraitBadge.style.left = 8f;
+            portraitBadge.style.top = 8f;
+            portraitBadge.style.height = 18f;
+            portraitBadge.style.paddingLeft = 7f;
+            portraitBadge.style.paddingRight = 7f;
+            portraitBadge.style.unityTextAlign = TextAnchor.MiddleCenter;
+            portraitBadge.style.unityFontStyleAndWeight = FontStyle.Bold;
+            portraitBadge.style.fontSize = 9f;
+            portraitBadge.style.color = (Color)new Color32(224, 242, 254, 255);
+            portraitBadge.style.backgroundColor = new Color(0.04f, 0.08f, 0.16f, 0.86f);
+            portraitBadge.style.borderTopLeftRadius = 5f;
+            portraitBadge.style.borderTopRightRadius = 5f;
+            portraitBadge.style.borderBottomLeftRadius = 5f;
+            portraitBadge.style.borderBottomRightRadius = 5f;
+            portraitBadge.pickingMode = PickingMode.Ignore;
+
+            var speakerNameLabel = new Label();
+            speakerNameLabel.style.position = Position.Absolute;
+            speakerNameLabel.style.left = 0f;
+            speakerNameLabel.style.right = 0f;
+            speakerNameLabel.style.bottom = 0f;
+            speakerNameLabel.style.height = 26f;
+            speakerNameLabel.style.paddingLeft = 10f;
+            speakerNameLabel.style.paddingRight = 10f;
+            speakerNameLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            speakerNameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            speakerNameLabel.style.fontSize = 11f;
+            speakerNameLabel.style.color = (Color)new Color32(241, 245, 249, 255);
+            speakerNameLabel.style.backgroundColor = new Color(0.03f, 0.05f, 0.11f, 0.88f);
+            speakerNameLabel.pickingMode = PickingMode.Ignore;
+
             viewport.Add(previewBody);
             viewport.Add(previewEyes);
             viewport.Add(previewDetails);
             viewport.Add(previewMouth);
+            viewport.Add(portraitBadge);
+            viewport.Add(speakerNameLabel);
             viewport.Add(emptyLabel);
             root.Add(viewport);
 
@@ -112,7 +161,14 @@ namespace Novelify.Editor
                 emptyLabel.text = character == null
                     ? "Connect a Character variable to Speaker"
                     : $"{character.SpeakerName}\nNo portrait assigned";
+                speakerNameLabel.text = character != null
+                    ? (string.IsNullOrWhiteSpace(character.SpeakerName)
+                        ? "UNNAMED CHARACTER"
+                        : character.SpeakerName.ToUpperInvariant())
+                    : string.Empty;
                 previewBody.style.display = hasPortrait ? DisplayStyle.Flex : DisplayStyle.None;
+                portraitBadge.style.display = hasPortrait ? DisplayStyle.Flex : DisplayStyle.None;
+                speakerNameLabel.style.display = hasPortrait ? DisplayStyle.Flex : DisplayStyle.None;
                 emptyLabel.style.display = hasPortrait ? DisplayStyle.None : DisplayStyle.Flex;
             }
 

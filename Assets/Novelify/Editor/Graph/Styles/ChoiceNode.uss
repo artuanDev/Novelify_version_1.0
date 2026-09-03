@@ -1,0 +1,27 @@
+@import url("NovelNodeBase.uss");
+
+.ge-node {
+    min-width: 300px;
+    background-color: #21172f;
+    border-left-color: #75449c;
+    border-right-color: #75449c;
+    border-top-color: #75449c;
+    border-bottom-color: #75449c;
+    --minimap-color: #c084fc;
+}
+
+.ge-node #title-container {
+    background-color: #35204d;
+    border-bottom-color: #8251a8;
+}
+
+.ge-node:checked {
+    border-left-color: #d8b4fe;
+    border-right-color: #d8b4fe;
+    border-top-color: #d8b4fe;
+    border-bottom-color: #d8b4fe;
+}
+
+.ge-node .ge-port--direction-output {
+    --port-color: #fbbf24;
+}
