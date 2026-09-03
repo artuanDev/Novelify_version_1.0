@@ -18,6 +18,11 @@ namespace Novelify
         public Sprite PortraitFaceDetails;
         public Sprite PortraitEyes;
 
+        [Tooltip("Talking sound that will play each character is displayed in the dialogue node")]
+        public AudioClip TalkSound;
+        public float PitchMinVariation = -0.05f;
+        public float PitchMaxVariation = 0.05f;
+
         [Header("Graph Preview")]
         [Range(80f, 220f)]
         [Tooltip("Width of this character's portrait preview inside Dialogue and Choice nodes.")]

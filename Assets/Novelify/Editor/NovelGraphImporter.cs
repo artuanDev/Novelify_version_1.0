@@ -119,6 +119,9 @@ namespace Novelify.Editor
             runtimeNode.PortraitEyes = character != null ? character.PortraitEyes : null;
             runtimeNode.PortraitDetails = character != null ? character.PortraitFaceDetails : null;
             runtimeNode.PortraitMouth = character != null ? character.PortraitMouth : null;
+            runtimeNode.TalkSound = character != null ? character.TalkSound : null;
+            runtimeNode.PitchMinVariation = character != null ? character.PitchMinVariation : 0;
+            runtimeNode.PitchMaxVariation = character != null ? character.PitchMaxVariation : 0;
         }
 
         //Get the port value no matter which type is it

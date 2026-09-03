@@ -21,6 +21,11 @@ namespace Novelify
         public Sprite PortraitEyes;
         public Sprite PortraitMouth;
         public string DialogueText;
+
+        public AudioClip TalkSound;
+        public float PitchMinVariation = -0.05f;
+        public float PitchMaxVariation = 0.05f;
+
         public List<ChoiceData> Choices = new List<ChoiceData>();
         public string NextNodeID;
     }

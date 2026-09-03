@@ -10,6 +10,9 @@ namespace Novelify
     {
         public RuntimeNovelGraph RuntimeGraph;
 
+        [Header("Sound settings")]
+        public AudioSource TalkSource;
+
         [Header("UI Components")]
         public GameObject DialoguePanel;
         public GameObject BackgroundChoicesPanel;
@@ -79,7 +82,12 @@ namespace Novelify
                 );
 
             //DialogueText.SetText(_currentNode.DialogueText); //This shows the text inmediately
-            StartCoroutine(NovelifyUtilities.ShowTextLetterByLetter(_currentNode.DialogueText, DialogueText));
+            StartCoroutine(NovelifyUtilities.ShowTextLetterByLetter(
+                _currentNode.DialogueText, DialogueText,
+                _currentNode.TalkSound, TalkSource,
+                _currentNode.PitchMinVariation, _currentNode.PitchMaxVariation
+                ));
+
             BackgroundChoicesPanel.SetActive(false);
 
             foreach (Transform child in ChoiceButtonContainer)
