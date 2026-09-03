@@ -1320,6 +1320,7 @@ MonoBehaviour:
   TalkSource: {fileID: 1649602343}
   DialoguePanel: {fileID: 791819471}
   BackgroundChoicesPanel: {fileID: 1338701998}
+  NameBackground: {fileID: 603582852}
   SpeakerNameText: {fileID: 787689823}
   Speaker_Body: {fileID: 1197012690}
   Speaker_Eyes: {fileID: 1425593604}
