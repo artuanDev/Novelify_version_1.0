@@ -141,6 +141,8 @@ namespace Novelify.Editor
                 node.GetNodeOptionByName("Emotion"), CharacterEmotion.Neutral);
             runtimeNode.ShowTextImmediately = GetOptionValue(
                 node.GetNodeOptionByName("Show Text Immediately"), false);
+            runtimeNode.CharactersPerSecond = Mathf.Max(1f, GetOptionValue(
+                node.GetNodeOptionByName("Text Speed (Characters/Second)"), 30f));
             runtimeNode.AnimateMouth = GetOptionValue(
                 node.GetNodeOptionByName("Animate Mouth"), true);
             runtimeNode.AnimateBlinking = GetOptionValue(

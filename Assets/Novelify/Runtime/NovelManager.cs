@@ -210,6 +210,7 @@ namespace Novelify
                 TalkSource,
                 node.PitchMinVariation,
                 node.PitchMaxVariation,
+                node.CharactersPerSecond,
                 letter =>
                 {
                     if (_currentNode == node)

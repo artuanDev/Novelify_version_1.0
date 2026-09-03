@@ -56,6 +56,10 @@ namespace Novelify.Editor
                 .WithDefaultValue(false)
                 .Build();
 
+            context.AddOption("Text Speed (Characters/Second)", typeof(float))
+                .WithDefaultValue(30f)
+                .Build();
+
             context.AddOption("Animate Mouth", typeof(bool))
                 .WithDefaultValue(true)
                 .Build();
@@ -102,6 +106,10 @@ namespace Novelify.Editor
 
             context.AddOption("Show Text Immediately", typeof(bool))
                 .WithDefaultValue(false)
+                .Build();
+
+            context.AddOption("Text Speed (Characters/Second)", typeof(float))
+                .WithDefaultValue(30f)
                 .Build();
 
             context.AddOption("Animate Mouth", typeof(bool))

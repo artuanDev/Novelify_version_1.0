@@ -26,9 +26,9 @@ MonoBehaviour:
   BlinkIntervalMin: 2.5
   BlinkIntervalMax: 5
   BlinkDuration: 0.12
-  TalkSound: {fileID: 8300000, guid: 645c0bb8a757aff4fbf3ff5060f61017, type: 3}
-  PitchMinVariation: 0
-  PitchMaxVariation: 0
+  TalkSound: {fileID: 8300000, guid: 6f0d90f29b9149908dde0b073d3766a8, type: 3}
+  PitchMinVariation: -0.2
+  PitchMaxVariation: -0.1
   PreviewWidth: 155
   PreviewHeight: 155
   PreviewZoom: 2.01

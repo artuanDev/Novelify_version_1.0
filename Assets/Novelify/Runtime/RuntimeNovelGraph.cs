@@ -24,6 +24,7 @@ namespace Novelify
         public string DialogueText;
 
         public bool ShowTextImmediately;
+        public float CharactersPerSecond = 30f;
         public bool AnimateMouth = true;
         public bool AnimateBlinking = true;
         public CharacterEmotion Emotion = CharacterEmotion.Neutral;

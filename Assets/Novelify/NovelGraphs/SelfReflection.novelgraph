@@ -347,7 +347,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b389765536d32b81e167feaafd8b94f3
         m_Version: 2
-        m_Position: {x: -323.40802, y: 350.33765}
+        m_Position: {x: -331.38806, y: 337.03757}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -362,6 +362,7 @@ MonoBehaviour:
           - __option_Show Text Immediately
           - __option_Animate Mouth
           - __option_Animate Blinking
+          - __option_Text Speed (Characters/Second)
           m_ValueList:
           - rid: 8564938349721158167
           - rid: 8564938349721158168
@@ -370,6 +371,7 @@ MonoBehaviour:
           - rid: 8564938376450932868
           - rid: 8564938376450932869
           - rid: 8564938376450932870
+          - rid: 8564938376450932907
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -593,6 +595,7 @@ MonoBehaviour:
           - __option_Show Text Immediately
           - __option_Animate Mouth
           - __option_Animate Blinking
+          - __option_Text Speed (Characters/Second)
           m_ValueList:
           - rid: 8564938376450932831
           - rid: 8564938376450932832
@@ -604,6 +607,7 @@ MonoBehaviour:
           - rid: 8564938376450932872
           - rid: 8564938376450932873
           - rid: 8564938376450932874
+          - rid: 8564938376450932908
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -810,6 +814,7 @@ MonoBehaviour:
           - __option_Show Text Immediately
           - __option_Animate Mouth
           - __option_Animate Blinking
+          - __option_Text Speed (Characters/Second)
           m_ValueList:
           - rid: 8564938376450932848
           - rid: 8564938376450932849
@@ -818,6 +823,7 @@ MonoBehaviour:
           - rid: 8564938376450932876
           - rid: 8564938376450932877
           - rid: 8564938376450932878
+          - rid: 8564938376450932909
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -975,6 +981,7 @@ MonoBehaviour:
           - __option_Show Text Immediately
           - __option_Animate Mouth
           - __option_Animate Blinking
+          - __option_Text Speed (Characters/Second)
           m_ValueList:
           - rid: 8564938376450932860
           - rid: 8564938376450932861
@@ -983,6 +990,7 @@ MonoBehaviour:
           - rid: 8564938376450932880
           - rid: 8564938376450932881
           - rid: 8564938376450932882
+          - rid: 8564938376450932910
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1226,3 +1234,19 @@ MonoBehaviour:
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 1
+    - rid: 8564938376450932907
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 30
+    - rid: 8564938376450932908
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 30
+    - rid: 8564938376450932909
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 30
+    - rid: 8564938376450932910
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 30
