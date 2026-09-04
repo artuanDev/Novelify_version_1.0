@@ -443,7 +443,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Text: <size=75%>Hola...</size> Mi nombre es Hoki.
+          Text: <size=75%>Hola...</size> Mi nombre es<b><i><size=160%><link="novelify-wave"> Hoki</link></size></i></b>.
     - rid: 8564938349721158169
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:

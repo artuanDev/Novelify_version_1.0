@@ -23,6 +23,9 @@ The editor graph and runtime presentation are intentionally separated: graph nod
 
 This repository is currently a Unity project containing the Novelify framework, its editor tooling and a working sample scene.
 
+Please, note this is just the bare basics, I am working right now on extending the tool and adding everything it is 
+missing for the moment, you can get an idea on what to expect from this tool in the "Roadmap".
+
 ![Novelify graph editor](Images/Graph.PNG)
 
 ## Features
@@ -179,27 +182,19 @@ Assets/Novelify/
 
 ## Screenshots
 
-Store project screenshots in the `Images/` directory. The existing graph screenshot is referenced as:
-
-```text
-Images/Graph.PNG
-```
-
-Recommended additional screenshots:
-
-```text
-Images/Dialogue_Runtime.PNG       # Dialogue running in Play Mode
-Images/Choice_Runtime.PNG         # Choice buttons and a branching conversation
-Images/Rich_Text_Inspector.PNG    # Rich-text toolbar and animated preview
-Images/Character_Asset.PNG        # Configured NovelCharacter inspector
-```
+![Novel Graph Dialogue in an example:](Images/Dialogue_Runtime.PNG)
+![Graph inspector for writing the dialogue:](Images/Rich_Text_Inspector.PNG)
+![Novel Graph Choice example:](Images/Choice_Runtime.PNG)
+![Character Asset:](Images/Character_Asset.PNG)
 
 ## Roadmap
 
 - [ ] Package the framework for easier reuse in other Unity projects.
 - [ ] Add more runtime flow controls and dialogue events.
+- [ ] Add custom character creator to preview emotions and examples and make tweaks to them.
 - [ ] Add localization support.
 - [ ] Add save, load and conversation history support.
+- [ ] Add utility nodes that eases scenes with more than one character.
 - [ ] Expand the sample content and documentation.
 
 ## Contributing
