@@ -1208,7 +1208,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9d3176f53feed943afb61808f3bdbb7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelManager
-  RuntimeGraph: {fileID: 3965311268370046156, guid: 02c96c9be2806b8439cdfc3b4b1768e7, type: 3}
+  RuntimeGraph: {fileID: 3965311268370046156, guid: eaba161d2b48e494e932da88627b1e04, type: 3}
   TalkSource: {fileID: 1649602343}
   NodeSoundSource: {fileID: 1639377565}
   DialoguePanel: {fileID: 791819471}
