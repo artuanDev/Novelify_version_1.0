@@ -94,9 +94,9 @@ namespace Novelify.Editor
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Dialogue", typeof(string))
-                .AsTextArea(3, 10)
-                .WithDefaultValue("")
+            context.AddOption("Dialogue", typeof(RichDialogueText))
+                .WithDefaultValue(new RichDialogueText(string.Empty))
+                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption("Show Text Immediately", typeof(bool))
@@ -209,9 +209,9 @@ namespace Novelify.Editor
                 .WithDefaultValue(new SpeakerPortraitOption())
                 .Build();
 
-            context.AddOption("Dialogue", typeof(string))
-                .AsTextArea(3, 10)
-                .WithDefaultValue("")
+            context.AddOption("Dialogue", typeof(RichDialogueText))
+                .WithDefaultValue(new RichDialogueText(string.Empty))
+                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption("Emotion", typeof(CharacterEmotion))

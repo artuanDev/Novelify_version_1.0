@@ -71,10 +71,10 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: -2164
+          x: -2163
           y: 112
-          width: 3322
-          height: 1002
+          width: 3319
+          height: 972
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 3633099837377684401
@@ -355,7 +355,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b1236d980d5d6b3250fc5e60aa0885cf
         m_Version: 2
-        m_Position: {x: -2164.0293, y: 728.1768}
+        m_Position: {x: -2162.8794, y: 628.12683}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -392,7 +392,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b389765536d32b81e167feaafd8b94f3
         m_Version: 2
-        m_Position: {x: -1450.1742, y: 302.93903}
+        m_Position: {x: -1505.0303, y: 355.2343}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -440,9 +440,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938349721158168
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Hola... Mi nombre es Hoki.
+        m_Value:
+          Text: Hola... Mi nombre es Hoki.
     - rid: 8564938349721158169
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -460,7 +461,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 18c18e5f8d62b88da2cf78ba589ba4d4
         m_Version: 2
-        m_Position: {x: -1568.207, y: 879.51294}
+        m_Position: {x: -1666.072, y: 822.64545}
         m_Title: Speaker
         m_Tooltip: 
         m_NodePreviewModel:
@@ -523,7 +524,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 59e9f24e5d16fa7cee2ecb126aa9c8d6
         m_Version: 2
-        m_Position: {x: 968.2054, y: 683.25024}
+        m_Position: {x: 966.4901, y: 676.961}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -646,9 +647,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938376450932832
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "Deber\xEDamos ir juntos a dar un voltio? Conozco un buen lugar."
+        m_Value:
+          Text: "Deber\xEDamos ir juntos a dar un voltio? Conozco un buen lugar."
     - rid: 8564938376450932833
       type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -864,9 +866,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938376450932849
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Venga... vamos.
+        m_Value:
+          Text: Venga... vamos.
     - rid: 8564938376450932850
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1033,9 +1036,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938376450932861
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "No creo que sepas lo que te conviene pero all\xE1 t\xFA..."
+        m_Value:
+          Text: "No creo que sepas lo que te conviene pero all\xE1 t\xFA..."
     - rid: 8564938376450932862
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1249,7 +1253,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 3c42a88b247ebe02745fc40681720933
         m_Version: 2
-        m_Position: {x: -521.0038, y: 355.2709}
+        m_Position: {x: -606.3616, y: 333.64023}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1297,9 +1301,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938383701049448
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "Lo cierto es que llevaba tiempo pensando en qu\xE9 hacer hoy."
+        m_Value:
+          Text: "Lo cierto es que llevaba tiempo pensando en qu\xE9 hacer hoy."
     - rid: 8564938383701049449
       type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1439,9 +1444,10 @@ MonoBehaviour:
         m_Node:
           rid: 8564938383701049478
     - rid: 8564938383701049475
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Esta historia... comienza con alguien muy especial.
+        m_Value:
+          Text: Esta historia... comienza con alguien muy... <b><size=125%><color=#F5AC39>especial.</color></size></b>
     - rid: 8564938383701049476
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1527,7 +1533,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: d08dbc697d16d6f4e58e9462f96c33bb
         m_Version: 2
-        m_Position: {x: -968.7882, y: 516.7382}
+        m_Position: {x: -995.2382, y: 479.7082}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1560,9 +1566,10 @@ MonoBehaviour:
         m_Node:
           rid: 8564938383701049489
     - rid: 8564938383701049486
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Por si lo dudabas... este tio es Hoki.
+        m_Value:
+          Text: Por si lo dudabas... este tio es Hoki.
     - rid: 8564938383701049487
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1698,7 +1705,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: a5744e42e3a55ef165eadc3e995bb266
         m_Version: 2
-        m_Position: {x: -1218.5487, y: 820.48914}
+        m_Position: {x: -1220.0696, y: 809.843}
         m_Title: ShockedSFX
         m_Tooltip: 
         m_NodePreviewModel:

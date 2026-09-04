@@ -45,6 +45,12 @@ namespace Novelify
 
         private void Awake()
         {
+            if (DialogueText != null)
+            {
+                DialogueText.richText = true;
+                DialogueText.maxVisibleCharacters = int.MaxValue;
+            }
+
             if (NodeSoundSource == null)
             {
                 NodeSoundSource = gameObject.AddComponent<AudioSource>();
@@ -193,6 +199,7 @@ namespace Novelify
 
             if (node.ShowTextImmediately || dialogue.Length == 0)
             {
+                DialogueText.maxVisibleCharacters = int.MaxValue;
                 DialogueText.SetText(dialogue);
                 _isTextRevealing = false;
             }
@@ -337,6 +344,7 @@ namespace Novelify
                 _textRevealCoroutine = null;
             }
 
+            DialogueText.maxVisibleCharacters = int.MaxValue;
             DialogueText.SetText(_currentNode.DialogueText ?? string.Empty);
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;

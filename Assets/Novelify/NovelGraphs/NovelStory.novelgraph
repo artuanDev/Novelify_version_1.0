@@ -563,9 +563,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: e280288b70fd46ef80ad92748c9591f1, type: 2}
     - rid: 8564938349721158168
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Creo que... definitivamente...
+        m_Value:
+          Text: Creo que... definitivamente...
     - rid: 8564938349721158169
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -720,9 +721,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 54a96945c59e434da96e3743f386e23c, type: 2}
     - rid: 8564938349721158177
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Nos hemos perdido.
+        m_Value:
+          Text: Nos hemos perdido.
     - rid: 8564938349721158178
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -914,9 +916,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 54a96945c59e434da96e3743f386e23c, type: 2}
     - rid: 8564938349721158190
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "Donde deber\xEDamos ir ahora?"
+        m_Value:
+          Text: "Donde deber\xEDamos ir ahora?"
     - rid: 8564938349721158191
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1040,9 +1043,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: 59ce64b4b6c65524f8c9619208636cc8, type: 2}
     - rid: 8564938349721158197
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "\xBFAdonde ir?"
+        m_Value:
+          Text: "\xBFAdonde ir?"
     - rid: 8564938349721158198
       type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1213,9 +1217,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: e280288b70fd46ef80ad92748c9591f1, type: 2}
     - rid: 8564938349721158209
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: Por ahora vamos al este... creo.
+        m_Value:
+          Text: Por ahora vamos al este... creo.
     - rid: 8564938349721158210
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1301,9 +1306,10 @@ MonoBehaviour:
         m_Value:
           Character: {fileID: 11400000, guid: e280288b70fd46ef80ad92748c9591f1, type: 2}
     - rid: 8564938349721158219
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: "Vamos al oeste! mi primo vive all\xED,, seguramente nos ayudar\xE1."
+        m_Value:
+          Text: "Vamos al oeste! mi primo vive all\xED,, seguramente nos ayudar\xE1."
     - rid: 8564938349721158220
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:

@@ -139,8 +139,10 @@ namespace Novelify.Editor
             // player needs must be copied explicitly while importing the graph.
             runtimeNode.PlaySound = GetPortValue<AudioClip>(
                 node.GetInputPortByName(SimpleDialogueNode.SoundPortName));
-            runtimeNode.DialogueText = GetOptionValue(
-                node.GetNodeOptionByName("Dialogue"), string.Empty);
+            RichDialogueText dialogue = GetOptionValue(
+                node.GetNodeOptionByName("Dialogue"),
+                new RichDialogueText(string.Empty));
+            runtimeNode.DialogueText = dialogue.Text ?? string.Empty;
             runtimeNode.Emotion = GetOptionValue(
                 node.GetNodeOptionByName("Emotion"), CharacterEmotion.Neutral);
             runtimeNode.ShowTextImmediately = GetOptionValue(
