@@ -49,6 +49,10 @@ namespace Novelify
             {
                 DialogueText.richText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
+                if (DialogueText.GetComponent<NovelTextEffects>() == null)
+                {
+                    DialogueText.gameObject.AddComponent<NovelTextEffects>();
+                }
             }
 
             if (NodeSoundSource == null)

@@ -106,7 +106,7 @@ namespace Novelify.Editor
             header.Add(characterCount);
 
             var help = new Label(
-                "Select words in the dialogue, then apply a style. Shortcuts: Ctrl+B and Ctrl+I.");
+                "Select words, then apply a style or motion effect. Shortcuts: Ctrl+B and Ctrl+I.");
             help.style.whiteSpace = WhiteSpace.Normal;
             help.style.fontSize = 10f;
             help.style.color = (Color)new Color32(148, 163, 184, 255);
@@ -141,6 +141,10 @@ namespace Novelify.Editor
             optionRow.style.marginTop = 3f;
             toolbar.Add(optionRow);
 
+            var effectRow = CreateToolbarRow();
+            effectRow.style.marginTop = 3f;
+            toolbar.Add(effectRow);
+
             var feedback = new Label("Select some text to format it.");
             feedback.style.fontSize = 9f;
             feedback.style.color = (Color)new Color32(125, 211, 252, 255);
@@ -171,7 +175,7 @@ namespace Novelify.Editor
             var clearFormatting = new Button
             {
                 text = "Clear all formatting",
-                tooltip = "Remove bold, italic, size, and color while keeping the dialogue"
+                tooltip = "Remove styles and motion while keeping the dialogue"
             };
             StyleToolbarButton(clearFormatting);
             styleRow.Add(clearFormatting);
@@ -211,6 +215,31 @@ namespace Novelify.Editor
             StyleToolbarButton(applyColor);
             optionRow.Add(applyColor);
 
+            AddToolbarCaption(effectRow, "Motion effect");
+            var wave = new Button
+            {
+                text = "Wave",
+                tooltip = "Make the selected letters move in a smooth wave"
+            };
+            StyleToolbarButton(wave);
+            effectRow.Add(wave);
+
+            var shake = new Button
+            {
+                text = "Shake",
+                tooltip = "Make the selected letters jitter"
+            };
+            StyleToolbarButton(shake);
+            effectRow.Add(shake);
+
+            var removeMotion = new Button
+            {
+                text = "Remove motion",
+                tooltip = "Remove Wave or Shake from the selected text"
+            };
+            StyleToolbarButton(removeMotion);
+            effectRow.Add(removeMotion);
+
             var previewTitle = new Label("In-game preview");
             previewTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
             previewTitle.style.fontSize = 9f;
@@ -218,9 +247,12 @@ namespace Novelify.Editor
             previewTitle.style.marginBottom = 2f;
             root.Add(previewTitle);
 
-            var preview = new Label { enableRichText = true };
+            var preview = new VisualElement();
             preview.style.height = PreviewHeight;
-            preview.style.whiteSpace = WhiteSpace.Normal;
+            preview.style.flexDirection = FlexDirection.Row;
+            preview.style.flexWrap = Wrap.Wrap;
+            preview.style.alignContent = Align.FlexStart;
+            preview.style.overflow = Overflow.Hidden;
             preview.style.paddingLeft = 7f;
             preview.style.paddingRight = 7f;
             preview.style.paddingTop = 5f;
@@ -228,16 +260,94 @@ namespace Novelify.Editor
             preview.style.backgroundColor = (Color)new Color32(7, 12, 22, 255);
             root.Add(preview);
 
+            var previewGlyphs = new List<AnimatedPreviewGlyph>();
+
             void RefreshPreview(string markup)
             {
-                int visibleCharacters = ParseDocument(markup).Characters.Count;
+                DialogueDocument document = ParseDocument(markup);
+                int visibleCharacters = document.Characters.Count;
                 characterCount.text = visibleCharacters == 1
                     ? "1 character"
                     : $"{visibleCharacters} characters";
-                preview.text = string.IsNullOrEmpty(markup)
-                    ? "Write dialogue above to see how it will look in the game."
-                    : markup;
+
+                preview.Clear();
+                previewGlyphs.Clear();
+                if (visibleCharacters == 0)
+                {
+                    var placeholder = new Label(
+                        "Write dialogue above to see how it will look in the game.");
+                    placeholder.style.fontSize = 10f;
+                    placeholder.style.color = (Color)new Color32(100, 116, 139, 255);
+                    placeholder.style.unityFontStyleAndWeight = FontStyle.Italic;
+                    preview.Add(placeholder);
+                    return;
+                }
+
+                for (int index = 0; index < document.Characters.Count; index++)
+                {
+                    StyledCharacter character = document.Characters[index];
+                    if (character.Character == '\n')
+                    {
+                        var lineBreak = new VisualElement();
+                        lineBreak.style.width = Length.Percent(100f);
+                        lineBreak.style.height = 1f;
+                        lineBreak.pickingMode = PickingMode.Ignore;
+                        preview.Add(lineBreak);
+                        continue;
+                    }
+
+                    var glyph = new Label(BuildPreviewGlyphText(character))
+                    {
+                        enableRichText = true,
+                        pickingMode = PickingMode.Ignore
+                    };
+                    glyph.style.flexShrink = 0f;
+                    glyph.style.marginLeft = 0f;
+                    glyph.style.marginRight = 0f;
+                    glyph.style.marginTop = 0f;
+                    glyph.style.marginBottom = 0f;
+                    glyph.style.paddingLeft = 0f;
+                    glyph.style.paddingRight = 0f;
+                    glyph.style.paddingTop = 0f;
+                    glyph.style.paddingBottom = 0f;
+                    glyph.style.whiteSpace = WhiteSpace.NoWrap;
+                    preview.Add(glyph);
+
+                    if (!string.IsNullOrEmpty(character.Style.Effect))
+                    {
+                        previewGlyphs.Add(new AnimatedPreviewGlyph
+                        {
+                            Element = glyph,
+                            Effect = character.Style.Effect,
+                            CharacterIndex = index
+                        });
+                    }
+                }
             }
+
+            preview.schedule.Execute(() =>
+            {
+                float time = (float)EditorApplication.timeSinceStartup;
+                float shakeFrame = Mathf.Floor(time * 24f);
+                foreach (AnimatedPreviewGlyph glyph in previewGlyphs)
+                {
+                    float x = 0f;
+                    float y = 0f;
+                    if (glyph.Effect == "novelify-wave")
+                    {
+                        y = Mathf.Sin(time * 7f + glyph.CharacterIndex * 0.65f) * 2.5f;
+                    }
+                    else if (glyph.Effect == "novelify-shake")
+                    {
+                        x = (PreviewHash(
+                            shakeFrame + glyph.CharacterIndex * 17.17f) * 2f - 1f) * 1.5f;
+                        y = (PreviewHash(
+                            shakeFrame * 1.37f + glyph.CharacterIndex * 41.73f) * 2f - 1f) * 1.5f;
+                    }
+
+                    glyph.Element.style.translate = new Translate(x, y);
+                }
+            }).Every(33);
 
             int savedSelectionStart = 0;
             int savedSelectionEnd = 0;
@@ -414,6 +524,39 @@ namespace Novelify.Editor
                     },
                     "Color");
             };
+            wave.clicked += () => ApplyToSelection(
+                (document, firstIndex, lastIndex) =>
+                {
+                    for (int index = firstIndex; index < lastIndex; index++)
+                    {
+                        StyledCharacter character = document.Characters[index];
+                        character.Style.Effect = "novelify-wave";
+                        document.Characters[index] = character;
+                    }
+                },
+                "Wave motion");
+            shake.clicked += () => ApplyToSelection(
+                (document, firstIndex, lastIndex) =>
+                {
+                    for (int index = firstIndex; index < lastIndex; index++)
+                    {
+                        StyledCharacter character = document.Characters[index];
+                        character.Style.Effect = "novelify-shake";
+                        document.Characters[index] = character;
+                    }
+                },
+                "Shake motion");
+            removeMotion.clicked += () => ApplyToSelection(
+                (document, firstIndex, lastIndex) =>
+                {
+                    for (int index = firstIndex; index < lastIndex; index++)
+                    {
+                        StyledCharacter character = document.Characters[index];
+                        character.Style.Effect = null;
+                        document.Characters[index] = character;
+                    }
+                },
+                "Motion removed");
             clearFormatting.clicked += () =>
             {
                 DialogueDocument document = ParseDocument(textProperty.stringValue);
@@ -544,6 +687,69 @@ namespace Novelify.Editor
                 : (Color)new Color32(125, 211, 252, 255);
         }
 
+        private static string BuildPreviewGlyphText(StyledCharacter character)
+        {
+            var result = new StringBuilder();
+            DialogueStyle style = character.Style;
+            if (style.Bold)
+            {
+                result.Append("<b>");
+            }
+
+            if (style.Italic)
+            {
+                result.Append("<i>");
+            }
+
+            if (!string.IsNullOrEmpty(style.Size))
+            {
+                result.Append("<size=").Append(style.Size).Append('>');
+            }
+
+            if (!string.IsNullOrEmpty(style.Color))
+            {
+                result.Append("<color=").Append(style.Color).Append('>');
+            }
+
+            result.Append(character.Character switch
+            {
+                ' ' => "\u00a0",
+                '\t' => "\u00a0\u00a0\u00a0\u00a0",
+                '<' => "&lt;",
+                '>' => "&gt;",
+                '&' => "&amp;",
+                _ => character.Character.ToString()
+            });
+
+            if (!string.IsNullOrEmpty(style.Color))
+            {
+                result.Append("</color>");
+            }
+
+            if (!string.IsNullOrEmpty(style.Size))
+            {
+                result.Append("</size>");
+            }
+
+            if (style.Italic)
+            {
+                result.Append("</i>");
+            }
+
+            if (style.Bold)
+            {
+                result.Append("</b>");
+            }
+
+            return result.ToString();
+        }
+
+        private static float PreviewHash(float value)
+        {
+            float sine = Mathf.Sin(value * 12.9898f) * 43758.5453f;
+            return sine - Mathf.Floor(sine);
+        }
+
         private static bool AllCharactersMatch(
             DialogueDocument document,
             int firstIndex,
@@ -578,6 +784,7 @@ namespace Novelify.Editor
             int italicDepth = 0;
             var sizes = new Stack<string>();
             var colors = new Stack<string>();
+            var effects = new Stack<string>();
 
             for (int index = 0; index < markup.Length; index++)
             {
@@ -594,7 +801,8 @@ namespace Novelify.Editor
                             ref boldDepth,
                             ref italicDepth,
                             sizes,
-                            colors))
+                            colors,
+                            effects))
                         {
                             index = closingBracket;
                             continue;
@@ -610,7 +818,8 @@ namespace Novelify.Editor
                         Bold = boldDepth > 0,
                         Italic = italicDepth > 0,
                         Size = sizes.Count > 0 ? sizes.Peek() : null,
-                        Color = colors.Count > 0 ? colors.Peek() : null
+                        Color = colors.Count > 0 ? colors.Peek() : null,
+                        Effect = effects.Count > 0 ? effects.Peek() : null
                     }
                 });
             }
@@ -623,7 +832,8 @@ namespace Novelify.Editor
             ref int boldDepth,
             ref int italicDepth,
             Stack<string> sizes,
-            Stack<string> colors)
+            Stack<string> colors,
+            Stack<string> effects)
         {
             if (tag.Equals("b", StringComparison.OrdinalIgnoreCase))
             {
@@ -678,6 +888,24 @@ namespace Novelify.Editor
                     colors.Pop();
                 }
 
+                return true;
+            }
+
+            if (tag.StartsWith("link=", StringComparison.OrdinalIgnoreCase))
+            {
+                string effect = CleanTagValue(tag.Substring("link=".Length));
+                if (effect.Equals("novelify-wave", StringComparison.OrdinalIgnoreCase) ||
+                    effect.Equals("novelify-shake", StringComparison.OrdinalIgnoreCase))
+                {
+                    effects.Push(effect.ToLowerInvariant());
+                    return true;
+                }
+            }
+
+            if (tag.Equals("/link", StringComparison.OrdinalIgnoreCase) &&
+                effects.Count > 0)
+            {
+                effects.Pop();
                 return true;
             }
 
@@ -796,10 +1024,20 @@ namespace Novelify.Editor
             {
                 result.Append("<color=").Append(style.Color).Append('>');
             }
+
+            if (!string.IsNullOrEmpty(style.Effect))
+            {
+                result.Append("<link=\"").Append(style.Effect).Append("\">");
+            }
         }
 
         private static void AppendClosingTags(StringBuilder result, DialogueStyle style)
         {
+            if (!string.IsNullOrEmpty(style.Effect))
+            {
+                result.Append("</link>");
+            }
+
             if (!string.IsNullOrEmpty(style.Color))
             {
                 result.Append("</color>");
@@ -1134,25 +1372,35 @@ namespace Novelify.Editor
             public DialogueStyle Style;
         }
 
+        private struct AnimatedPreviewGlyph
+        {
+            public Label Element;
+            public string Effect;
+            public int CharacterIndex;
+        }
+
         private struct DialogueStyle : IEquatable<DialogueStyle>
         {
             public bool Bold;
             public bool Italic;
             public string Size;
             public string Color;
+            public string Effect;
 
             public bool IsDefault =>
                 !Bold &&
                 !Italic &&
                 string.IsNullOrEmpty(Size) &&
-                string.IsNullOrEmpty(Color);
+                string.IsNullOrEmpty(Color) &&
+                string.IsNullOrEmpty(Effect);
 
             public bool Equals(DialogueStyle other)
             {
                 return Bold == other.Bold &&
                     Italic == other.Italic &&
                     string.Equals(Size, other.Size, StringComparison.Ordinal) &&
-                    string.Equals(Color, other.Color, StringComparison.OrdinalIgnoreCase);
+                    string.Equals(Color, other.Color, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(Effect, other.Effect, StringComparison.OrdinalIgnoreCase);
             }
 
             public override bool Equals(object obj)
@@ -1162,7 +1410,12 @@ namespace Novelify.Editor
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(Bold, Italic, Size, Color?.ToUpperInvariant());
+                return HashCode.Combine(
+                    Bold,
+                    Italic,
+                    Size,
+                    Color?.ToUpperInvariant(),
+                    Effect?.ToUpperInvariant());
             }
         }
 

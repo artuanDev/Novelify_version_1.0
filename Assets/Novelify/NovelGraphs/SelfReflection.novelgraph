@@ -443,7 +443,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Text: Hola... Mi nombre es Hoki.
+          Text: <size=75%>Hola...</size> Mi nombre es Hoki.
     - rid: 8564938349721158169
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1447,7 +1447,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Text: Esta historia... comienza con alguien muy... <b><size=125%><color=#F5AC39>especial.</color></size></b>
+          Text: Esta historia... comienza con alguien muy... <b><size=125%><color=#F5AC39><link="novelify-wave">especial</link></color></size></b><b><size=125%><color=#F5AC39>.</color></size></b>
     - rid: 8564938383701049476
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
