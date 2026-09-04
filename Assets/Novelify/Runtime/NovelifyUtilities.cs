@@ -15,14 +15,22 @@ namespace Novelify
             Action<char> onCharacterShown = null)
         {
             text ??= string.Empty;
-            textDisplay.SetText(string.Empty);
-            string currentTextShown = string.Empty;
+            textDisplay.richText = true;
+            textDisplay.SetText(text);
+            textDisplay.maxVisibleCharacters = 0;
+            textDisplay.ForceMeshUpdate();
+
+            int visibleCharacterCount = textDisplay.textInfo.characterCount;
             float characterDelay = 1f / Mathf.Max(1f, charactersPerSecond);
             float talkSoundCooldown = 0f;
 
-            for (int characterIndex = 0; characterIndex < text.Length; characterIndex++)
+            for (int characterIndex = 0;
+                 characterIndex < visibleCharacterCount;
+                 characterIndex++)
             {
-                char letter = text[characterIndex];
+                // TMP's character data excludes rich-text markup. Revealing through
+                // maxVisibleCharacters keeps tags intact and never displays them.
+                char letter = textDisplay.textInfo.characterInfo[characterIndex].character;
 
                 if (talkSoundCooldown <= 0f &&
                     talkSoundSource != null &&
@@ -37,11 +45,10 @@ namespace Novelify
                     talkSoundCooldown = UnityEngine.Random.Range(0.055f, 0.085f);
                 }
 
-                currentTextShown += letter;
-                textDisplay.SetText(currentTextShown);
+                textDisplay.maxVisibleCharacters = characterIndex + 1;
                 onCharacterShown?.Invoke(letter);
 
-                if (characterIndex == text.Length - 1)
+                if (characterIndex == visibleCharacterCount - 1)
                 {
                     continue;
                 }
@@ -51,6 +58,8 @@ namespace Novelify
                 yield return new WaitForSeconds(delay);
                 talkSoundCooldown -= delay;
             }
+
+            textDisplay.maxVisibleCharacters = int.MaxValue;
         }
 
         private static float GetDelayMultiplier(char character)

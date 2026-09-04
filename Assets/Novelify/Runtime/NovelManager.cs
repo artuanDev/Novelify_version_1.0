@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Novelify
@@ -13,6 +14,9 @@ namespace Novelify
 
         [Header("Sound settings")]
         public AudioSource TalkSource;
+        [Tooltip("Plays the optional sound attached to a node. A dedicated source is created automatically when this is empty.")]
+        [FormerlySerializedAs("PlaySound")]
+        public AudioSource NodeSoundSource;
 
         [Header("UI Components")]
         public GameObject DialoguePanel;
@@ -38,6 +42,25 @@ namespace Novelify
         private int _textCompletedFrame = -1;
         private char _lastRevealedCharacter;
         private bool _hasRevealedCharacter;
+
+        private void Awake()
+        {
+            if (DialogueText != null)
+            {
+                DialogueText.richText = true;
+                DialogueText.maxVisibleCharacters = int.MaxValue;
+                if (DialogueText.GetComponent<NovelTextEffects>() == null)
+                {
+                    DialogueText.gameObject.AddComponent<NovelTextEffects>();
+                }
+            }
+
+            if (NodeSoundSource == null)
+            {
+                NodeSoundSource = gameObject.AddComponent<AudioSource>();
+                NodeSoundSource.playOnAwake = false;
+            }
+        }
 
         private void Start()
         {
@@ -101,6 +124,8 @@ namespace Novelify
             _currentNode = _nodeLookup[nodeID];
             DialoguePanel.SetActive(true);
             SpeakerNameText.SetText(_currentNode.SpeakerName);
+
+            PlayNodeSound(_currentNode.PlaySound);
 
             NameBackground.SetActive(_currentNode.SpeakerName != "");
 
@@ -178,6 +203,7 @@ namespace Novelify
 
             if (node.ShowTextImmediately || dialogue.Length == 0)
             {
+                DialogueText.maxVisibleCharacters = int.MaxValue;
                 DialogueText.SetText(dialogue);
                 _isTextRevealing = false;
             }
@@ -322,6 +348,7 @@ namespace Novelify
                 _textRevealCoroutine = null;
             }
 
+            DialogueText.maxVisibleCharacters = int.MaxValue;
             DialogueText.SetText(_currentNode.DialogueText ?? string.Empty);
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;
@@ -347,6 +374,30 @@ namespace Novelify
 
             _isTextRevealing = false;
             StopTalkAudio();
+            StopNodeSound();
+        }
+
+        private void PlayNodeSound(AudioClip clip)
+        {
+            if (clip == null || NodeSoundSource == null)
+            {
+                return;
+            }
+
+            NodeSoundSource.Stop();
+            NodeSoundSource.clip = clip;
+            NodeSoundSource.Play();
+        }
+
+        private void StopNodeSound()
+        {
+            if (NodeSoundSource == null)
+            {
+                return;
+            }
+
+            NodeSoundSource.Stop();
+            NodeSoundSource.clip = null;
         }
 
         private void StopMouthAnimation()

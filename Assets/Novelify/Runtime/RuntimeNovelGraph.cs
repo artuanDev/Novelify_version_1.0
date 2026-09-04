@@ -38,6 +38,7 @@ namespace Novelify
         public float BlinkDuration = 0.12f;
 
         public AudioClip TalkSound;
+        public AudioClip PlaySound;
         public float PitchMinVariation = -0.05f;
         public float PitchMaxVariation = 0.05f;
 

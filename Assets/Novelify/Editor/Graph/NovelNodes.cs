@@ -34,7 +34,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Flow", "d_winbtn_win_close", "End",
+    [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
     public class EndNode: Node
@@ -64,6 +64,8 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph))]
     public class SimpleDialogueNode : Node
     {
+        internal const string SoundPortName = "Sound";
+
         public override void OnEnable()
         {
             base.OnEnable();
@@ -79,6 +81,12 @@ namespace Novelify.Editor
             context.AddInputPort("in")
                 .WithDisplayName("Enter")
                 .Build();
+
+            context.AddInputPort<AudioClip>(SoundPortName)
+                .WithDisplayName("Play Sound")
+                .WithTooltip("Sound to play when this node is shown.")
+                .Build();
+
             context.AddOutputPort("out")
                 .WithDisplayName("Continue")
                 .Build();
@@ -86,9 +94,9 @@ namespace Novelify.Editor
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Dialogue", typeof(string))
-                .AsTextArea(3, 10)
-                .WithDefaultValue("")
+            context.AddOption("Dialogue", typeof(RichDialogueText))
+                .WithDefaultValue(new RichDialogueText(string.Empty))
+                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption("Show Text Immediately", typeof(bool))
@@ -181,6 +189,11 @@ namespace Novelify.Editor
                 .WithTooltip("Character presenting this decision.")
                 .Build();
 
+            context.AddInputPort<AudioClip>(SimpleDialogueNode.SoundPortName)
+                .WithDisplayName("Play Sound")
+                .WithTooltip("Sound to play when this node is shown.")
+                .Build();
+
             var option = GetNodeOptionByName(optionID);
             option.TryGetValue(out int portCount);
             for (int i = 0; i < portCount; i++)
@@ -196,9 +209,9 @@ namespace Novelify.Editor
                 .WithDefaultValue(new SpeakerPortraitOption())
                 .Build();
 
-            context.AddOption("Dialogue", typeof(string))
-                .AsTextArea(3, 10)
-                .WithDefaultValue("")
+            context.AddOption("Dialogue", typeof(RichDialogueText))
+                .WithDefaultValue(new RichDialogueText(string.Empty))
+                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption("Emotion", typeof(CharacterEmotion))
