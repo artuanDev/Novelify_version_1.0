@@ -34,6 +34,35 @@ namespace Novelify.Editor
     }
 
     [Serializable]
+    [Node("Novelify/Utilities")]
+    [UseWithGraph(typeof(NovelGraph))]
+    public class PlaySoundNode : Node
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Story entry",
+                "The first beat in this narrative path.",
+                new Color32(52, 211, 153, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort("in");
+            context.AddOutputPort("out");
+
+            context.AddInputPort<AudioClip>("AudioToPlay");
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            context.AddOption<bool>("Loop");
+        }
+    }
+
+    [Serializable]
     [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
