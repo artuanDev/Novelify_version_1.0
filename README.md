@@ -182,17 +182,17 @@ Assets/Novelify/
 
 ## Screenshots
 
-# Novel Graph Dialogue example:
+### Novel Graph Dialogue example:
 
 ![Novel Graph Dialogue in an example:](Images/Dialogue_Runtime.PNG)
 
-# Graph inspector rich text editor:
+### Graph inspector rich text editor:
 ![Graph inspector for writing the dialogue:](Images/Rich_Text_Inspector.PNG)
 
-# Novel Graph Choice example:
+### Novel Graph Choice example:
 ![Novel Graph Choice example:](Images/Choice_Runtime.PNG)
 
-# Character asset example:
+### Character asset example:
 ![Character Asset:](Images/Character_Asset.PNG)
 
 ## Roadmap
