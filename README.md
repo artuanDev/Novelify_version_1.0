@@ -1,195 +1,222 @@
 <a id="readme-top"></a>
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+<div align="center">
 
+# Novelify
 
+### A node-based dialogue and narrative system for Unity
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+Create branching conversations visually with custom Graph Toolkit nodes, reusable character assets, rich text, animated portraits, audio feedback and runtime dialogue presentation.
 
-[![Graph view example][product-screenshot]](https://example.com)
+[![Unity](https://img.shields.io/badge/Unity-6000.6.0f1-black?logo=unity)](https://unity.com/)
+[![URP](https://img.shields.io/badge/Render%20Pipeline-URP-5562ea)](https://docs.unity3d.com/6000.0/Documentation/Manual/urp/InstallURPIntoAProject.html)
+[![C%23](https://img.shields.io/badge/Language-C%23-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
+[![Status](https://img.shields.io/badge/Status-Prototype-orange)](https://github.com/artuanDev/Novelify_version_1.0)
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
+</div>
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+## About
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people who have contributed to expanding this template!
+Novelify is a visual dialogue framework built for Unity. Stories are authored inside custom `.novelgraph` assets using Unity Graph Toolkit and then imported into runtime data that can be played by the `NovelManager`.
 
-Use the `BLANK_README.md` to get started.
+The editor graph and runtime presentation are intentionally separated: graph nodes are used for authoring, while the importer generates a `RuntimeNovelGraph` that can be consumed by normal Unity components during play mode.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+This repository is currently a Unity project containing the Novelify framework, its editor tooling and a working sample scene.
 
+![Novelify graph editor](Images/Graph.PNG)
 
+## Features
 
-### Built With
+- Visual narrative authoring with custom Graph Toolkit nodes.
+- Start, End, Simple Dialogue, Dialogue and Choice nodes.
+- Branching conversations with dynamically generated choice buttons.
+- Reusable `NovelCharacter` ScriptableObjects.
+- Layered 2D portraits using body, eyes, facial details and mouth sprites.
+- Optional blinking and mouth animation while text is revealed.
+- Typewriter-style dialogue reveal with configurable characters-per-second speed.
+- Per-character talking sounds with pitch variation.
+- Optional audio clips played when individual nodes are displayed.
+- Rich dialogue editing with bold, italic, colour and multiple text sizes.
+- Wave and shake text effects with an animated editor preview.
+- Automatic conversion from editor graphs to runtime dialogue data.
+- Included sample graph, character asset, UI setup and playable scene.
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+## How It Works
 
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
+| Stage | Responsibility |
+| --- | --- |
+| Graph authoring | Create and connect nodes in a `.novelgraph` asset. |
+| Character data | Store a speaker's name, portrait layers, voice clip and animation timing in a `NovelCharacter` asset. |
+| Import | `NovelGraphImporter` converts the editor graph into a `RuntimeNovelGraph`. |
+| Runtime | `NovelManager` displays dialogue, reveals text, plays audio, animates portraits and routes choices. |
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Requirements
 
+- Unity `6000.6.0f1`.
+- Unity Graph Toolkit, compatible with the selected Unity 6 installation.
+- Git LFS, required for image and other binary assets.
+- Universal Render Pipeline.
+- Input System.
+- TextMesh Pro.
 
+If the Graph Toolkit package is not available in the project after opening it, install the compatible package through Unity's Package Manager before opening or creating a Novelify graph.
 
-<!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+### 1. Clone the Repository
 
-### Prerequisites
+Install Git LFS once on your machine, then clone the project:
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+```bash
+git lfs install
+git clone https://github.com/artuanDev/Novelify_version_1.0.git
+cd Novelify_version_1.0
+git lfs pull
+```
 
-### Installation
+Open the project in Unity Hub using **Unity 6000.6.0f1**.
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+### 2. Open the Sample
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/github_username/repo_name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-5. Change git remote url to avoid accidental pushes to base project
-   ```sh
-   git remote set-url origin github_username/repo_name
-   git remote -v # confirm the changes
-   ```
+Open:
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+```text
+Assets/Novelify/Samples/Scenes/TestScene.unity
+```
 
+Press **Play**. The sample scene uses:
 
+- `Assets/Novelify/NovelGraphs/SelfReflection.novelgraph`.
+- `Assets/Novelify/Samples/Characters/Hoki.asset`.
+- A configured `NovelManager`.
+- A TextMesh Pro dialogue interface.
+- A choice button prefab and choice container.
 
-<!-- USAGE EXAMPLES -->
-## Usage
+A left mouse click advances the current dialogue. During text reveal, the first click completes the line; the next click advances. Choice nodes are advanced through their generated UI buttons.
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+## Creating a Dialogue Graph
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+1. In the Project window, right-click and choose **Create > Novelify > Novel Graph**.
+2. Open the new `.novelgraph` asset.
+3. Add a **Start** node and an **End** node.
+4. Add **Dialogue** or **SimpleDialogue** nodes.
+5. Connect the flow ports from Start through the conversation and finally to End.
+6. Add a **Choice** node when the player should select a branch.
+7. Set the choice count, enter each choice's text and connect each output to its destination node.
+8. Save the graph so Unity can import its runtime representation.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Dialogue Nodes
 
+- **SimpleDialogue** displays a line without requiring a character asset.
+- **Dialogue** accepts a `NovelCharacter` speaker and exposes portrait preview, emotion metadata, text timing and portrait animation options.
+- **Choice** combines dialogue presentation with multiple player-selected branches.
 
+## Creating a Character
 
-<!-- ROADMAP -->
+Create a character asset through:
+
+```text
+Create > Novelify > Character
+```
+
+Assign the portrait layers and optional audio:
+
+| Field | Purpose |
+| --- | --- |
+| Speaker Name | Name displayed above the dialogue. |
+| Portrait Body | Main portrait layer. |
+| Portrait Eyes | Default eye layer. |
+| Portrait Eyes Closed | Sprite used during blinking. |
+| Portrait Face Details | Additional facial details. |
+| Portrait Mouth | Default mouth layer. |
+| Portrait Mouth Open | Mouth layer used during text reveal. |
+| Talk Sound | Sound played while letters are displayed. |
+
+The character asset also contains timing controls for blinking, mouth animation, voice pitch variation and graph preview framing.
+
+## Rich Text and Text Effects
+
+Dialogue text can be formatted from the custom inspector. Select text and use the toolbar to apply:
+
+- Bold and italic formatting.
+- Small, normal, large and extra-large text sizes.
+- Colour.
+- Wave motion.
+- Shake motion.
+
+At runtime, `NovelManager` enables TextMesh Pro rich text automatically. The `NovelTextEffects` component animates ranges marked with the wave or shake effect.
+
+## Using NovelManager in Your Own Scene
+
+Add a `NovelManager` component to a GameObject and assign:
+
+- The imported `RuntimeGraph` from your `.novelgraph` asset.
+- A TextMesh Pro object for `DialogueText`.
+- A TextMesh Pro object for `SpeakerNameText`.
+- The portrait `Image` components for body, eyes, details and mouth.
+- A dialogue panel and a choices panel.
+- A `Button` prefab and a container transform for generated choices.
+- Optional audio sources for talking sounds and node sounds.
+
+The manager builds its node lookup at startup and begins at the graph's Start node. Normal dialogue advances with a left mouse click; Choice nodes create their buttons at runtime.
+
+## Project Structure
+
+```text
+Assets/Novelify/
+├── Editor/
+│   ├── Graph/                 # Graph, nodes, inspectors and visual styles
+│   └── NovelGraphImporter.cs  # Converts editor graphs to runtime data
+├── Runtime/
+│   ├── NovelManager.cs        # Dialogue presentation and flow
+│   ├── NovelCharacter.cs      # Character ScriptableObject
+│   ├── RuntimeNovelGraph.cs   # Runtime graph data
+│   └── NovelTextEffects.cs    # Wave and shake text animation
+├── NovelGraphs/               # Example .novelgraph assets
+├── Prefabs/                   # Reusable UI prefabs
+└── Samples/                   # Example character and scene
+```
+
+## Screenshots
+
+Store project screenshots in the `Images/` directory. The existing graph screenshot is referenced as:
+
+```text
+Images/Graph.PNG
+```
+
+Recommended additional screenshots:
+
+```text
+Images/Dialogue_Runtime.PNG       # Dialogue running in Play Mode
+Images/Choice_Runtime.PNG         # Choice buttons and a branching conversation
+Images/Rich_Text_Inspector.PNG    # Rich-text toolbar and animated preview
+Images/Character_Asset.PNG        # Configured NovelCharacter inspector
+```
+
 ## Roadmap
 
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
+- [ ] Package the framework for easier reuse in other Unity projects.
+- [ ] Add more runtime flow controls and dialogue events.
+- [ ] Add localization support.
+- [ ] Add save, load and conversation history support.
+- [ ] Expand the sample content and documentation.
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Suggestions, bug reports and improvements are welcome. Please open an issue with reproduction steps and the Unity version you are using. For code changes, create a feature branch and submit a pull request.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Top contributors:
-
-<a href="https://github.com/othneildrew/Best-README-Template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=othneildrew/Best-README-Template" alt="contrib.rocks image" />
-</a>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
 ## License
 
-Distributed under the Unlicense License. See `LICENSE.txt` for more information.
+No license has been specified for this repository yet. Add a license file before distributing Novelify or accepting external contributions.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Antonio Mata Marín
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
+- GitHub: [@artuanDev](https://github.com/artuanDev)
+- LinkedIn: [Antonio Mata Marín](https://www.linkedin.com/in/antonio-mata-mar%C3%ADn-7a936a1aa/)
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
+Project repository: [Novelify_version_1.0](https://github.com/artuanDev/Novelify_version_1.0)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://www.linkedin.com/in/antonio-mata-mar%C3%ADn-7a936a1aa/?locale=en
-[product-screenshot]: images/Graph.png
