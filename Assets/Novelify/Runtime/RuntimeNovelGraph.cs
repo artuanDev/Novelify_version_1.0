@@ -24,6 +24,8 @@ namespace Novelify
     [Serializable]
     public class RuntimeDialogueNode : RuntimeNode
     {
+        public NovelCharacter NovelCharacter;
+        public string InstanceID;
         public string SpeakerName;
 
         public Sprite PortraitBody;
@@ -71,17 +73,66 @@ namespace Novelify
         public bool Loop;
         public AudioClip ClipSound;
 
-        public float Volume;
-        public int Priority;
-        public float Pitch;
+        public float Volume = 1f;
+        public int Priority = 128;
+        public float Pitch = 1f;
     }
 
     [Serializable]
     public class RuntimeTranslateSpeakerPortraitNode : RuntimeNode
     {
+        public NovelCharacter Character;
+        public string InstanceID;
         public float OffsetX;
         public float OffsetY;
+        public bool SmoothMovement;
+        public float Duration = 0.5f;
+        public bool WaitForCompletion = true;
+        public bool EaseInOut = true;
+        public bool Relative;
     }
+
+    [Serializable]
+    public class RuntimeShowCharacterNode : RuntimeNode
+    {
+        public NovelCharacter Character;
+        public string InstanceID;
+        public Vector2 Position;
+        public CharacterEmotion Emotion;
+    }
+
+    [Serializable]
+    public class RuntimeHideCharacterNode : RuntimeNode
+    {
+        public NovelCharacter Character;
+        public string InstanceID;
+    }
+
+    [Serializable]
+    public class RuntimeHideAllCharactersNode : RuntimeNode { }
+
+    [Serializable]
+    public class RuntimeSetCharacterEmotionNode : RuntimeNode
+    {
+        public NovelCharacter Character;
+        public string InstanceID;
+        public CharacterEmotion Emotion;
+    }
+
+    [Serializable]
+    public class RuntimeWaitNode : RuntimeNode
+    {
+        public float Duration = 1f;
+    }
+
+    [Serializable]
+    public class RuntimeDialogueEventNode : RuntimeNode
+    {
+        public string EventName;
+    }
+
+    [Serializable]
+    public class RuntimeStopSoundNode : RuntimeNode { }
 
     [Serializable]
     public class ChoiceData

@@ -1,0 +1,6 @@
+{
+  "name": "Novelify.Editor.Tests",
+  "references": ["Novelify.Runtime", "Novelify.Editor", "UnityEngine.UI"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

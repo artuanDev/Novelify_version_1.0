@@ -124,47 +124,7 @@ namespace Novelify.Editor
             }
         }
 
-        private NovelCharacter GetSpeakerCharacter(INode node)
-        {
-            IPort speakerPort = node.GetInputPortByName("Speaker");
-            if (speakerPort == null)
-            {
-                return null;
-            }
-
-            IPort connectedPort = speakerPort.FirstConnectedPort;
-            if (connectedPort?.GetNode() is IVariableNode variableNode &&
-                variableNode.Variable.TryGetDefaultValue(out NovelCharacter variableCharacter))
-            {
-                return variableCharacter;
-            }
-
-            // GetWire also follows Graph Toolkit portals, so a Character variable can be
-            // routed through a portal without losing the portrait preview.
-            foreach (IVariable variable in GetVariables())
-            {
-                if (!variable.TryGetDefaultValue(out NovelCharacter portalCharacter))
-                {
-                    continue;
-                }
-
-                var variableNodes = new List<IVariableNode>();
-                variable.GetNodes(variableNodes);
-
-                foreach (IVariableNode variableReferenceNode in variableNodes)
-                {
-                    foreach (IPort outputPort in variableReferenceNode.GetOutputPorts())
-                    {
-                        if (GetWire(outputPort, speakerPort) != null)
-                        {
-                            return portalCharacter;
-                        }
-                    }
-                }
-            }
-
-            speakerPort.TryGetValue(out NovelCharacter inlineCharacter);
-            return inlineCharacter;
-        }
+        private NovelCharacter GetSpeakerCharacter(INode node) =>
+            NovelGraphValues.Resolve<NovelCharacter>(this, node.GetInputPortByName("Speaker"));
     }
 }

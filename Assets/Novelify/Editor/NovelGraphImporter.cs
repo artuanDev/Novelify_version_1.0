@@ -1,19 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEditor.AssetImporters;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(1, NovelGraph.AssetExtension)]
+    [ScriptedImporter(4, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         private NovelGraph _editorGraph;
+        private AssetImportContext _context;
 
         public override void OnImportAsset(AssetImportContext ctx)
         {
+            _context = ctx;
             NovelGraph editorGraph =
                 GraphDatabase.LoadGraphForImporter<NovelGraph>(
                     ctx.assetPath);
@@ -37,23 +40,18 @@ namespace Novelify.Editor
 
             if (startNode != null)
             {
-                IPort entryPort =
-                    startNode.GetOutputPorts()
-                        .FirstOrDefault()?
-                        .FirstConnectedPort;
+                INode entryNode = NovelGraphValues.FlowDestination(editorGraph, startNode.GetOutputPortByName("out"));
 
-                if (entryPort != null &&
-                    nodeIDMap.ContainsKey(entryPort.GetNode()))
+                if (entryNode != null && nodeIDMap.ContainsKey(entryNode))
                 {
                     runtimeGraph.EntryNodeID =
-                        nodeIDMap[entryPort.GetNode()];
+                        nodeIDMap[entryNode];
                 }
             }
 
             foreach (INode editorNode in editorGraph.GetNodes())
             {
-                if (editorNode is StartNode ||
-                    editorNode is EndNode)
+                if (editorNode is StartNode || editorNode is IVariableNode)
                 {
                     continue;
                 }
@@ -122,15 +120,9 @@ namespace Novelify.Editor
                 }
                 else
                 {
-                    // Every unknown node is still imported and routed.
-                    runtimeNode =
-                        new RuntimeNode
-                        {
-                            NodeID = nodeIDMap[editorNode],
-                            NextNodeID = GetNextNodeID(
-                                editorNode,
-                                nodeIDMap)
-                        };
+                    runtimeNode = CreateUtilityNode(editorNode);
+                    runtimeNode.NodeID = nodeIDMap[editorNode];
+                    runtimeNode.NextNodeID = GetNextNodeID(editorNode, nodeIDMap);
                 }
 
                 runtimeGraph.AllNodes.Add(runtimeNode);
@@ -179,13 +171,7 @@ namespace Novelify.Editor
                     ChoiceText =
                         GetPortValue<string>(textPort),
 
-                    DestinationNodeID =
-                        outputPort.FirstConnectedPort != null &&
-                        nodeIDMap.ContainsKey(
-                            outputPort.FirstConnectedPort.GetNode())
-                            ? nodeIDMap[
-                                outputPort.FirstConnectedPort.GetNode()]
-                            : null
+                    DestinationNodeID = GetDestinationID(outputPort, nodeIDMap)
                 };
 
                 runtimeNode.Choices.Add(choiceData);
@@ -263,6 +249,16 @@ namespace Novelify.Editor
         {
             runtimeNode.OffsetX = GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0.0f);
             runtimeNode.OffsetY = GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0.0f);
+            runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
+            runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
+            runtimeNode.SmoothMovement = GetOptionValue(node.GetNodeOptionByName("Smooth Movement"), false);
+            runtimeNode.Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.5f));
+            runtimeNode.WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true);
+            runtimeNode.EaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
+            runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
+
+            if (runtimeNode.Character == null)
+                _context?.LogImportWarning("Translate Speaker Portrait needs a Character input. Assign a character asset or connect a Current Speaker output.");
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);
@@ -272,32 +268,45 @@ namespace Novelify.Editor
             INode node,
             Dictionary<INode, string> nodeIDMap)
         {
-            IPort outputPort =
-                node.GetOutputPortByName("out");
+            return GetDestinationID(node.GetOutputPortByName("out"), nodeIDMap);
+        }
 
-            IPort connectedPort =
-                outputPort != null
-                    ? outputPort.FirstConnectedPort
-                    : null;
-
-            if (connectedPort == null)
+        private string GetDestinationID(IPort output, Dictionary<INode, string> nodeIDMap)
+        {
+            var connected = new List<IPort>();
+            output?.GetConnectedPorts(connected);
+            if (connected.Count > 1)
             {
-                connectedPort =
-                    node.GetOutputPorts()
-                        .Select(port => port.FirstConnectedPort)
-                        .FirstOrDefault(port => port != null);
+                _context?.LogImportWarning($"{output.GetNode().GetType().Name}: '{output.Name}' has multiple story destinations. " +
+                    "Connect utility nodes in sequence, or use a Choice node for branching. Only one continuation can run.");
             }
+            INode destination = NovelGraphValues.FlowDestination(_editorGraph, output);
+            return destination != null && nodeIDMap.TryGetValue(destination, out string id) ? id : null;
+        }
 
-            if (connectedPort == null)
+        private RuntimeNode CreateUtilityNode(INode node)
+        {
+            NovelCharacter character = node is CharacterActionNode
+                ? GetPortValue<NovelCharacter>(node.GetInputPortByName("Character")) : null;
+            string instanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
+            CharacterEmotion emotion = GetOptionValue(node.GetNodeOptionByName("Emotion"), CharacterEmotion.Neutral);
+            switch (node)
             {
-                return null;
+                case ShowCharacterNode _:
+                    return new RuntimeShowCharacterNode { Character = character, InstanceID = instanceID, Emotion = emotion,
+                        Position = GetOptionValue(node.GetNodeOptionByName("Position"), Vector2.zero) };
+                case HideCharacterNode _:
+                    return new RuntimeHideCharacterNode { Character = character, InstanceID = instanceID };
+                case HideAllCharactersNode _: return new RuntimeHideAllCharactersNode();
+                case SetCharacterEmotionNode _:
+                    return new RuntimeSetCharacterEmotionNode { Character = character, InstanceID = instanceID, Emotion = emotion };
+                case WaitNode _:
+                    return new RuntimeWaitNode { Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 1f)) };
+                case DialogueEventNode _:
+                    return new RuntimeDialogueEventNode { EventName = GetOptionValue(node.GetNodeOptionByName("Event Name"), string.Empty) };
+                case StopSoundNode _: return new RuntimeStopSoundNode();
+                default: return new RuntimeNode();
             }
-
-            INode nextNode = connectedPort.GetNode();
-
-            return nodeIDMap.ContainsKey(nextNode)
-                ? nodeIDMap[nextNode]
-                : null;
         }
 
         private T GetFirstPortValue<T>(
@@ -355,6 +364,9 @@ namespace Novelify.Editor
             NovelCharacter character =
                 GetPortValue<NovelCharacter>(
                     node.GetInputPortByName("Speaker"));
+
+            runtimeNode.NovelCharacter = character;
+            runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
 
             runtimeNode.SpeakerName =
                 character != null
@@ -492,60 +504,13 @@ namespace Novelify.Editor
 
         private T GetPortValue<T>(IPort port)
         {
-            if (port == null)
+            T value = NovelGraphValues.Resolve<T>(_editorGraph, port);
+            if (value is UnityEngine.Object asset && asset != null)
             {
-                return default;
+                string path = AssetDatabase.GetAssetPath(asset);
+                if (!string.IsNullOrEmpty(path)) _context?.DependsOnSourceAsset(path);
             }
-
-            if (port.FirstConnectedPort?.GetNode()
-                is IVariableNode variableNode)
-            {
-                if (variableNode.Variable.TryGetDefaultValue(
-                        out T variableValue))
-                {
-                    return variableValue;
-                }
-            }
-
-            if (_editorGraph != null)
-            {
-                foreach (IVariable variable in
-                    _editorGraph.GetVariables())
-                {
-                    if (!variable.TryGetDefaultValue(
-                            out T portalValue))
-                    {
-                        continue;
-                    }
-
-                    var variableNodes =
-                        new List<IVariableNode>();
-
-                    variable.GetNodes(variableNodes);
-
-                    foreach (IVariableNode referenceNode
-                        in variableNodes)
-                    {
-                        foreach (IPort outputPort
-                            in referenceNode.GetOutputPorts())
-                        {
-                            if (_editorGraph.GetWire(
-                                    outputPort,
-                                    port) != null)
-                            {
-                                return portalValue;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (port.TryGetValue(out T fallbackValue))
-            {
-                return fallbackValue;
-            }
-
-            return default;
+            return value;
         }
 
         private T GetOptionValue<T>(

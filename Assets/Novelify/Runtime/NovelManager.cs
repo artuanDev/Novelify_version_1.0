@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
@@ -14,46 +15,74 @@ namespace Novelify
 
         [Header("Sound Settings")]
         public AudioSource TalkSource;
-
         [Tooltip("Sound attached directly to dialogue nodes.")]
         [FormerlySerializedAs("PlaySound")]
         public AudioSource NodeSoundSource;
-
-        [Tooltip("Sound source used by RuntimePlaySoundNode.")]
+        [Tooltip("Sound source used by Play Sound nodes.")]
         public AudioSource PlaySoundSource;
+
+        [Header("Character Stage")]
+        public GameObject CanvasDialogue;
+        public GameObject PortraitPrefab;
+        [Tooltip("Optional portrait parent outside the dialogue panel. Defaults to a separate stage under the canvas.")]
+        public Transform CharacterContainer;
+        public bool HideCharactersOnEnd = true;
 
         [Header("UI Components")]
         public GameObject DialoguePanel;
-        public GameObject CharacterPortrait;
+        [HideInInspector] public GameObject CharacterPortrait;
         public GameObject BackgroundChoicesPanel;
         public GameObject NameBackground;
-
         public TextMeshProUGUI SpeakerNameText;
-        public Image Speaker_Body;
-        public Image Speaker_Eyes;
-        public Image Speaker_Details;
-        public Image Speaker_Mouth;
         public TextMeshProUGUI DialogueText;
 
         [Header("Choice Button UI")]
         public Button ChoiceButtonPrefab;
         public Transform ChoiceButtonContainer;
 
-        private readonly Dictionary<string, RuntimeNode> _nodeLookup =
-            new Dictionary<string, RuntimeNode>();
+        [Header("Story Events")]
+        [Tooltip("Event nodes send their Event Name to these listeners.")]
+        public UnityEvent<string> OnDialogueEvent = new UnityEvent<string>();
 
+        public IReadOnlyDictionary<string, CharacterInfo> AllCharacters => Stage.Characters;
+        public bool IsWaiting => _isWaiting;
+        public RuntimeNode CurrentNode => _currentNode;
+        private NovelCharacterStage _stage;
+        private CharacterInfo _speaker;
+        private readonly Dictionary<string, RuntimeNode> _nodeLookup = new Dictionary<string, RuntimeNode>();
         private RuntimeNode _currentNode;
-
         private Coroutine _textRevealCoroutine;
-        private Coroutine _mouthAnimationCoroutine;
-        private Coroutine _blinkAnimationCoroutine;
-
-        private bool _isTextRevealing;
+        private Coroutine _waitCoroutine;
+        private bool _isTextRevealing, _isWaiting;
+        private bool _hasStartedGraph, _ownsContainer;
+        private int _nodeEnteredFrame = -1;
         private int _textCompletedFrame = -1;
-        private char _lastRevealedCharacter;
-        private bool _hasRevealedCharacter;
-
+        private int _flowVersion;
         private const int MaxAutomaticNodesPerTraversal = 1000;
+
+        private NovelCharacterStage Stage
+        {
+            get
+            {
+                if (_stage != null) return _stage;
+                if (CharacterContainer == null && CanvasDialogue != null)
+                {
+                    Canvas canvas = CanvasDialogue.GetComponentInParent<Canvas>();
+                    Transform parent = canvas != null ? canvas.transform : CanvasDialogue.transform;
+                    var container = new GameObject("Novelify Character Stage", typeof(RectTransform));
+                    var rect = (RectTransform)container.transform;
+                    rect.SetParent(parent, false);
+                    rect.anchorMin = Vector2.zero;
+                    rect.anchorMax = Vector2.one;
+                    rect.sizeDelta = Vector2.zero;
+                    rect.SetAsFirstSibling();
+                    CharacterContainer = rect;
+                    _ownsContainer = true;
+                }
+                _stage = new NovelCharacterStage(CharacterContainer, PortraitPrefab);
+                return _stage;
+            }
+        }
 
         private void Awake()
         {
@@ -61,741 +90,335 @@ namespace Novelify
             {
                 DialogueText.richText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
-
                 if (DialogueText.GetComponent<NovelTextEffects>() == null)
-                {
                     DialogueText.gameObject.AddComponent<NovelTextEffects>();
-                }
             }
+            if (NodeSoundSource == null) NodeSoundSource = CreateAudioSource();
+            if (PlaySoundSource == null) PlaySoundSource = CreateAudioSource();
+        }
 
-            if (NodeSoundSource == null)
-            {
-                NodeSoundSource =
-                    gameObject.AddComponent<AudioSource>();
-
-                NodeSoundSource.playOnAwake = false;
-            }
-
-            if (PlaySoundSource == null)
-            {
-                PlaySoundSource =
-                    gameObject.AddComponent<AudioSource>();
-
-                PlaySoundSource.playOnAwake = false;
-            }
+        private AudioSource CreateAudioSource()
+        {
+            AudioSource source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            return source;
         }
 
         private void Start()
         {
-            if (RuntimeGraph == null)
-            {
-                Debug.LogError(
-                    "NovelManager has no RuntimeNovelGraph assigned.",
-                    this);
+            if (!_hasStartedGraph) PlayGraph(RuntimeGraph);
+        }
 
-                EndDialogue();
+        public void PlayGraph(RuntimeNovelGraph graph)
+        {
+            _hasStartedGraph = true;
+            EndDialogue();
+            _stage?.StopMovement();
+            RuntimeGraph = graph;
+            _nodeLookup.Clear();
+            if (graph == null)
+            {
+                Debug.LogError("NovelManager has no RuntimeNovelGraph assigned.", this);
                 return;
             }
-
-            _nodeLookup.Clear();
-
-            foreach (RuntimeNode node in RuntimeGraph.AllNodes)
-            {
-                if (node == null ||
-                    string.IsNullOrEmpty(node.NodeID))
-                {
-                    continue;
-                }
-
-                _nodeLookup[node.NodeID] = node;
-            }
-
-            if (!string.IsNullOrEmpty(
-                    RuntimeGraph.EntryNodeID))
-            {
-                ShowNode(RuntimeGraph.EntryNodeID);
-            }
-            else
-            {
-                EndDialogue();
-            }
+            if (graph.AllNodes != null)
+                foreach (RuntimeNode node in graph.AllNodes)
+                    if (node != null && !string.IsNullOrEmpty(node.NodeID)) _nodeLookup[node.NodeID] = node;
+            if (!string.IsNullOrEmpty(graph.EntryNodeID)) ShowNode(graph.EntryNodeID);
         }
 
         private void Update()
         {
-            if (Mouse.current == null ||
-                !Mouse.current.leftButton.wasPressedThisFrame ||
-                _currentNode == null)
-            {
-                return;
-            }
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) Advance();
+        }
 
-            if (_isTextRevealing)
-            {
-                CompleteTextImmediately();
-                return;
-            }
-
-            if (_currentNode is RuntimeChoiceNode choiceNode &&
-                choiceNode.Choices != null &&
-                choiceNode.Choices.Count > 0)
-            {
-                return;
-            }
-
+        public void Advance()
+        {
+            if (_currentNode is not RuntimeDialogueNode || _isWaiting || _nodeEnteredFrame == Time.frameCount) return;
+            if (_isTextRevealing) { CompleteTextImmediately(); return; }
+            if (_textCompletedFrame == Time.frameCount) return;
+            if (_currentNode is RuntimeChoiceNode choice && choice.Choices?.Count > 0) return;
             AdvanceCurrentNode();
         }
 
         private void AdvanceCurrentNode()
         {
-            if (_currentNode == null)
-            {
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(
-                    _currentNode.NextNodeID))
-            {
-                ShowNode(_currentNode.NextNodeID);
-            }
-            else
-            {
-                EndDialogue();
-            }
+            if (!string.IsNullOrEmpty(_currentNode?.NextNodeID)) ShowNode(_currentNode.NextNodeID);
+            else EndDialogue();
         }
 
         private void ShowNode(string nodeID)
         {
-            if (!_nodeLookup.TryGetValue(
-                    nodeID,
-                    out RuntimeNode node) ||
-                node == null)
-            {
-                Debug.LogWarning(
-                    $"NovelManager could not find node '{nodeID}'.",
-                    this);
-
-                EndDialogue();
-                return;
-            }
-
+            CancelWait();
             StopNodePresentation();
-
-            int automaticNodesProcessed = 0;
-
-            while (node != null)
+            ClearChoiceButtons();
+            int version = ++_flowVersion;
+            int automaticNodes = 0;
+            while (!string.IsNullOrEmpty(nodeID))
             {
+                if (!_nodeLookup.TryGetValue(nodeID, out RuntimeNode node))
+                {
+                    Debug.LogWarning($"NovelManager could not find node '{nodeID}'.", this);
+                    break;
+                }
                 _currentNode = node;
                 _textCompletedFrame = -1;
-                ClearChoiceButtons();
-
-                if (node is RuntimeDialogueNode dialogueNode)
+                if (node is RuntimeDialogueNode dialogue)
                 {
-                    ShowDialogueNode(dialogueNode);
+                    ShowDialogueNode(dialogue);
                     return;
                 }
-
-                if (node is RuntimePlaySoundNode soundNode)
+                if (++automaticNodes > MaxAutomaticNodesPerTraversal)
                 {
-                    ShowPlaySoundNode(soundNode);
+                    Debug.LogError("Too many automatic nodes were chained. There may be a loop in the graph.", this);
+                    break;
                 }
-                else if(node is RuntimeTranslateSpeakerPortraitNode translateSpeakerPortraitNode)
+                HideDialoguePanel();
+                switch (node)
                 {
-                    ShowTranslatePortraitNode(translateSpeakerPortraitNode);
+                    case RuntimeTranslateSpeakerPortraitNode move:
+                        CharacterInfo moving = ShowCharacter(move.Character, move.InstanceID);
+                        if (moving != null)
+                        {
+                            Vector2 target = new Vector2(move.OffsetX, move.OffsetY);
+                            if (move.Relative) target += moving.Position;
+                            moving.MoveTo(target, move.SmoothMovement, move.Duration, move.EaseInOut);
+                            if (move.WaitForCompletion && moving.IsMoving)
+                            {
+                                _isWaiting = true;
+                                _waitCoroutine = StartCoroutine(WaitThenContinue(node, version, 0f, moving));
+                                return;
+                            }
+                        }
+                        break;
+                    case RuntimeShowCharacterNode show:
+                        CharacterInfo shown = ShowCharacter(show.Character, show.InstanceID);
+                        if (shown != null)
+                        {
+                            shown.MoveTo(show.Position, false, 0f);
+                            shown.SetEmotion(show.Emotion);
+                        }
+                        break;
+                    case RuntimeHideCharacterNode hide: Stage.Hide(hide.Character, hide.InstanceID); break;
+                    case RuntimeHideAllCharactersNode _: Stage.HideAll(); break;
+                    case RuntimeSetCharacterEmotionNode emotion:
+                        ShowCharacter(emotion.Character, emotion.InstanceID)?.SetEmotion(emotion.Emotion);
+                        break;
+                    case RuntimeWaitNode wait:
+                        if (wait.Duration > 0f && !float.IsInfinity(wait.Duration))
+                        {
+                            _isWaiting = true;
+                            _waitCoroutine = StartCoroutine(WaitThenContinue(node, version, wait.Duration));
+                            return;
+                        }
+                        break;
+                    case RuntimeDialogueEventNode signal:
+                        OnDialogueEvent?.Invoke(signal.EventName ?? string.Empty);
+                        if (version != _flowVersion || !isActiveAndEnabled) return;
+                        break;
+                    case RuntimePlaySoundNode sound: PlaySound(sound); break;
+                    case RuntimeStopSoundNode _: StopAudio(PlaySoundSource); break;
                 }
-                else
-                {
-                    // All other non-dialogue nodes are instant.
-                    HideDialoguePanel();
-                }
-
-                automaticNodesProcessed++;
-
-                if (automaticNodesProcessed >
-                    MaxAutomaticNodesPerTraversal)
-                {
-                    Debug.LogError(
-                        "Too many automatic nodes were chained. " +
-                        "There may be a loop in the graph.",
-                        this);
-
-                    EndDialogue();
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(
-                        node.NextNodeID))
-                {
-                    EndDialogue();
-                    return;
-                }
-
-                if (!_nodeLookup.TryGetValue(
-                        node.NextNodeID,
-                        out node))
-                {
-                    Debug.LogWarning(
-                        $"NovelManager could not find node " +
-                        $"'{node.NextNodeID}'.",
-                        this);
-
-                    EndDialogue();
-                    return;
-                }
+                nodeID = node.NextNodeID;
             }
-
             EndDialogue();
         }
 
-        private void ShowDialogueNode(
-            RuntimeDialogueNode node)
+        private IEnumerator WaitThenContinue(RuntimeNode node, int version, float seconds, CharacterInfo moving = null)
         {
-            if (DialoguePanel != null)
+            // Yield before continuing so the coroutine handle is assigned before completion.
+            do
             {
-                DialoguePanel.SetActive(true);
-            }
-
-            if (SpeakerNameText != null)
-            {
-                SpeakerNameText.SetText(
-                    node.SpeakerName ?? string.Empty);
-            }
-
-            if (NameBackground != null)
-            {
-                NameBackground.SetActive(
-                    !string.IsNullOrEmpty(
-                        node.SpeakerName));
-            }
-
-            PlayPlaySoundNode(node.PlaySound);
-
-            UpdateSpeakerPortrait(
-                node.PortraitBody,
-                node.PortraitEyes,
-                node.PortraitDetails,
-                node.PortraitMouth);
-
-            StartNodePresentation(node);
-
-            if (BackgroundChoicesPanel != null)
-            {
-                BackgroundChoicesPanel.SetActive(false);
-            }
-
-            if (node is RuntimeChoiceNode choiceNode &&
-                choiceNode.Choices != null &&
-                choiceNode.Choices.Count > 0)
-            {
-                ShowChoices(choiceNode);
-            }
+                yield return null;
+                seconds -= Time.unscaledDeltaTime;
+            } while (seconds > 0f || (moving != null && moving.IsMoving));
+            _waitCoroutine = null;
+            _isWaiting = false;
+            if (version == _flowVersion && _currentNode == node) AdvanceCurrentNode();
         }
 
-        private void ShowPlaySoundNode(
-            RuntimePlaySoundNode node)
+        public CharacterInfo ShowCharacter(NovelCharacter character, string instanceID = "") => Stage.Show(character, instanceID);
+
+        public bool SearchAlreadyCreatedCharacter(NovelCharacter character, string instanceID = "") =>
+            Stage.TryGet(character, instanceID, out _);
+
+        private void ShowDialogueNode(RuntimeDialogueNode node)
         {
-            HideDialoguePanel();
-
-            if (PlaySoundSource == null ||
-                node.ClipSound == null)
+            _nodeEnteredFrame = Time.frameCount;
+            SetPanelVisible(DialoguePanel, true);
+            if (SpeakerNameText != null) SpeakerNameText.SetText(node.SpeakerName ?? string.Empty);
+            if (NameBackground != null) NameBackground.SetActive(!string.IsNullOrEmpty(node.SpeakerName));
+            if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
+            StopAudio(NodeSoundSource);
+            if (NodeSoundSource != null && node.PlaySound != null)
             {
-                return;
+                NodeSoundSource.clip = node.PlaySound;
+                NodeSoundSource.Play();
             }
-
-            PlaySoundSource.Stop();
-            PlaySoundSource.clip = node.ClipSound;
-            PlaySoundSource.loop = node.Loop;
-            PlaySoundSource.volume = node.Volume;
-            PlaySoundSource.priority = node.Priority;
-            PlaySoundSource.pitch = node.Pitch;
-            PlaySoundSource.Play();
+            _speaker = node.NovelCharacter != null ? ShowCharacter(node.NovelCharacter, node.InstanceID) : null;
+            CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
+            _speaker?.BeginDialogue(node);
+            if (DialogueText != null)
+            {
+                DialogueText.SetText(node.DialogueText ?? string.Empty);
+                if (node.ShowTextImmediately || string.IsNullOrEmpty(node.DialogueText))
+                    DialogueText.maxVisibleCharacters = int.MaxValue;
+                else
+                {
+                    _isTextRevealing = true;
+                    _textRevealCoroutine = StartCoroutine(RevealText(node));
+                }
+            }
+            if (!_isTextRevealing) _speaker?.StopSpeaking();
+            if (node is RuntimeChoiceNode choice && choice.Choices?.Count > 0) ShowChoices(choice);
         }
 
-        private void ShowTranslatePortraitNode(
-            RuntimeTranslateSpeakerPortraitNode node)
+        private IEnumerator RevealText(RuntimeDialogueNode node)
         {
-            if( !CharacterPortrait.activeSelf ) return;
-            CharacterPortrait.transform.position = new Vector2(node.OffsetX, node.OffsetY);
+            yield return NovelifyUtilities.ShowTextLetterByLetter(
+                node.DialogueText ?? string.Empty, DialogueText, node.TalkSound, TalkSource,
+                node.PitchMinVariation, node.PitchMaxVariation, node.CharactersPerSecond,
+                letter => _speaker?.RevealLetter(letter));
+            if (_currentNode != node) yield break;
+            _textRevealCoroutine = null;
+            _isTextRevealing = false;
+            _textCompletedFrame = Time.frameCount;
+            _speaker?.StopSpeaking();
+            StopTalkAudio();
         }
 
         private void ShowChoices(RuntimeChoiceNode node)
         {
-            if (BackgroundChoicesPanel != null)
+            if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(true);
+            if (ChoiceButtonPrefab == null || ChoiceButtonContainer == null)
             {
-                BackgroundChoicesPanel.SetActive(true);
-            }
-
-            if (ChoiceButtonPrefab == null ||
-                ChoiceButtonContainer == null)
-            {
-                Debug.LogWarning(
-                    "ChoiceButtonPrefab or " +
-                    "ChoiceButtonContainer is missing.",
-                    this);
-
+                Debug.LogWarning("ChoiceButtonPrefab or ChoiceButtonContainer is missing.", this);
                 return;
             }
-
             foreach (ChoiceData choice in node.Choices)
             {
-                ChoiceData selectedChoice = choice;
-
-                Button button = Instantiate(
-                    ChoiceButtonPrefab,
-                    ChoiceButtonContainer);
-
-                TextMeshProUGUI buttonText =
-                    button.GetComponentInChildren<
-                        TextMeshProUGUI>();
-
-                if (buttonText != null)
-                {
-                    buttonText.text =
-                        selectedChoice.ChoiceText ??
-                        string.Empty;
-                }
-
+                if (choice == null) continue;
+                Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
+                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+                if (label != null) label.SetText(choice.ChoiceText ?? string.Empty);
                 button.onClick.AddListener(() =>
                 {
-                    if (_isTextRevealing)
-                    {
-                        CompleteTextImmediately();
-                        return;
-                    }
-
-                    if (_textCompletedFrame ==
-                        Time.frameCount)
-                    {
-                        return;
-                    }
-
-                    if (!string.IsNullOrEmpty(
-                            selectedChoice.DestinationNodeID))
-                    {
-                        ShowNode(
-                            selectedChoice.DestinationNodeID);
-                    }
-                    else
-                    {
-                        EndDialogue();
-                    }
+                    if (_currentNode != node || _isWaiting) return;
+                    if (_isTextRevealing) { CompleteTextImmediately(); return; }
+                    if (_textCompletedFrame == Time.frameCount) return;
+                    if (!string.IsNullOrEmpty(choice.DestinationNodeID)) ShowNode(choice.DestinationNodeID);
+                    else EndDialogue();
                 });
             }
         }
 
-        private void EndDialogue()
+        private void PlaySound(RuntimePlaySoundNode node)
         {
+            StopAudio(PlaySoundSource);
+            if (PlaySoundSource == null || node.ClipSound == null) return;
+            PlaySoundSource.clip = node.ClipSound;
+            PlaySoundSource.loop = node.Loop;
+            PlaySoundSource.volume = Mathf.Clamp01(node.Volume);
+            PlaySoundSource.priority = Mathf.Clamp(node.Priority, 0, 256);
+            PlaySoundSource.pitch = Mathf.Clamp(node.Pitch, -3f, 3f);
+            PlaySoundSource.Play();
+        }
+
+        public void EndDialogue()
+        {
+            ++_flowVersion;
+            CancelWait();
             StopNodePresentation();
-
-            if (PlaySoundSource != null)
-            {
-                PlaySoundSource.Stop();
-                PlaySoundSource.clip = null;
-                PlaySoundSource.loop = false;
-            }
-
+            StopAudio(PlaySoundSource);
             _currentNode = null;
-
             HideDialoguePanel();
-            UpdateSpeakerPortrait(null, null, null, null);
+            if (HideCharactersOnEnd) _stage?.HideAll();
             ClearChoiceButtons();
+        }
+
+        private void CancelWait()
+        {
+            if (_waitCoroutine != null) StopCoroutine(_waitCoroutine);
+            _waitCoroutine = null;
+            _isWaiting = false;
         }
 
         private void HideDialoguePanel()
         {
-            if (DialoguePanel != null)
-            {
-                DialoguePanel.SetActive(false);
-            }
-
-            if (BackgroundChoicesPanel != null)
-            {
-                BackgroundChoicesPanel.SetActive(false);
-            }
+            SetPanelVisible(DialoguePanel, false);
+            if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
         }
 
-        private void StartNodePresentation(
-            RuntimeDialogueNode node)
+        private static void SetPanelVisible(GameObject panel, bool visible)
         {
-            _hasRevealedCharacter = false;
-
-            if (DialogueText == null)
-            {
-                _isTextRevealing = false;
-                return;
-            }
-
-            string dialogue =
-                node.DialogueText ?? string.Empty;
-
-            if (node.ShowTextImmediately ||
-                dialogue.Length == 0)
-            {
-                DialogueText.maxVisibleCharacters =
-                    int.MaxValue;
-
-                DialogueText.SetText(dialogue);
-                _isTextRevealing = false;
-            }
-            else
-            {
-                DialogueText.SetText(string.Empty);
-                _isTextRevealing = true;
-
-                _textRevealCoroutine =
-                    StartCoroutine(RevealText(node));
-
-                if (node.AnimateMouth &&
-                    Speaker_Mouth != null &&
-                    node.PortraitMouth != null &&
-                    node.PortraitMouthOpen != null)
-                {
-                    _mouthAnimationCoroutine =
-                        StartCoroutine(AnimateMouth(node));
-                }
-            }
-
-            if (node.AnimateBlinking &&
-                Speaker_Eyes != null &&
-                node.PortraitEyes != null &&
-                node.PortraitEyesClosed != null)
-            {
-                _blinkAnimationCoroutine =
-                    StartCoroutine(AnimateBlinking(node));
-            }
-        }
-
-        private IEnumerator RevealText(
-            RuntimeDialogueNode node)
-        {
-            yield return NovelifyUtilities
-                .ShowTextLetterByLetter(
-                    node.DialogueText ?? string.Empty,
-                    DialogueText,
-                    node.TalkSound,
-                    TalkSource,
-                    node.PitchMinVariation,
-                    node.PitchMaxVariation,
-                    node.CharactersPerSecond,
-                    letter =>
-                    {
-                        if (_currentNode == node)
-                        {
-                            _lastRevealedCharacter = letter;
-                            _hasRevealedCharacter = true;
-                        }
-                    });
-
-            if (_currentNode != node)
-            {
-                yield break;
-            }
-
-            _textRevealCoroutine = null;
-            _isTextRevealing = false;
-
-            StopMouthAnimation();
-            StopTalkAudio();
-        }
-
-        private IEnumerator AnimateMouth(
-            RuntimeDialogueNode node)
-        {
-            bool showOpenMouth = false;
-
-            float baseFrameInterval =
-                Mathf.Max(
-                    0.02f,
-                    node.MouthFrameInterval);
-
-            float timingVariation =
-                Mathf.Clamp(
-                    node.MouthTimingVariation,
-                    0f,
-                    0.75f);
-
-            float pauseChance =
-                Mathf.Clamp01(
-                    node.MouthPauseChance);
-
-            float pauseMultiplier =
-                Mathf.Max(
-                    1f,
-                    node.MouthPauseMultiplier);
-
-            while (_currentNode == node &&
-                   _isTextRevealing)
-            {
-                bool isSpeechPause =
-                    _hasRevealedCharacter &&
-                    (char.IsWhiteSpace(
-                        _lastRevealedCharacter) ||
-                     char.IsPunctuation(
-                        _lastRevealedCharacter));
-
-                if (!_hasRevealedCharacter ||
-                    isSpeechPause)
-                {
-                    showOpenMouth = false;
-                }
-                else
-                {
-                    showOpenMouth =
-                        Random.value < 0.62f;
-                }
-
-                Speaker_Mouth.sprite =
-                    showOpenMouth
-                        ? node.PortraitMouthOpen
-                        : node.PortraitMouth;
-
-                float frameInterval =
-                    baseFrameInterval *
-                    Random.Range(
-                        1f - timingVariation,
-                        1f + timingVariation);
-
-                if (isSpeechPause ||
-                    (!showOpenMouth &&
-                     Random.value < pauseChance))
-                {
-                    frameInterval *=
-                        pauseMultiplier *
-                        Random.Range(0.85f, 1.15f);
-                }
-
-                yield return new WaitForSeconds(
-                    Mathf.Max(
-                        0.02f,
-                        frameInterval));
-            }
-
-            if (_currentNode == node &&
-                Speaker_Mouth != null)
-            {
-                Speaker_Mouth.sprite =
-                    node.PortraitMouth;
-            }
-        }
-
-        private IEnumerator AnimateBlinking(
-            RuntimeDialogueNode node)
-        {
-            float minimumInterval =
-                Mathf.Max(
-                    0.1f,
-                    Mathf.Min(
-                        node.BlinkIntervalMin,
-                        node.BlinkIntervalMax));
-
-            float maximumInterval =
-                Mathf.Max(
-                    minimumInterval,
-                    Mathf.Max(
-                        node.BlinkIntervalMin,
-                        node.BlinkIntervalMax));
-
-            float blinkDuration =
-                Mathf.Max(
-                    0.02f,
-                    node.BlinkDuration);
-
-            while (_currentNode == node)
-            {
-                yield return new WaitForSeconds(
-                    Random.Range(
-                        minimumInterval,
-                        maximumInterval));
-
-                if (_currentNode != node)
-                {
-                    yield break;
-                }
-
-                Speaker_Eyes.sprite =
-                    node.PortraitEyesClosed;
-
-                yield return new WaitForSeconds(
-                    blinkDuration);
-
-                if (_currentNode == node)
-                {
-                    Speaker_Eyes.sprite =
-                        node.PortraitEyes;
-                }
-            }
+            if (panel == null) return;
+            // The sample manager is a child of this panel. Deactivating it stops the
+            // story's coroutines and audio through OnDisable, even between nodes.
+            CanvasGroup group = panel.GetComponent<CanvasGroup>();
+            if (group == null) group = panel.AddComponent<CanvasGroup>();
+            group.alpha = visible ? 1f : 0f;
+            group.interactable = visible;
+            group.blocksRaycasts = visible;
+            if (visible && !panel.activeSelf) panel.SetActive(true);
         }
 
         private void CompleteTextImmediately()
         {
-            RuntimeDialogueNode node =
-                _currentNode as RuntimeDialogueNode;
-
-            if (!_isTextRevealing ||
-                node == null ||
-                DialogueText == null)
-            {
-                return;
-            }
-
-            if (_textRevealCoroutine != null)
-            {
-                StopCoroutine(
-                    _textRevealCoroutine);
-
-                _textRevealCoroutine = null;
-            }
-
-            DialogueText.maxVisibleCharacters =
-                int.MaxValue;
-
-            DialogueText.SetText(
-                node.DialogueText ?? string.Empty);
-
+            if (!_isTextRevealing || DialogueText == null) return;
+            if (_textRevealCoroutine != null) StopCoroutine(_textRevealCoroutine);
+            _textRevealCoroutine = null;
+            DialogueText.maxVisibleCharacters = int.MaxValue;
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;
-
-            StopMouthAnimation();
+            _speaker?.StopSpeaking();
             StopTalkAudio();
         }
 
         private void StopNodePresentation()
         {
-            if (_textRevealCoroutine != null)
-            {
-                StopCoroutine(
-                    _textRevealCoroutine);
-
-                _textRevealCoroutine = null;
-            }
-
-            StopMouthAnimation();
-
-            if (_blinkAnimationCoroutine != null)
-            {
-                StopCoroutine(
-                    _blinkAnimationCoroutine);
-
-                _blinkAnimationCoroutine = null;
-            }
-
+            if (_textRevealCoroutine != null) StopCoroutine(_textRevealCoroutine);
+            _textRevealCoroutine = null;
             _isTextRevealing = false;
-
+            _speaker?.StopSpeaking();
+            _speaker = null;
             StopTalkAudio();
-            StopNodeSound();
-        }
-
-        private void PlayPlaySoundNode(AudioClip clip)
-        {
-            if (NodeSoundSource == null)
-            {
-                return;
-            }
-
-            NodeSoundSource.Stop();
-            NodeSoundSource.clip = null;
-            NodeSoundSource.loop = false;
-
-            if (clip == null)
-            {
-                return;
-            }
-
-            NodeSoundSource.clip = clip;
-            NodeSoundSource.Play();
-        }
-
-        private void StopNodeSound()
-        {
-            if (NodeSoundSource == null)
-            {
-                return;
-            }
-
-            NodeSoundSource.Stop();
-            NodeSoundSource.clip = null;
-            NodeSoundSource.loop = false;
-        }
-
-        private void StopMouthAnimation()
-        {
-            if (_mouthAnimationCoroutine != null)
-            {
-                StopCoroutine(
-                    _mouthAnimationCoroutine);
-
-                _mouthAnimationCoroutine = null;
-            }
-
-            RuntimeDialogueNode node =
-                _currentNode as RuntimeDialogueNode;
-
-            if (node != null &&
-                Speaker_Mouth != null)
-            {
-                Speaker_Mouth.sprite =
-                    node.PortraitMouth;
-            }
+            StopAudio(NodeSoundSource);
         }
 
         private void StopTalkAudio()
         {
-            if (TalkSource == null)
-            {
-                return;
-            }
-
+            if (TalkSource == null) return;
             TalkSource.Stop();
             TalkSource.pitch = 1f;
         }
 
+        private static void StopAudio(AudioSource source)
+        {
+            if (source == null) return;
+            source.Stop();
+            source.clip = null;
+            source.loop = false;
+        }
+
         private void ClearChoiceButtons()
         {
-            if (ChoiceButtonContainer == null)
-            {
-                return;
-            }
-
+            if (ChoiceButtonContainer == null) return;
             foreach (Transform child in ChoiceButtonContainer)
             {
+                child.gameObject.SetActive(false);
                 Destroy(child.gameObject);
             }
         }
 
-        private void UpdateSpeakerPortrait(
-            Sprite portraitBody,
-            Sprite portraitEyes,
-            Sprite portraitDetails,
-            Sprite portraitMouth)
+        private void OnDisable()
         {
-            SetPortraitLayer(
-                Speaker_Body,
-                portraitBody);
-
-            SetPortraitLayer(
-                Speaker_Eyes,
-                portraitEyes);
-
-            SetPortraitLayer(
-                Speaker_Details,
-                portraitDetails);
-
-            SetPortraitLayer(
-                Speaker_Mouth,
-                portraitMouth);
+            EndDialogue();
+            _stage?.StopMovement();
         }
 
-        private static void SetPortraitLayer(
-            Image image,
-            Sprite sprite)
+        private void OnDestroy()
         {
-            if (image == null)
-            {
-                return;
-            }
-
-            image.sprite = sprite;
-            image.enabled = sprite != null;
+            if (_ownsContainer && CharacterContainer != null) Destroy(CharacterContainer.gameObject);
         }
     }
 }

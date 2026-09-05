@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Novelify
@@ -14,6 +16,24 @@ namespace Novelify
         Confused,
         Embarrassed,
         Excited
+    }
+
+    [Serializable]
+    public class CharacterExpression
+    {
+        public CharacterEmotion Emotion;
+        [Tooltip("Empty layers inherit the character's default sprites.")]
+        public Sprite Body;
+        public Sprite Eyes;
+        public Sprite EyesClosed;
+        public Sprite Details;
+        public Sprite Mouth;
+        public Sprite MouthOpen;
+    }
+
+    public struct CharacterPortrait
+    {
+        public Sprite Body, Eyes, EyesClosed, Details, Mouth, MouthOpen;
     }
 
     [CreateAssetMenu(
@@ -93,5 +113,22 @@ namespace Novelify
         [Range(-1f, 1f)]
         [Tooltip("Positive values move the portrait up; negative values move it down.")]
         public float PreviewOffsetY;
+
+        [Header("Emotions")]
+        public List<CharacterExpression> Expressions = new List<CharacterExpression>();
+
+        public CharacterPortrait GetPortrait(CharacterEmotion emotion)
+        {
+            CharacterExpression expression = Expressions?.Find(item => item != null && item.Emotion == emotion);
+            return new CharacterPortrait
+            {
+                Body = expression?.Body != null ? expression.Body : PortraitBody,
+                Eyes = expression?.Eyes != null ? expression.Eyes : PortraitEyes,
+                EyesClosed = expression?.EyesClosed != null ? expression.EyesClosed : PortraitEyesClosed,
+                Details = expression?.Details != null ? expression.Details : PortraitFaceDetails,
+                Mouth = expression?.Mouth != null ? expression.Mouth : PortraitMouth,
+                MouthOpen = expression?.MouthOpen != null ? expression.MouthOpen : PortraitMouthOpen
+            };
+        }
     }
 }

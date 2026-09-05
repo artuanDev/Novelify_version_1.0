@@ -27,6 +27,7 @@ namespace Novelify.Editor
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             context.AddOutputPort("out")
+                .WithCapacity(PortCapacity.Single)
                 .WithDisplayName("Begin")
                 .WithTooltip("Connect to the first story node.")
                 .Build();
@@ -51,7 +52,7 @@ namespace Novelify.Editor
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             context.AddInputPort("in").Build();
-            context.AddOutputPort("out").Build();
+            context.AddOutputPort("out").WithCapacity(PortCapacity.Single).Build();
 
             context.AddInputPort<AudioClip>("AudioToPlay").Build();
         }
@@ -68,28 +69,33 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Utilities")]
     [UseWithGraph(typeof(NovelGraph))]
-    public class TranslateSpeakerPortraitNode : Node
+    public class TranslateSpeakerPortraitNode : CharacterActionNode
     {
         public override void OnEnable()
         {
             base.OnEnable();
             NovelNodePresentation.Apply(
                 this,
-                "Story entry",
-                "The first beat in this narrative path.",
-                new Color32(52, 211, 153, 255));
+                "Move character",
+                "Creates the selected character if needed, then moves that instance on the stage.",
+                new Color32(251, 191, 36, 255));
         }
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            context.AddInputPort("in").Build();
-            context.AddOutputPort("out").Build();
+            base.OnDefinePorts(context);
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption<float>("OffsetX").WithTooltip("offset the portrait in the X axis").WithDefaultValue(0.0f).Build();
-            context.AddOption<float>("OffsetY").WithTooltip("offset the portrait in the X axis").WithDefaultValue(0.0f).Build();
+            base.OnDefineOptions(context);
+            context.AddOption<float>("OffsetX").WithTooltip("Target X in canvas units; an offset when Relative is enabled.").WithDefaultValue(0f).Build();
+            context.AddOption<float>("OffsetY").WithTooltip("Target Y in canvas units; an offset when Relative is enabled.").WithDefaultValue(0f).Build();
+            context.AddOption<bool>("Relative").WithTooltip("Move by this offset from the current position.").Build();
+            context.AddOption<bool>("Smooth Movement").WithTooltip("Animate the move over Duration; disable to move instantly.").WithDefaultValue(false).Build();
+            context.AddOption<float>("Duration").WithTooltip("Movement time in seconds. Zero moves instantly.").WithDefaultValue(0.5f).Build();
+            context.AddOption<bool>("Ease In Out").WithTooltip("Accelerate and decelerate smoothly; disable for constant speed.").WithDefaultValue(true).Build();
+            context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for this move before continuing the story. Disable to move during dialogue.").WithDefaultValue(true).Build();
         }
     }
 
@@ -148,6 +154,7 @@ namespace Novelify.Editor
                 .Build();
 
             context.AddOutputPort("out")
+                .WithCapacity(PortCapacity.Single)
                 .WithDisplayName("Continue")
                 .Build();
         }
@@ -211,6 +218,8 @@ namespace Novelify.Editor
                 .WithDefaultValue(CharacterEmotion.Neutral)
                 .Build();
 
+            CharacterActionNode.DefineInstanceOption(context);
+
             context.AddOption("Animate Mouth", typeof(bool))
                 .WithDefaultValue(true)
                 .Build();
@@ -259,12 +268,13 @@ namespace Novelify.Editor
             for (int i = 0; i < portCount; i++)
             {
                 context.AddInputPort<string>($"Choice Text {i}").Build();
-                context.AddOutputPort($"Choice {i}").Build();
+                context.AddOutputPort($"Choice {i}").WithCapacity(PortCapacity.Single).Build();
             }
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
+            CharacterActionNode.DefineInstanceOption(context);
             context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
                 .WithDefaultValue(new SpeakerPortraitOption())
                 .Build();

@@ -34,6 +34,10 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Start, End, Simple Dialogue, Dialogue and Choice nodes.
 - Branching conversations with dynamically generated choice buttons.
 - Reusable `NovelCharacter` ScriptableObjects.
+- Multiple characters on a dedicated stage, with optional instance IDs for additional copies.
+- Character-specific Translate nodes with optional smooth motion, duration, easing and parallel movement.
+- Show/Hide Character, Hide All Characters, Set Character Emotion, Wait, Dialogue Event and Stop Sound nodes.
+- A custom character creator with layered emotion, blinking and talking previews.
 - Layered 2D portraits using body, eyes, facial details and mouth sprites.
 - Optional blinking and mouth animation while text is revealed.
 - Typewriter-style dialogue reveal with configurable characters-per-second speed.
@@ -137,6 +141,45 @@ Assign the portrait layers and optional audio:
 
 The character asset also contains timing controls for blinking, mouth animation, voice pitch variation and graph preview framing.
 
+Open **Window > Novelify > Character Creator** to create, duplicate or edit a character with a live layered preview. Select a preview emotion and enable talking/blinking to audition the sprites and timing. Under **Emotions**, add one entry per emotion and assign its alternate layers; empty layers inherit the default character sprites. Dialogue, Choice and Set Character Emotion nodes use these expressions at runtime. Asset edits support Unity's normal Undo; use **Save** to save the selected character.
+
+### Multiple Characters and Movement
+
+Assign **Portrait Prefab** on `NovelManager`. Its `CharacterInfo` component exposes Body, Eyes, Details and Mouth image references. The supplied prefab's named layers are detected automatically. Empty sprite layers are hidden and portrait images do not intercept clicks.
+
+Characters have no fixed slot limit. Each character asset gets its own default instance, even when two assets share a speaker name. To show additional copies of one asset, use different **Instance ID** values. Use the same character asset and ID in Dialogue, Choice and character utility nodes to address the same copy; a blank ID always means the default copy. Character output wires pass the asset, so set the matching Instance ID on each node when targeting a named copy.
+
+Use **Show Character** to place a character before their first line, or connect a character to **Translate Speaker Portrait > Character**. Translate creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
+
+- **OffsetX / OffsetY:** target position in canvas units relative to the portrait's anchors (centered in the supplied prefab).
+- **Relative:** interpret X/Y as an offset from the character's current position.
+- **Smooth Movement:** toggle animated movement. Disabled moves instantly.
+- **Duration:** movement time in real-time seconds. Zero moves instantly.
+- **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
+- **Wait For Completion:** pause story flow until arrival. Disable to continue to dialogue or start other characters moving in parallel.
+
+For example: `Start → Show Character (Hoki, X=-300) → Translate (Daisy, X=300, Smooth Movement=true) → Dialogue → End`. Give characters different positions to keep their portraits from overlapping. A new move on the same instance replaces its previous move from its current position.
+
+**Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
+
+### Utility Nodes
+
+| Node | Behavior |
+| --- | --- |
+| Show Character | Creates/reveals one instance and sets its position and emotion. |
+| Hide Character | Hides one instance without deleting it; showing it again reuses it. |
+| Hide All Characters | Hides the entire stage. |
+| Set Character Emotion | Applies the selected expression, creating the character if needed. |
+| Wait | Pauses flow for real-time seconds; dialogue clicks cannot skip it. |
+| Dialogue Event | Sends Event Name to `NovelManager.OnDialogueEvent`, then continues. Connect listeners in the manager inspector. |
+| Stop Sound | Stops the audio channel used by Play Sound nodes. |
+
+Connect the **Enter/Continue** flow ports to execute these nodes. Character data wires select the target and do not execute nodes on their own. Place a Dialogue, Choice or Wait after automatic nodes to hold the scene before End. Existing Translate nodes need their new Character input assigned; their X/Y fields now use canvas coordinates instead of world coordinates.
+
+Each Continue output has one story destination: connect `Dialogue → Translate → Dialogue` in sequence. Turn off Translate's **Wait For Completion** to keep moving during the following line. Use Choice outputs for alternative story paths.
+
+The dialogue panel is hidden with a CanvasGroup, keeping its GameObject active. This allows the manager and audio sources to live inside the panel without being disabled between nodes. Play Sound continues across dialogue, waits and movement until Stop Sound or the story ends.
+
 ## Rich Text and Text Effects
 
 Dialogue text can be formatted from the custom inspector. Select text and use the toolbar to apply:
@@ -156,7 +199,7 @@ Add a `NovelManager` component to a GameObject and assign:
 - The imported `RuntimeGraph` from your `.novelgraph` asset.
 - A TextMesh Pro object for `DialogueText`.
 - A TextMesh Pro object for `SpeakerNameText`.
-- The portrait `Image` components for body, eyes, details and mouth.
+- A **Portrait Prefab** with `CharacterInfo` and layered portrait Images, plus **Canvas Dialogue** or an explicit **Character Container**.
 - A dialogue panel and a choices panel.
 - A `Button` prefab and a container transform for generated choices.
 - Optional audio sources for talking sounds and node sounds.
@@ -198,14 +241,18 @@ Assets/Novelify/
 ## Roadmap
 
 - [ ] Package the framework for easier reuse in other Unity projects.
-- [ ] Add more runtime flow controls and dialogue events.
-- [ ] Add custom character creator to preview emotions and examples and make tweaks to them.
+- [x] Add initial runtime flow controls and dialogue events (Wait and Dialogue Event nodes).
+- [x] Add custom character creator to preview emotions and examples and make tweaks to them.
 - [ ] Add localization support.
 - [ ] Add save, load and conversation history support.
-- [ ] Add utility nodes that eases scenes with more than one character.
+- [x] Add utility nodes that ease scenes with more than one character.
 - [ ] Expand the sample content and documentation.
 
 ## Contributing
+
+### Tests
+
+Open Unity's **Window > General > Test Runner**. Run `Novelify.Editor.Tests` in Edit Mode and `Novelify.Runtime.Tests` in Play Mode. These cover independent character instances, expression fallback, graph import and character connections, smooth and simultaneous movement, wait cancellation, event callbacks and stage visibility.
 
 Suggestions, bug reports and improvements are welcome. Please open an issue with reproduction steps and the Unity version you are using. For code changes, create a feature branch and submit a pull request.
 
