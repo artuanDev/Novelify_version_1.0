@@ -12,16 +12,22 @@ namespace Novelify
     {
         public RuntimeNovelGraph RuntimeGraph;
 
-        [Header("Sound settings")]
+        [Header("Sound Settings")]
         public AudioSource TalkSource;
-        [Tooltip("Plays the optional sound attached to a node. A dedicated source is created automatically when this is empty.")]
+
+        [Tooltip("Sound attached directly to dialogue nodes.")]
         [FormerlySerializedAs("PlaySound")]
         public AudioSource NodeSoundSource;
 
+        [Tooltip("Sound source used by RuntimePlaySoundNode.")]
+        public AudioSource PlaySoundSource;
+
         [Header("UI Components")]
         public GameObject DialoguePanel;
+        public GameObject CharacterPortrait;
         public GameObject BackgroundChoicesPanel;
         public GameObject NameBackground;
+
         public TextMeshProUGUI SpeakerNameText;
         public Image Speaker_Body;
         public Image Speaker_Eyes;
@@ -33,15 +39,21 @@ namespace Novelify
         public Button ChoiceButtonPrefab;
         public Transform ChoiceButtonContainer;
 
-        private Dictionary<string, RuntimeDialogueNode> _nodeLookup = new Dictionary<string, RuntimeDialogueNode>();
-        private RuntimeDialogueNode _currentNode;
+        private readonly Dictionary<string, RuntimeNode> _nodeLookup =
+            new Dictionary<string, RuntimeNode>();
+
+        private RuntimeNode _currentNode;
+
         private Coroutine _textRevealCoroutine;
         private Coroutine _mouthAnimationCoroutine;
         private Coroutine _blinkAnimationCoroutine;
+
         private bool _isTextRevealing;
         private int _textCompletedFrame = -1;
         private char _lastRevealedCharacter;
         private bool _hasRevealedCharacter;
+
+        private const int MaxAutomaticNodesPerTraversal = 1000;
 
         private void Awake()
         {
@@ -49,6 +61,7 @@ namespace Novelify
             {
                 DialogueText.richText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
+
                 if (DialogueText.GetComponent<NovelTextEffects>() == null)
                 {
                     DialogueText.gameObject.AddComponent<NovelTextEffects>();
@@ -57,19 +70,48 @@ namespace Novelify
 
             if (NodeSoundSource == null)
             {
-                NodeSoundSource = gameObject.AddComponent<AudioSource>();
+                NodeSoundSource =
+                    gameObject.AddComponent<AudioSource>();
+
                 NodeSoundSource.playOnAwake = false;
+            }
+
+            if (PlaySoundSource == null)
+            {
+                PlaySoundSource =
+                    gameObject.AddComponent<AudioSource>();
+
+                PlaySoundSource.playOnAwake = false;
             }
         }
 
         private void Start()
         {
-            foreach (var node in RuntimeGraph.AllNodes)
+            if (RuntimeGraph == null)
             {
-                _nodeLookup[node.NodeID] = node;
-            }  
+                Debug.LogError(
+                    "NovelManager has no RuntimeNovelGraph assigned.",
+                    this);
 
-            if(!string.IsNullOrEmpty(RuntimeGraph.EntryNodeID))
+                EndDialogue();
+                return;
+            }
+
+            _nodeLookup.Clear();
+
+            foreach (RuntimeNode node in RuntimeGraph.AllNodes)
+            {
+                if (node == null ||
+                    string.IsNullOrEmpty(node.NodeID))
+                {
+                    continue;
+                }
+
+                _nodeLookup[node.NodeID] = node;
+            }
+
+            if (!string.IsNullOrEmpty(
+                    RuntimeGraph.EntryNodeID))
             {
                 ShowNode(RuntimeGraph.EntryNodeID);
             }
@@ -94,14 +136,25 @@ namespace Novelify
                 return;
             }
 
-            // Choice nodes only advance through their buttons. A click anywhere still
-            // completes their unfinished text, but it must not select a choice as well.
-            if (_currentNode.Choices.Count > 0)
+            if (_currentNode is RuntimeChoiceNode choiceNode &&
+                choiceNode.Choices != null &&
+                choiceNode.Choices.Count > 0)
             {
                 return;
             }
 
-            if (!string.IsNullOrEmpty(_currentNode.NextNodeID))
+            AdvanceCurrentNode();
+        }
+
+        private void AdvanceCurrentNode()
+        {
+            if (_currentNode == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(
+                    _currentNode.NextNodeID))
             {
                 ShowNode(_currentNode.NextNodeID);
             }
@@ -113,97 +166,274 @@ namespace Novelify
 
         private void ShowNode(string nodeID)
         {
-            if(!_nodeLookup.ContainsKey(nodeID))
+            if (!_nodeLookup.TryGetValue(
+                    nodeID,
+                    out RuntimeNode node) ||
+                node == null)
             {
+                Debug.LogWarning(
+                    $"NovelManager could not find node '{nodeID}'.",
+                    this);
+
                 EndDialogue();
                 return;
             }
 
             StopNodePresentation();
 
-            _currentNode = _nodeLookup[nodeID];
-            DialoguePanel.SetActive(true);
-            SpeakerNameText.SetText(_currentNode.SpeakerName);
+            int automaticNodesProcessed = 0;
 
-            PlayNodeSound(_currentNode.PlaySound);
-
-            NameBackground.SetActive(_currentNode.SpeakerName != "");
-
-            UpdateSpeakerPortrait(
-                _currentNode.PortraitBody,
-                _currentNode.PortraitEyes,
-                _currentNode.PortraitDetails,
-                _currentNode.PortraitMouth
-                );
-
-            StartNodePresentation(_currentNode);
-
-            BackgroundChoicesPanel.SetActive(false);
-
-            foreach (Transform child in ChoiceButtonContainer)
+            while (node != null)
             {
-                Destroy(child.gameObject);
+                _currentNode = node;
+                _textCompletedFrame = -1;
+                ClearChoiceButtons();
+
+                if (node is RuntimeDialogueNode dialogueNode)
+                {
+                    ShowDialogueNode(dialogueNode);
+                    return;
+                }
+
+                if (node is RuntimePlaySoundNode soundNode)
+                {
+                    ShowPlaySoundNode(soundNode);
+                }
+                else if(node is RuntimeTranslateSpeakerPortraitNode translateSpeakerPortraitNode)
+                {
+                    ShowTranslatePortraitNode(translateSpeakerPortraitNode);
+                }
+                else
+                {
+                    // All other non-dialogue nodes are instant.
+                    HideDialoguePanel();
+                }
+
+                automaticNodesProcessed++;
+
+                if (automaticNodesProcessed >
+                    MaxAutomaticNodesPerTraversal)
+                {
+                    Debug.LogError(
+                        "Too many automatic nodes were chained. " +
+                        "There may be a loop in the graph.",
+                        this);
+
+                    EndDialogue();
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(
+                        node.NextNodeID))
+                {
+                    EndDialogue();
+                    return;
+                }
+
+                if (!_nodeLookup.TryGetValue(
+                        node.NextNodeID,
+                        out node))
+                {
+                    Debug.LogWarning(
+                        $"NovelManager could not find node " +
+                        $"'{node.NextNodeID}'.",
+                        this);
+
+                    EndDialogue();
+                    return;
+                }
             }
 
-            if(_currentNode.Choices.Count > 0)
+            EndDialogue();
+        }
+
+        private void ShowDialogueNode(
+            RuntimeDialogueNode node)
+        {
+            if (DialoguePanel != null)
+            {
+                DialoguePanel.SetActive(true);
+            }
+
+            if (SpeakerNameText != null)
+            {
+                SpeakerNameText.SetText(
+                    node.SpeakerName ?? string.Empty);
+            }
+
+            if (NameBackground != null)
+            {
+                NameBackground.SetActive(
+                    !string.IsNullOrEmpty(
+                        node.SpeakerName));
+            }
+
+            PlayPlaySoundNode(node.PlaySound);
+
+            UpdateSpeakerPortrait(
+                node.PortraitBody,
+                node.PortraitEyes,
+                node.PortraitDetails,
+                node.PortraitMouth);
+
+            StartNodePresentation(node);
+
+            if (BackgroundChoicesPanel != null)
+            {
+                BackgroundChoicesPanel.SetActive(false);
+            }
+
+            if (node is RuntimeChoiceNode choiceNode &&
+                choiceNode.Choices != null &&
+                choiceNode.Choices.Count > 0)
+            {
+                ShowChoices(choiceNode);
+            }
+        }
+
+        private void ShowPlaySoundNode(
+            RuntimePlaySoundNode node)
+        {
+            HideDialoguePanel();
+
+            if (PlaySoundSource == null ||
+                node.ClipSound == null)
+            {
+                return;
+            }
+
+            PlaySoundSource.Stop();
+            PlaySoundSource.clip = node.ClipSound;
+            PlaySoundSource.loop = node.Loop;
+            PlaySoundSource.volume = node.Volume;
+            PlaySoundSource.priority = node.Priority;
+            PlaySoundSource.pitch = node.Pitch;
+            PlaySoundSource.Play();
+        }
+
+        private void ShowTranslatePortraitNode(
+            RuntimeTranslateSpeakerPortraitNode node)
+        {
+            if( !CharacterPortrait.activeSelf ) return;
+            CharacterPortrait.transform.position = new Vector2(node.OffsetX, node.OffsetY);
+        }
+
+        private void ShowChoices(RuntimeChoiceNode node)
+        {
+            if (BackgroundChoicesPanel != null)
             {
                 BackgroundChoicesPanel.SetActive(true);
-                foreach(var choice in _currentNode.Choices)
+            }
+
+            if (ChoiceButtonPrefab == null ||
+                ChoiceButtonContainer == null)
+            {
+                Debug.LogWarning(
+                    "ChoiceButtonPrefab or " +
+                    "ChoiceButtonContainer is missing.",
+                    this);
+
+                return;
+            }
+
+            foreach (ChoiceData choice in node.Choices)
+            {
+                ChoiceData selectedChoice = choice;
+
+                Button button = Instantiate(
+                    ChoiceButtonPrefab,
+                    ChoiceButtonContainer);
+
+                TextMeshProUGUI buttonText =
+                    button.GetComponentInChildren<
+                        TextMeshProUGUI>();
+
+                if (buttonText != null)
                 {
-                    Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
-
-                    TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
-                    if(buttonText != null)
-                    {
-                        buttonText.text = choice.ChoiceText;
-                    }
-
-                    if(button != null)
-                    {
-                        button.onClick.AddListener(() =>
-                        {
-                            if (_isTextRevealing || _textCompletedFrame == Time.frameCount)
-                            {
-                                CompleteTextImmediately();
-                                return;
-                            }
-
-                            if (!string.IsNullOrEmpty(choice.DestinationNodeID))
-                            {
-                                ShowNode(choice.DestinationNodeID);
-                            }
-                            else
-                            {
-                                EndDialogue();
-                            }
-                        });
-                    }
+                    buttonText.text =
+                        selectedChoice.ChoiceText ??
+                        string.Empty;
                 }
+
+                button.onClick.AddListener(() =>
+                {
+                    if (_isTextRevealing)
+                    {
+                        CompleteTextImmediately();
+                        return;
+                    }
+
+                    if (_textCompletedFrame ==
+                        Time.frameCount)
+                    {
+                        return;
+                    }
+
+                    if (!string.IsNullOrEmpty(
+                            selectedChoice.DestinationNodeID))
+                    {
+                        ShowNode(
+                            selectedChoice.DestinationNodeID);
+                    }
+                    else
+                    {
+                        EndDialogue();
+                    }
+                });
             }
         }
 
         private void EndDialogue()
         {
             StopNodePresentation();
-            DialoguePanel.SetActive(false);
+
+            if (PlaySoundSource != null)
+            {
+                PlaySoundSource.Stop();
+                PlaySoundSource.clip = null;
+                PlaySoundSource.loop = false;
+            }
+
             _currentNode = null;
 
+            HideDialoguePanel();
             UpdateSpeakerPortrait(null, null, null, null);
+            ClearChoiceButtons();
+        }
 
-            foreach (Transform child in ChoiceButtonContainer)
+        private void HideDialoguePanel()
+        {
+            if (DialoguePanel != null)
             {
-                Destroy(child.gameObject);
+                DialoguePanel.SetActive(false);
+            }
+
+            if (BackgroundChoicesPanel != null)
+            {
+                BackgroundChoicesPanel.SetActive(false);
             }
         }
 
-        private void StartNodePresentation(RuntimeDialogueNode node)
+        private void StartNodePresentation(
+            RuntimeDialogueNode node)
         {
-            string dialogue = node.DialogueText ?? string.Empty;
             _hasRevealedCharacter = false;
 
-            if (node.ShowTextImmediately || dialogue.Length == 0)
+            if (DialogueText == null)
             {
-                DialogueText.maxVisibleCharacters = int.MaxValue;
+                _isTextRevealing = false;
+                return;
+            }
+
+            string dialogue =
+                node.DialogueText ?? string.Empty;
+
+            if (node.ShowTextImmediately ||
+                dialogue.Length == 0)
+            {
+                DialogueText.maxVisibleCharacters =
+                    int.MaxValue;
+
                 DialogueText.SetText(dialogue);
                 _isTextRevealing = false;
             }
@@ -211,14 +441,17 @@ namespace Novelify
             {
                 DialogueText.SetText(string.Empty);
                 _isTextRevealing = true;
-                _textRevealCoroutine = StartCoroutine(RevealText(node));
+
+                _textRevealCoroutine =
+                    StartCoroutine(RevealText(node));
 
                 if (node.AnimateMouth &&
                     Speaker_Mouth != null &&
                     node.PortraitMouth != null &&
                     node.PortraitMouthOpen != null)
                 {
-                    _mouthAnimationCoroutine = StartCoroutine(AnimateMouth(node));
+                    _mouthAnimationCoroutine =
+                        StartCoroutine(AnimateMouth(node));
                 }
             }
 
@@ -227,28 +460,31 @@ namespace Novelify
                 node.PortraitEyes != null &&
                 node.PortraitEyesClosed != null)
             {
-                _blinkAnimationCoroutine = StartCoroutine(AnimateBlinking(node));
+                _blinkAnimationCoroutine =
+                    StartCoroutine(AnimateBlinking(node));
             }
         }
 
-        private IEnumerator RevealText(RuntimeDialogueNode node)
+        private IEnumerator RevealText(
+            RuntimeDialogueNode node)
         {
-            yield return NovelifyUtilities.ShowTextLetterByLetter(
-                node.DialogueText,
-                DialogueText,
-                node.TalkSound,
-                TalkSource,
-                node.PitchMinVariation,
-                node.PitchMaxVariation,
-                node.CharactersPerSecond,
-                letter =>
-                {
-                    if (_currentNode == node)
+            yield return NovelifyUtilities
+                .ShowTextLetterByLetter(
+                    node.DialogueText ?? string.Empty,
+                    DialogueText,
+                    node.TalkSound,
+                    TalkSource,
+                    node.PitchMinVariation,
+                    node.PitchMaxVariation,
+                    node.CharactersPerSecond,
+                    letter =>
                     {
-                        _lastRevealedCharacter = letter;
-                        _hasRevealedCharacter = true;
-                    }
-                });
+                        if (_currentNode == node)
+                        {
+                            _lastRevealedCharacter = letter;
+                            _hasRevealedCharacter = true;
+                        }
+                    });
 
             if (_currentNode != node)
             {
@@ -257,101 +493,168 @@ namespace Novelify
 
             _textRevealCoroutine = null;
             _isTextRevealing = false;
+
             StopMouthAnimation();
             StopTalkAudio();
         }
 
-        private IEnumerator AnimateMouth(RuntimeDialogueNode node)
+        private IEnumerator AnimateMouth(
+            RuntimeDialogueNode node)
         {
             bool showOpenMouth = false;
-            float baseFrameInterval = Mathf.Max(0.02f, node.MouthFrameInterval);
-            float timingVariation = Mathf.Clamp(node.MouthTimingVariation, 0f, 0.75f);
-            float pauseChance = Mathf.Clamp01(node.MouthPauseChance);
-            float pauseMultiplier = Mathf.Max(1f, node.MouthPauseMultiplier);
 
-            while (_currentNode == node && _isTextRevealing)
+            float baseFrameInterval =
+                Mathf.Max(
+                    0.02f,
+                    node.MouthFrameInterval);
+
+            float timingVariation =
+                Mathf.Clamp(
+                    node.MouthTimingVariation,
+                    0f,
+                    0.75f);
+
+            float pauseChance =
+                Mathf.Clamp01(
+                    node.MouthPauseChance);
+
+            float pauseMultiplier =
+                Mathf.Max(
+                    1f,
+                    node.MouthPauseMultiplier);
+
+            while (_currentNode == node &&
+                   _isTextRevealing)
             {
-                bool isSpeechPause = _hasRevealedCharacter &&
-                    (char.IsWhiteSpace(_lastRevealedCharacter) ||
-                     char.IsPunctuation(_lastRevealedCharacter));
+                bool isSpeechPause =
+                    _hasRevealedCharacter &&
+                    (char.IsWhiteSpace(
+                        _lastRevealedCharacter) ||
+                     char.IsPunctuation(
+                        _lastRevealedCharacter));
 
-                if (!_hasRevealedCharacter || isSpeechPause)
+                if (!_hasRevealedCharacter ||
+                    isSpeechPause)
                 {
                     showOpenMouth = false;
                 }
                 else
                 {
-                    // Choosing a state instead of strictly alternating lets the mouth
-                    // naturally hold a pose for an extra beat from time to time.
-                    showOpenMouth = Random.value < 0.62f;
+                    showOpenMouth =
+                        Random.value < 0.62f;
                 }
 
-                Speaker_Mouth.sprite = showOpenMouth
-                    ? node.PortraitMouthOpen
-                    : node.PortraitMouth;
+                Speaker_Mouth.sprite =
+                    showOpenMouth
+                        ? node.PortraitMouthOpen
+                        : node.PortraitMouth;
 
-                float frameInterval = baseFrameInterval * Random.Range(
-                    1f - timingVariation,
-                    1f + timingVariation);
+                float frameInterval =
+                    baseFrameInterval *
+                    Random.Range(
+                        1f - timingVariation,
+                        1f + timingVariation);
 
-                if (isSpeechPause || (!showOpenMouth && Random.value < pauseChance))
+                if (isSpeechPause ||
+                    (!showOpenMouth &&
+                     Random.value < pauseChance))
                 {
-                    frameInterval *= pauseMultiplier * Random.Range(0.85f, 1.15f);
+                    frameInterval *=
+                        pauseMultiplier *
+                        Random.Range(0.85f, 1.15f);
                 }
 
-                yield return new WaitForSeconds(Mathf.Max(0.02f, frameInterval));
+                yield return new WaitForSeconds(
+                    Mathf.Max(
+                        0.02f,
+                        frameInterval));
             }
 
-            if (_currentNode == node)
+            if (_currentNode == node &&
+                Speaker_Mouth != null)
             {
-                Speaker_Mouth.sprite = node.PortraitMouth;
+                Speaker_Mouth.sprite =
+                    node.PortraitMouth;
             }
         }
 
-        private IEnumerator AnimateBlinking(RuntimeDialogueNode node)
+        private IEnumerator AnimateBlinking(
+            RuntimeDialogueNode node)
         {
-            float minimumInterval = Mathf.Max(0.1f, Mathf.Min(
-                node.BlinkIntervalMin, node.BlinkIntervalMax));
-            float maximumInterval = Mathf.Max(minimumInterval, Mathf.Max(
-                node.BlinkIntervalMin, node.BlinkIntervalMax));
-            float blinkDuration = Mathf.Max(0.02f, node.BlinkDuration);
+            float minimumInterval =
+                Mathf.Max(
+                    0.1f,
+                    Mathf.Min(
+                        node.BlinkIntervalMin,
+                        node.BlinkIntervalMax));
+
+            float maximumInterval =
+                Mathf.Max(
+                    minimumInterval,
+                    Mathf.Max(
+                        node.BlinkIntervalMin,
+                        node.BlinkIntervalMax));
+
+            float blinkDuration =
+                Mathf.Max(
+                    0.02f,
+                    node.BlinkDuration);
 
             while (_currentNode == node)
             {
-                yield return new WaitForSeconds(Random.Range(minimumInterval, maximumInterval));
+                yield return new WaitForSeconds(
+                    Random.Range(
+                        minimumInterval,
+                        maximumInterval));
 
                 if (_currentNode != node)
                 {
                     yield break;
                 }
 
-                Speaker_Eyes.sprite = node.PortraitEyesClosed;
-                yield return new WaitForSeconds(blinkDuration);
+                Speaker_Eyes.sprite =
+                    node.PortraitEyesClosed;
+
+                yield return new WaitForSeconds(
+                    blinkDuration);
 
                 if (_currentNode == node)
                 {
-                    Speaker_Eyes.sprite = node.PortraitEyes;
+                    Speaker_Eyes.sprite =
+                        node.PortraitEyes;
                 }
             }
         }
 
         private void CompleteTextImmediately()
         {
-            if (!_isTextRevealing || _currentNode == null)
+            RuntimeDialogueNode node =
+                _currentNode as RuntimeDialogueNode;
+
+            if (!_isTextRevealing ||
+                node == null ||
+                DialogueText == null)
             {
                 return;
             }
 
             if (_textRevealCoroutine != null)
             {
-                StopCoroutine(_textRevealCoroutine);
+                StopCoroutine(
+                    _textRevealCoroutine);
+
                 _textRevealCoroutine = null;
             }
 
-            DialogueText.maxVisibleCharacters = int.MaxValue;
-            DialogueText.SetText(_currentNode.DialogueText ?? string.Empty);
+            DialogueText.maxVisibleCharacters =
+                int.MaxValue;
+
+            DialogueText.SetText(
+                node.DialogueText ?? string.Empty);
+
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;
+
             StopMouthAnimation();
             StopTalkAudio();
         }
@@ -360,7 +663,9 @@ namespace Novelify
         {
             if (_textRevealCoroutine != null)
             {
-                StopCoroutine(_textRevealCoroutine);
+                StopCoroutine(
+                    _textRevealCoroutine);
+
                 _textRevealCoroutine = null;
             }
 
@@ -368,23 +673,34 @@ namespace Novelify
 
             if (_blinkAnimationCoroutine != null)
             {
-                StopCoroutine(_blinkAnimationCoroutine);
+                StopCoroutine(
+                    _blinkAnimationCoroutine);
+
                 _blinkAnimationCoroutine = null;
             }
 
             _isTextRevealing = false;
+
             StopTalkAudio();
             StopNodeSound();
         }
 
-        private void PlayNodeSound(AudioClip clip)
+        private void PlayPlaySoundNode(AudioClip clip)
         {
-            if (clip == null || NodeSoundSource == null)
+            if (NodeSoundSource == null)
             {
                 return;
             }
 
             NodeSoundSource.Stop();
+            NodeSoundSource.clip = null;
+            NodeSoundSource.loop = false;
+
+            if (clip == null)
+            {
+                return;
+            }
+
             NodeSoundSource.clip = clip;
             NodeSoundSource.Play();
         }
@@ -398,19 +714,27 @@ namespace Novelify
 
             NodeSoundSource.Stop();
             NodeSoundSource.clip = null;
+            NodeSoundSource.loop = false;
         }
 
         private void StopMouthAnimation()
         {
             if (_mouthAnimationCoroutine != null)
             {
-                StopCoroutine(_mouthAnimationCoroutine);
+                StopCoroutine(
+                    _mouthAnimationCoroutine);
+
                 _mouthAnimationCoroutine = null;
             }
 
-            if (_currentNode != null && Speaker_Mouth != null)
+            RuntimeDialogueNode node =
+                _currentNode as RuntimeDialogueNode;
+
+            if (node != null &&
+                Speaker_Mouth != null)
             {
-                Speaker_Mouth.sprite = _currentNode.PortraitMouth;
+                Speaker_Mouth.sprite =
+                    node.PortraitMouth;
             }
         }
 
@@ -425,16 +749,45 @@ namespace Novelify
             TalkSource.pitch = 1f;
         }
 
-        private void UpdateSpeakerPortrait(
-            Sprite portrait_body, Sprite portrait_eyes, Sprite portrait_details, Sprite portrait_mouth)
+        private void ClearChoiceButtons()
         {
-            SetPortraitLayer(Speaker_Body, portrait_body);
-            SetPortraitLayer(Speaker_Eyes, portrait_eyes);
-            SetPortraitLayer(Speaker_Details, portrait_details);
-            SetPortraitLayer(Speaker_Mouth, portrait_mouth);
+            if (ChoiceButtonContainer == null)
+            {
+                return;
+            }
+
+            foreach (Transform child in ChoiceButtonContainer)
+            {
+                Destroy(child.gameObject);
+            }
         }
 
-        private static void SetPortraitLayer(Image image, Sprite sprite)
+        private void UpdateSpeakerPortrait(
+            Sprite portraitBody,
+            Sprite portraitEyes,
+            Sprite portraitDetails,
+            Sprite portraitMouth)
+        {
+            SetPortraitLayer(
+                Speaker_Body,
+                portraitBody);
+
+            SetPortraitLayer(
+                Speaker_Eyes,
+                portraitEyes);
+
+            SetPortraitLayer(
+                Speaker_Details,
+                portraitDetails);
+
+            SetPortraitLayer(
+                Speaker_Mouth,
+                portraitMouth);
+        }
+
+        private static void SetPortraitLayer(
+            Image image,
+            Sprite sprite)
         {
             if (image == null)
             {

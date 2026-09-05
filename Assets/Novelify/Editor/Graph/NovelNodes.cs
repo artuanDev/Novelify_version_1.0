@@ -34,6 +34,66 @@ namespace Novelify.Editor
     }
 
     [Serializable]
+    [Node("Novelify/Utilities")]
+    [UseWithGraph(typeof(NovelGraph))]
+    public class PlaySoundNode : Node
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Story entry",
+                "The first beat in this narrative path.",
+                new Color32(52, 211, 153, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort("in").Build();
+            context.AddOutputPort("out").Build();
+
+            context.AddInputPort<AudioClip>("AudioToPlay").Build();
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            context.AddOption<bool>("Loop").Build();
+            context.AddOption<float>("Volume").WithTooltip("From 0 to 1").WithDefaultValue(1.0f).Build();
+            context.AddOption<int>("Priority").WithTooltip("From 0 to 256").WithDefaultValue(128).Build();
+            context.AddOption<float>("Pitch").WithTooltip("From -3 to 3").WithDefaultValue(1.0f).Build();
+        }
+    }
+
+    [Serializable]
+    [Node("Novelify/Utilities")]
+    [UseWithGraph(typeof(NovelGraph))]
+    public class TranslateSpeakerPortraitNode : Node
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Story entry",
+                "The first beat in this narrative path.",
+                new Color32(52, 211, 153, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort("in").Build();
+            context.AddOutputPort("out").Build();
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            context.AddOption<float>("OffsetX").WithTooltip("offset the portrait in the X axis").WithDefaultValue(0.0f).Build();
+            context.AddOption<float>("OffsetY").WithTooltip("offset the portrait in the X axis").WithDefaultValue(0.0f).Build();
+        }
+    }
+
+    [Serializable]
     [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
