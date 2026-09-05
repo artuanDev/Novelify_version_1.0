@@ -1342,6 +1342,7 @@ MonoBehaviour:
   NodeSoundSource: {fileID: 1639377565}
   PlaySoundSource: {fileID: 40008851}
   DialoguePanel: {fileID: 791819471}
+  CharacterPortrait: {fileID: 1831921066}
   BackgroundChoicesPanel: {fileID: 1338701998}
   NameBackground: {fileID: 603582852}
   SpeakerNameText: {fileID: 787689823}

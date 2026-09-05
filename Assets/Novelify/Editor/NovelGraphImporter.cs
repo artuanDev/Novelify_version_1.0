@@ -105,6 +105,21 @@ namespace Novelify.Editor
 
                     runtimeNode = soundRuntimeNode;
                 }
+                else if (editorNode is TranslateSpeakerPortraitNode translateSpeakerPortraitNode)
+                {
+                    var runtimeTranslateSpeakerPortrait =
+                        new RuntimeTranslateSpeakerPortraitNode
+                        {
+                            NodeID = nodeIDMap[editorNode]
+                        };
+
+                    ProcessTranslateSpeakerNode(
+                        translateSpeakerPortraitNode,
+                        runtimeTranslateSpeakerPortrait,
+                        nodeIDMap);
+
+                    runtimeNode = runtimeTranslateSpeakerPortrait;
+                }
                 else
                 {
                     // Every unknown node is still imported and routed.
@@ -187,6 +202,10 @@ namespace Novelify.Editor
                     node.GetNodeOptionByName("Loop"),
                     false);
 
+            runtimeNode.Priority = GetOptionValue(node.GetNodeOptionByName("Priority"), 1);
+            runtimeNode.Volume = GetOptionValue(node.GetNodeOptionByName("Volume"), 1.0f);
+            runtimeNode.Pitch = GetOptionValue(node.GetNodeOptionByName("Pitch"), 1.0f);
+
             IPort loopPort =
                 node.GetInputPortByName("Loop");
 
@@ -232,6 +251,18 @@ namespace Novelify.Editor
                     "from its AudioToPlay input.",
                     this);
             }
+
+            runtimeNode.NextNodeID =
+                GetNextNodeID(node, nodeIDMap);
+        }
+
+        private void ProcessTranslateSpeakerNode(
+            TranslateSpeakerPortraitNode node,
+            RuntimeTranslateSpeakerPortraitNode runtimeNode,
+            Dictionary<INode, string> nodeIDMap)
+        {
+            runtimeNode.OffsetX = GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0.0f);
+            runtimeNode.OffsetY = GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0.0f);
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);

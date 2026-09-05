@@ -24,6 +24,7 @@ namespace Novelify
 
         [Header("UI Components")]
         public GameObject DialoguePanel;
+        public GameObject CharacterPortrait;
         public GameObject BackgroundChoicesPanel;
         public GameObject NameBackground;
 
@@ -198,6 +199,10 @@ namespace Novelify
                 {
                     ShowPlaySoundNode(soundNode);
                 }
+                else if(node is RuntimeTranslateSpeakerPortraitNode translateSpeakerPortraitNode)
+                {
+                    ShowTranslatePortraitNode(translateSpeakerPortraitNode);
+                }
                 else
                 {
                     // All other non-dialogue nodes are instant.
@@ -263,7 +268,7 @@ namespace Novelify
                         node.SpeakerName));
             }
 
-            PlayNodeSound(node.PlaySound);
+            PlayPlaySoundNode(node.PlaySound);
 
             UpdateSpeakerPortrait(
                 node.PortraitBody,
@@ -300,7 +305,17 @@ namespace Novelify
             PlaySoundSource.Stop();
             PlaySoundSource.clip = node.ClipSound;
             PlaySoundSource.loop = node.Loop;
+            PlaySoundSource.volume = node.Volume;
+            PlaySoundSource.priority = node.Priority;
+            PlaySoundSource.pitch = node.Pitch;
             PlaySoundSource.Play();
+        }
+
+        private void ShowTranslatePortraitNode(
+            RuntimeTranslateSpeakerPortraitNode node)
+        {
+            if( !CharacterPortrait.activeSelf ) return;
+            CharacterPortrait.transform.position = new Vector2(node.OffsetX, node.OffsetY);
         }
 
         private void ShowChoices(RuntimeChoiceNode node)
@@ -670,7 +685,7 @@ namespace Novelify
             StopNodeSound();
         }
 
-        private void PlayNodeSound(AudioClip clip)
+        private void PlayPlaySoundNode(AudioClip clip)
         {
             if (NodeSoundSource == null)
             {

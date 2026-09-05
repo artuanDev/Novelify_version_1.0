@@ -70,6 +70,17 @@ namespace Novelify
     {
         public bool Loop;
         public AudioClip ClipSound;
+
+        public float Volume;
+        public int Priority;
+        public float Pitch;
+    }
+
+    [Serializable]
+    public class RuntimeTranslateSpeakerPortraitNode : RuntimeNode
+    {
+        public float OffsetX;
+        public float OffsetY;
     }
 
     [Serializable]
