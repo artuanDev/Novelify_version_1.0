@@ -209,10 +209,6 @@ Assets/Novelify/
 
 Suggestions, bug reports and improvements are welcome. Please open an issue with reproduction steps and the Unity version you are using. For code changes, create a feature branch and submit a pull request.
 
-## License
-
-No license has been specified for this repository yet. Add a license file before distributing Novelify or accepting external contributions.
-
 ## Contact
 
 Antonio Mata Marín
