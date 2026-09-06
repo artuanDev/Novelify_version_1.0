@@ -50,7 +50,8 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Rich dialogue editing with bold, italic, colour and multiple text sizes.
 - Wave and shake text effects with an animated editor preview.
 - Automatic conversion from editor graphs to runtime dialogue data.
-- Included sample graph, character asset, UI setup and playable scene.
+- Included sample graphs, character assets, UI setup and playable scene.
+- A ready-to-use layered template character with sprites for all ten supported emotions.
 
 ## How It Works
 
@@ -97,11 +98,13 @@ Assets/Novelify/Samples/Scenes/TestScene.unity
 
 Press **Play**. The sample scene uses:
 
-- `Assets/Novelify/Samples/NovelGraphs/SelfReflection.novelgraph`.
-- `Assets/Novelify/Samples/Characters/Hoki.asset`.
+- `Assets/Novelify/Samples/NovelGraphs/TemplateEmotions.novelgraph`.
+- The `Template`, `Hoki` and `Daisy` character assets from `Assets/Novelify/Samples/Characters/`.
 - A configured `NovelManager`.
 - A TextMesh Pro dialogue interface.
 - A choice button prefab and choice container.
+
+`TemplateEmotions` demonstrates layered portrait changes for Neutral, Happy, Sad, Angry, Surprised, Afraid, Disgusted, Confused, Embarrassed and Excited expressions. It also shows blinking, talking animation and rich-text effects in a short conversation. `ExampleStory.novelgraph` remains available as an additional graph-authoring example.
 
 A left mouse click advances the current dialogue. During text reveal, the first click completes the line; the next click advances. Choice nodes are advanced through their generated UI buttons.
 
@@ -158,6 +161,8 @@ Assign the portrait layers and optional audio:
 The character asset also contains timing controls for blinking, mouth animation, voice pitch variation and graph preview framing.
 
 Open **Window > Novelify > Character Creator** to create, duplicate or edit a character with a live layered preview. Select a preview emotion and enable talking/blinking to audition the sprites and timing. Under **Emotions**, add one entry per emotion and assign its alternate layers; empty layers inherit the default character sprites. Dialogue, Choice and Set Character Emotion nodes use these expressions at runtime. Asset edits support Unity's normal Undo; use **Save** to save the selected character.
+
+For a complete reference, inspect or duplicate `Assets/Novelify/Samples/Characters/Template.asset`. Its matching sprites are under `Assets/Novelify/Samples/Portraits/Template/`, and it includes configured layers for every supported emotion.
 
 ### Multiple Characters and Movement
 
@@ -243,9 +248,13 @@ Assets/Novelify/
 │   ├── NovelCharacter.cs      # Character ScriptableObject
 │   ├── RuntimeNovelGraph.cs   # Runtime graph data
 │   └── NovelTextEffects.cs    # Wave and shake text animation
-├── NovelGraphs/               # Example .novelgraph assets
 ├── Prefabs/                   # Reusable UI prefabs
-└── Samples/                   # Example character and scene
+└── Samples/
+    ├── Characters/            # Daisy, Hoki and the layered Template character
+    ├── NovelGraphs/           # ExampleStory and the playable emotion showcase
+    ├── Portraits/             # Layered sample portrait sprites
+    ├── Prefabs/               # Sample UI and character prefabs
+    └── Scenes/                # TestScene playable demo
 ```
 
 ## Screenshots
@@ -271,7 +280,8 @@ Assets/Novelify/
 - [ ] Add localization support.
 - [ ] Add save, load and conversation history support.
 - [x] Add utility nodes that ease scenes with more than one character.
-- [ ] Expand the sample content and documentation.
+- [x] Add a layered template character and a playable emotion showcase.
+- [ ] Continue expanding the sample content and documentation.
 
 ## Contributing
 
