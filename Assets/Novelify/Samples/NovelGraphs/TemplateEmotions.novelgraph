@@ -1050,6 +1050,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 0
     - rid: 8564938451261063176
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1249,6 +1250,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 7
     - rid: 8564938451261063204
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1417,6 +1419,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
+          Emotion: 0
     - rid: 8564938451261063219
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1711,6 +1714,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: bd23349f89344024fb67558f8c6108b9, type: 2}
+          Emotion: 0
     - rid: 8564938451261063241
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1815,6 +1819,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 5
     - rid: 8564938451261063265
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2020,6 +2025,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 8
     - rid: 8564938451261063281
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2156,6 +2162,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 1
     - rid: 8564938451261063305
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2324,6 +2331,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 2
     - rid: 8564938451261063330
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2492,6 +2500,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 3
     - rid: 8564938451261063355
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2660,6 +2669,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 4
     - rid: 8564938451261063380
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3182,6 +3192,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 6
     - rid: 8564938451261063447
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3232,6 +3243,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 8
     - rid: 8564938451261063458
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3282,6 +3294,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 7
     - rid: 8564938451261063469
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3332,6 +3345,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 9
     - rid: 8564938451261063480
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3569,6 +3583,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
+          Emotion: 0
     - rid: 8564938451261063507
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3742,6 +3757,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: bd23349f89344024fb67558f8c6108b9, type: 2}
+          Emotion: 0
     - rid: 8564938451261063533
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -4023,6 +4039,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 0
     - rid: 8564938451261063595
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -4260,6 +4277,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
+          Emotion: 0
     - rid: 8564938451261063622
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -4584,6 +4602,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
+          Emotion: 7
     - rid: 8564938451261063659
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:

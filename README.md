@@ -42,6 +42,7 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Label and Jump flow nodes for explicit non-local story routing.
 - Show/Hide Character, Hide All Characters, Set Character Emotion, Wait, Dialogue Event and Stop Sound nodes.
 - A custom character creator with layered emotion, blinking and talking previews.
+- Emotion-aware Dialogue and Choice node previews in both `.novelgraph` and `.novelfunction` editors.
 - Layered 2D portraits using body, eyes, facial details and mouth sprites.
 - Optional blinking and mouth animation while text is revealed.
 - Typewriter-style dialogue reveal with configurable characters-per-second speed.
@@ -122,8 +123,10 @@ A left mouse click advances the current dialogue. During text reveal, the first 
 ### Dialogue Nodes
 
 - **SimpleDialogue** displays a line without requiring a character asset.
-- **Dialogue** accepts a `NovelCharacter` speaker and exposes portrait preview, emotion metadata, text timing and portrait animation options.
-- **Choice** combines dialogue presentation with multiple player-selected branches.
+- **Dialogue** accepts a `NovelCharacter` speaker and exposes an emotion-aware portrait preview, emotion metadata, text timing and portrait animation options.
+- **Choice** combines dialogue presentation with multiple player-selected branches and the same emotion-aware speaker preview.
+
+Dialogue and Choice previews update when their **Speaker** or **Emotion** changes. The preview displays the selected expression's layered sprites and emotion name, using the same fallback to the character's default layers as runtime playback. This works in main Novel Graphs and reusable Novel Function subgraphs.
 
 ## Creating and Using Novel Functions
 
@@ -297,6 +300,7 @@ Antonio Mata Marín
 
 - GitHub: [@artuanDev](https://github.com/artuanDev)
 - LinkedIn: [Antonio Mata Marín](https://www.linkedin.com/in/antonio-mata-mar%C3%ADn-7a936a1aa/)
+- Portfolio: [Antonio Mata Marín — Portfolio](https://portfoliowebsite-ecru-six.vercel.app/#/portfolio)
 
 Project repository: [Novelify_version_1.0](https://github.com/artuanDev/Novelify_version_1.0)
 

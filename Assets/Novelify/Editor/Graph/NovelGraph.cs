@@ -60,7 +60,7 @@ namespace Novelify.Editor
             EditorApplication.delayCall -= SynchronizeSpeakerPreviewsAfterGraphProcessing;
             _speakerPreviewSyncQueued = false;
 
-            if (!_isEnabled || !IsOpenInGraphWindow())
+            if (!_isEnabled || !SpeakerPreviewSynchronization.IsOpenInGraphWindow(this))
             {
                 return;
             }
@@ -68,66 +68,10 @@ namespace Novelify.Editor
             SynchronizeSpeakerPreviews();
         }
 
-        private bool IsOpenInGraphWindow()
-        {
-            foreach (EditorWindow window in Resources.FindObjectsOfTypeAll<EditorWindow>())
-            {
-                if (window is IGraphWindow graphWindow &&
-                    ReferenceEquals(graphWindow.Graph, this))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private void SynchronizeSpeakerPreviews()
         {
-            bool isRecordingUndo = false;
-
-            try
-            {
-                foreach (INode node in GetNodes())
-                {
-                    if (node is not DialogueNode && node is not ChoiceNode)
-                    {
-                        continue;
-                    }
-
-                    NovelCharacter character = GetSpeakerCharacter(node);
-                    INodeOption previewOption = node.GetNodeOptionByName("Speaker Preview");
-
-                    if (previewOption == null ||
-                        !previewOption.TryGetValue(out SpeakerPortraitOption currentPreview) ||
-                        currentPreview.Character == character)
-                    {
-                        continue;
-                    }
-
-                    if (!isRecordingUndo)
-                    {
-                        UndoBeginRecordGraph("Update Speaker Portrait Previews");
-                        isRecordingUndo = true;
-                    }
-
-                    previewOption.TrySetValue(new SpeakerPortraitOption
-                    {
-                        Character = character
-                    });
-                }
-            }
-            finally
-            {
-                if (isRecordingUndo)
-                {
-                    UndoEndRecordGraph();
-                }
-            }
+            SpeakerPreviewSynchronization.Synchronize(this);
         }
-
-        private NovelCharacter GetSpeakerCharacter(INode node) =>
-            NovelGraphValues.Resolve<NovelCharacter>(this, node.GetInputPortByName("Speaker"));
     }
 
     /// <summary>
@@ -142,6 +86,9 @@ namespace Novelify.Editor
         public const string AssetExtension = "novelfunction";
         public const string EnterVariableName = "Enter";
         public const string ContinueVariableName = "Continue";
+
+        [NonSerialized] private bool _isEnabled;
+        [NonSerialized] private bool _speakerPreviewSyncQueued;
 
         [MenuItem("Assets/Create/Novelify/Novel Function", false)]
         private static void CreateFunctionAssetFile()
@@ -170,6 +117,51 @@ namespace Novelify.Editor
             }
 
             GraphDatabase.SaveGraph(graph);
+        }
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            _isEnabled = true;
+            QueueSpeakerPreviewSynchronization();
+        }
+
+        public override void OnDisable()
+        {
+            _isEnabled = false;
+            _speakerPreviewSyncQueued = false;
+            EditorApplication.delayCall -= SynchronizeSpeakerPreviewsAfterGraphProcessing;
+            base.OnDisable();
+        }
+
+        public override void OnGraphChanged(GraphLogger graphLogger)
+        {
+            base.OnGraphChanged(graphLogger);
+            QueueSpeakerPreviewSynchronization();
+        }
+
+        private void QueueSpeakerPreviewSynchronization()
+        {
+            if (_speakerPreviewSyncQueued)
+            {
+                return;
+            }
+
+            _speakerPreviewSyncQueued = true;
+            EditorApplication.delayCall += SynchronizeSpeakerPreviewsAfterGraphProcessing;
+        }
+
+        private void SynchronizeSpeakerPreviewsAfterGraphProcessing()
+        {
+            EditorApplication.delayCall -= SynchronizeSpeakerPreviewsAfterGraphProcessing;
+            _speakerPreviewSyncQueued = false;
+
+            if (!_isEnabled || !SpeakerPreviewSynchronization.IsOpenInGraphWindow(this))
+            {
+                return;
+            }
+
+            SpeakerPreviewSynchronization.Synchronize(this);
         }
 
         public bool EnsureFlowInterface()
@@ -257,6 +249,72 @@ namespace Novelify.Editor
             variable?.GetType().GetProperty(
                 "Scope",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    }
+
+    internal static class SpeakerPreviewSynchronization
+    {
+        public static bool IsOpenInGraphWindow(Graph graph)
+        {
+            foreach (EditorWindow window in Resources.FindObjectsOfTypeAll<EditorWindow>())
+            {
+                if (window is IGraphWindow graphWindow &&
+                    ReferenceEquals(graphWindow.Graph, graph))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static void Synchronize(Graph graph)
+        {
+            bool isRecordingUndo = false;
+
+            try
+            {
+                foreach (INode node in graph.GetNodes())
+                {
+                    if (node is not DialogueNode && node is not ChoiceNode)
+                    {
+                        continue;
+                    }
+
+                    NovelCharacter character = NovelGraphValues.Resolve<NovelCharacter>(
+                        graph,
+                        node.GetInputPortByName("Speaker"));
+                    CharacterEmotion emotion = CharacterEmotion.Neutral;
+                    node.GetNodeOptionByName("Emotion")?.TryGetValue(out emotion);
+                    INodeOption previewOption = node.GetNodeOptionByName("Speaker Preview");
+
+                    if (previewOption == null ||
+                        !previewOption.TryGetValue(out SpeakerPortraitOption currentPreview) ||
+                        (currentPreview.Character == character && currentPreview.Emotion == emotion))
+                    {
+                        continue;
+                    }
+
+                    if (!isRecordingUndo)
+                    {
+                        graph.UndoBeginRecordGraph("Update Speaker Portrait Previews");
+                        isRecordingUndo = true;
+                    }
+
+                    previewOption.TrySetValue(new SpeakerPortraitOption
+                    {
+                        Character = character,
+                        Emotion = emotion
+                    });
+                }
+            }
+            finally
+            {
+                if (isRecordingUndo)
+                {
+                    graph.UndoEndRecordGraph();
+                }
+            }
+        }
     }
 
     /// <summary>

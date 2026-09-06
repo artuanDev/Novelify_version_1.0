@@ -11,6 +11,7 @@ namespace Novelify.Editor
     public struct SpeakerPortraitOption
     {
         public NovelCharacter Character;
+        public CharacterEmotion Emotion;
     }
 
     [CustomPropertyDrawer(typeof(SpeakerPortraitOption))]
@@ -20,6 +21,8 @@ namespace Novelify.Editor
         {
             SerializedProperty characterProperty = property.FindPropertyRelative(
                 nameof(SpeakerPortraitOption.Character));
+            SerializedProperty emotionProperty = property.FindPropertyRelative(
+                nameof(SpeakerPortraitOption.Emotion));
 
             var root = new VisualElement();
             root.style.alignItems = Align.Center;
@@ -135,10 +138,12 @@ namespace Novelify.Editor
             void RefreshPreview()
             {
                 var character = characterProperty.objectReferenceValue as NovelCharacter;
-                Sprite portrait_body = character != null ? character.PortraitBody : null;
-                Sprite portrait_eyes = character != null ? character.PortraitEyes : null;
-                Sprite portrait_details = character != null ? character.PortraitFaceDetails : null;
-                Sprite portrait_mouth = character != null ? character.PortraitMouth : null;
+                var emotion = emotionProperty != null
+                    ? (CharacterEmotion)emotionProperty.intValue
+                    : CharacterEmotion.Neutral;
+                CharacterPortrait portrait = character != null
+                    ? character.GetPortrait(emotion)
+                    : default;
                 float width = character != null
                     ? Mathf.Clamp(character.PreviewWidth, 80f, 220f)
                     : 160f;
@@ -152,15 +157,17 @@ namespace Novelify.Editor
                 viewport.style.width = width;
                 viewport.style.height = height;
 
-                PlacePreviewImage(previewBody, portrait_body,zoom, zoom, character, width, height);
-                PlacePreviewImage(previewEyes, portrait_eyes,zoom, zoom, character, width, height);
-                PlacePreviewImage(previewDetails, portrait_details,zoom, zoom, character, width, height);
-                PlacePreviewImage(previewMouth, portrait_mouth,zoom, zoom, character, width, height);
+                PlacePreviewImage(previewBody, portrait.Body, zoom, zoom, character, width, height);
+                PlacePreviewImage(previewEyes, portrait.Eyes, zoom, zoom, character, width, height);
+                PlacePreviewImage(previewDetails, portrait.Details, zoom, zoom, character, width, height);
+                PlacePreviewImage(previewMouth, portrait.Mouth, zoom, zoom, character, width, height);
 
-                bool hasPortrait = portrait_body != null;
+                bool hasPortrait = portrait.Body != null || portrait.Eyes != null ||
+                    portrait.Details != null || portrait.Mouth != null;
                 emptyLabel.text = character == null
                     ? "Connect a Character variable to Speaker"
                     : $"{character.SpeakerName}\nNo portrait assigned";
+                portraitBadge.text = emotion.ToString().ToUpperInvariant();
                 speakerNameLabel.text = character != null
                     ? (string.IsNullOrWhiteSpace(character.SpeakerName)
                         ? "UNNAMED CHARACTER"
@@ -174,6 +181,10 @@ namespace Novelify.Editor
 
             RefreshPreview();
             root.TrackPropertyValue(characterProperty, _ => RefreshPreview());
+            if (emotionProperty != null)
+            {
+                root.TrackPropertyValue(emotionProperty, _ => RefreshPreview());
+            }
             root.schedule.Execute(RefreshPreview).Every(250);
 
             return root;
