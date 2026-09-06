@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c14d01d8d5e77ec4192e67897c930f9e, type: 3}
+  m_Name: Template
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelCharacter
+  SpeakerName: Template_01
+  PortraitBody: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+  PortraitMouth: {fileID: 21300000, guid: c8f82e956fb98f1488c73f8f5e0ec29e, type: 3}
+  PortraitFaceDetails: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+  PortraitEyes: {fileID: 21300000, guid: 9483db539fbe04c40abce9ee7ab5d272, type: 3}
+  PortraitMouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  MouthFrameInterval: 0.02
+  MouthTimingVariation: 0.4
+  MouthPauseChance: 0.14
+  MouthPauseMultiplier: 1.85
+  PortraitEyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+  BlinkIntervalMin: 2.5
+  BlinkIntervalMax: 5
+  BlinkDuration: 0.12
+  TalkSound: {fileID: 8300000, guid: 6f0d90f29b9149908dde0b073d3766a8, type: 3}
+  PitchMinVariation: 0
+  PitchMaxVariation: 0
+  PreviewWidth: 220
+  PreviewHeight: 220
+  PreviewZoom: 2.01
+  PreviewOffsetX: 0.16
+  PreviewOffsetY: -0.74
+  Expressions:
+  - Emotion: 0
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 9483db539fbe04c40abce9ee7ab5d272, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: c8f82e956fb98f1488c73f8f5e0ec29e, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 1
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: eb5a721c1a88a6346b2d134af18ac08c, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 5af6f0749687acb4da227f37660a39a7, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 2
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 2add7d66fe4058847a3468956ed53b55, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 0fd76ad84a5d0ff46ac79bdd91715e9c, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 3
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 046d55c8ff2bbce4c8037d1bee42d7f0, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: c4dc48e1a62ed5940abbab2122a2297b, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 4
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 2fad3541e75ccbc499dfcd112f0c265c, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: e87abef23a8ad464ba8897c27fda3187, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 5
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 2c15d0e242ea1b4489d1dc292e795b61, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 037cb3c2af31f954997ff734f7b5f1c6, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 6
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 7c91b8eb06047ef41a3356d7a75c3254, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 439b277140d48d24a9c58cbf3debb0fd, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 7
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 3bf4e31e8424b924e9c053dd21b9effc, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 0defa03c5a789fb419b5f05c4b9b2808, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 8
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 4f4eeb40c36b3b94cbf178c640e5864f, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: 62722be8477ebab40bc987b7b6d78127, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}
+  - Emotion: 9
+    Body: {fileID: 21300000, guid: 3359bbb2d37405d4c920f3b01a540adb, type: 3}
+    Eyes: {fileID: 21300000, guid: 24affe49443e8ab4eb1cf2dad8868fe7, type: 3}
+    EyesClosed: {fileID: 21300000, guid: 20fa19fcaf6fa2c4e8460dfaeb5ca15b, type: 3}
+    Details: {fileID: 21300000, guid: 4406d751c09d92843947df012136b0a4, type: 3}
+    Mouth: {fileID: 21300000, guid: e041a945d589584478ddde5d8cef9d6d, type: 3}
+    MouthOpen: {fileID: 21300000, guid: e08083c8ebd4b8c48b5ee863324a21dd, type: 3}

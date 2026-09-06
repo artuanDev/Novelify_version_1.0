@@ -1,0 +1,548 @@
+fileFormatVersion: 2
+guid: 046d55c8ff2bbce4c8037d1bee42d7f0
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 8756521719166400769
+    second: template_angry_eyes_opened_0
+  - first:
+      213: -6064417477960388864
+    second: template_angry_eyes_opened_1
+  - first:
+      213: -8009902653039774199
+    second: template_angry_eyes_opened_2
+  - first:
+      213: 5922784948181873323
+    second: template_angry_eyes_opened_3
+  - first:
+      213: -3730211778818791003
+    second: template_angry_eyes_opened_4
+  - first:
+      213: -5229379800207475334
+    second: template_angry_eyes_opened_5
+  - first:
+      213: -1526112856995923963
+    second: template_angry_eyes_opened_6
+  - first:
+      213: -8652909787131506137
+    second: template_angry_eyes_opened_7
+  - first:
+      213: -5240895930959828943
+    second: template_angry_eyes_opened_8
+  - first:
+      213: 4264617543475706848
+    second: template_angry_eyes_opened_9
+  - first:
+      213: -893171204460697251
+    second: template_angry_eyes_opened_10
+  - first:
+      213: 3955197653683480668
+    second: template_angry_eyes_opened_11
+  - first:
+      213: -4004494907422468605
+    second: template_angry_eyes_opened_12
+  - first:
+      213: 3457273179036068012
+    second: template_angry_eyes_opened_13
+  - first:
+      213: -8206808900908977556
+    second: template_angry_eyes_opened_14
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_0
+      rect:
+        serializedVersion: 2
+        x: 903
+        y: 2175
+        width: 172
+        height: 233
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 109f7ea0c1a658970800000000000000
+      internalID: 8756521719166400769
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_1
+      rect:
+        serializedVersion: 2
+        x: 1103
+        y: 2167
+        width: 26
+        height: 145
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 00f20883f6cd6dba0800000000000000
+      internalID: -6064417477960388864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_2
+      rect:
+        serializedVersion: 2
+        x: 1121
+        y: 2153
+        width: 29
+        height: 187
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 906fa10b9fb17d090800000000000000
+      internalID: -8009902653039774199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_3
+      rect:
+        serializedVersion: 2
+        x: 1148
+        y: 2183
+        width: 20
+        height: 149
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba23965b785f13250800000000000000
+      internalID: 5922784948181873323
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_4
+      rect:
+        serializedVersion: 2
+        x: 1171
+        y: 2181
+        width: 19
+        height: 166
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a927829620ab3cc0800000000000000
+      internalID: -3730211778818791003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_5
+      rect:
+        serializedVersion: 2
+        x: 1191
+        y: 2201
+        width: 15
+        height: 121
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a7db70537c28d67b0800000000000000
+      internalID: -5229379800207475334
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_6
+      rect:
+        serializedVersion: 2
+        x: 1200
+        y: 2239
+        width: 168
+        height: 190
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 508f997317822dae0800000000000000
+      internalID: -1526112856995923963
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_7
+      rect:
+        serializedVersion: 2
+        x: 1235
+        y: 2204
+        width: 45
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7229688c460bae780800000000000000
+      internalID: -8652909787131506137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_8
+      rect:
+        serializedVersion: 2
+        x: 1283
+        y: 2173
+        width: 37
+        height: 105
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 13869521be89447b0800000000000000
+      internalID: -5240895930959828943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_9
+      rect:
+        serializedVersion: 2
+        x: 1305
+        y: 2174
+        width: 34
+        height: 93
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ebb4c59f07fe2b30800000000000000
+      internalID: 4264617543475706848
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_10
+      rect:
+        serializedVersion: 2
+        x: 967
+        y: 2117
+        width: 70
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5923829581da93f0800000000000000
+      internalID: -893171204460697251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_11
+      rect:
+        serializedVersion: 2
+        x: 1040
+        y: 2162
+        width: 20
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c58234c7f4fa3e630800000000000000
+      internalID: 3955197653683480668
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_12
+      rect:
+        serializedVersion: 2
+        x: 1059
+        y: 2167
+        width: 17
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3061932391d2d68c0800000000000000
+      internalID: -4004494907422468605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_13
+      rect:
+        serializedVersion: 2
+        x: 1072
+        y: 2187
+        width: 39
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca82eef83a3baff20800000000000000
+      internalID: 3457273179036068012
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_angry_eyes_opened_14
+      rect:
+        serializedVersion: 2
+        x: 940
+        y: 2098
+        width: 84
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c627ec149ce8b1e80800000000000000
+      internalID: -8206808900908977556
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      template_angry_eyes_opened_0: 8756521719166400769
+      template_angry_eyes_opened_1: -6064417477960388864
+      template_angry_eyes_opened_10: -893171204460697251
+      template_angry_eyes_opened_11: 3955197653683480668
+      template_angry_eyes_opened_12: -4004494907422468605
+      template_angry_eyes_opened_13: 3457273179036068012
+      template_angry_eyes_opened_14: -8206808900908977556
+      template_angry_eyes_opened_2: -8009902653039774199
+      template_angry_eyes_opened_3: 5922784948181873323
+      template_angry_eyes_opened_4: -3730211778818791003
+      template_angry_eyes_opened_5: -5229379800207475334
+      template_angry_eyes_opened_6: -1526112856995923963
+      template_angry_eyes_opened_7: -8652909787131506137
+      template_angry_eyes_opened_8: -5240895930959828943
+      template_angry_eyes_opened_9: 4264617543475706848
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

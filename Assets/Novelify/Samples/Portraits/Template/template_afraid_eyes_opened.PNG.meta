@@ -1,0 +1,548 @@
+fileFormatVersion: 2
+guid: 2c15d0e242ea1b4489d1dc292e795b61
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4063174862685405242
+    second: template_afraid_eyes_opened_0
+  - first:
+      213: 4289894631808657000
+    second: template_afraid_eyes_opened_1
+  - first:
+      213: -6426935147852715530
+    second: template_afraid_eyes_opened_2
+  - first:
+      213: -2561945910060119635
+    second: template_afraid_eyes_opened_3
+  - first:
+      213: -4662675679884741708
+    second: template_afraid_eyes_opened_4
+  - first:
+      213: -4501696629391070633
+    second: template_afraid_eyes_opened_5
+  - first:
+      213: 6097815031729347806
+    second: template_afraid_eyes_opened_6
+  - first:
+      213: 8488830828566314822
+    second: template_afraid_eyes_opened_7
+  - first:
+      213: -5886084885414578627
+    second: template_afraid_eyes_opened_8
+  - first:
+      213: -4840700939495385178
+    second: template_afraid_eyes_opened_9
+  - first:
+      213: 8256302275862110714
+    second: template_afraid_eyes_opened_10
+  - first:
+      213: 6155936961986060572
+    second: template_afraid_eyes_opened_11
+  - first:
+      213: -3261094816472124068
+    second: template_afraid_eyes_opened_12
+  - first:
+      213: -3072142325053677428
+    second: template_afraid_eyes_opened_13
+  - first:
+      213: -6124020976371640986
+    second: template_afraid_eyes_opened_14
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_0
+      rect:
+        serializedVersion: 2
+        x: 928
+        y: 2456
+        width: 95
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3009ae820c436830800000000000000
+      internalID: 4063174862685405242
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_1
+      rect:
+        serializedVersion: 2
+        x: 1257
+        y: 2473
+        width: 101
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8666fc45074c88b30800000000000000
+      internalID: 4289894631808657000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_2
+      rect:
+        serializedVersion: 2
+        x: 896
+        y: 2189
+        width: 125
+        height: 95
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f924cdc880fec6a0800000000000000
+      internalID: -6426935147852715530
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_3
+      rect:
+        serializedVersion: 2
+        x: 920
+        y: 2206
+        width: 107
+        height: 99
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da90a11c4c3227cd0800000000000000
+      internalID: -2561945910060119635
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_4
+      rect:
+        serializedVersion: 2
+        x: 1021
+        y: 2251
+        width: 17
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4b3fd9d4c29da4fb0800000000000000
+      internalID: -4662675679884741708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_5
+      rect:
+        serializedVersion: 2
+        x: 1048
+        y: 2251
+        width: 9
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75a629e34c2c681c0800000000000000
+      internalID: -4501696629391070633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_6
+      rect:
+        serializedVersion: 2
+        x: 1056
+        y: 2248
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: edcd348b67acf9450800000000000000
+      internalID: 6097815031729347806
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_7
+      rect:
+        serializedVersion: 2
+        x: 1059
+        y: 2236
+        width: 11
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64f741fa9a26ec570800000000000000
+      internalID: 8488830828566314822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_8
+      rect:
+        serializedVersion: 2
+        x: 1196
+        y: 2212
+        width: 32
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d3671178bfc605ea0800000000000000
+      internalID: -5886084885414578627
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_9
+      rect:
+        serializedVersion: 2
+        x: 1205
+        y: 2250
+        width: 12
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a75a75842062dcb0800000000000000
+      internalID: -4840700939495385178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_10
+      rect:
+        serializedVersion: 2
+        x: 1255
+        y: 2252
+        width: 19
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af1a2071d27449270800000000000000
+      internalID: 8256302275862110714
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_11
+      rect:
+        serializedVersion: 2
+        x: 1258
+        y: 2191
+        width: 130
+        height: 119
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1160e62d084e6550800000000000000
+      internalID: 6155936961986060572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_12
+      rect:
+        serializedVersion: 2
+        x: 1058
+        y: 2210
+        width: 20
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c55bf4dda834eb2d0800000000000000
+      internalID: -3261094816472124068
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_13
+      rect:
+        serializedVersion: 2
+        x: 1063
+        y: 2232
+        width: 10
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c80abbf05de8d55d0800000000000000
+      internalID: -3072142325053677428
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: template_afraid_eyes_opened_14
+      rect:
+        serializedVersion: 2
+        x: 1202
+        y: 2207
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 665d3525e5b130ba0800000000000000
+      internalID: -6124020976371640986
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      template_afraid_eyes_opened_0: 4063174862685405242
+      template_afraid_eyes_opened_1: 4289894631808657000
+      template_afraid_eyes_opened_10: 8256302275862110714
+      template_afraid_eyes_opened_11: 6155936961986060572
+      template_afraid_eyes_opened_12: -3261094816472124068
+      template_afraid_eyes_opened_13: -3072142325053677428
+      template_afraid_eyes_opened_14: -6124020976371640986
+      template_afraid_eyes_opened_2: -6426935147852715530
+      template_afraid_eyes_opened_3: -2561945910060119635
+      template_afraid_eyes_opened_4: -4662675679884741708
+      template_afraid_eyes_opened_5: -4501696629391070633
+      template_afraid_eyes_opened_6: 6097815031729347806
+      template_afraid_eyes_opened_7: 8488830828566314822
+      template_afraid_eyes_opened_8: -5886084885414578627
+      template_afraid_eyes_opened_9: -4840700939495385178
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
