@@ -1,19 +1,13 @@
 fileFormatVersion: 2
-guid: 5c39dc969420c8848a13746b9ab9225f
+guid: 6a87276caa0d1884b8f7504c16489ccb
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 402716589645041923
-    second: eyes_closed_0
+      213: 2710851215528456216
+    second: daisy_neutral_mouth_closed_0
   - first:
-      213: -1628498043503647475
-    second: eyes_closed_1
-  - first:
-      213: -4163527266613528686
-    second: eyes_closed_2
-  - first:
-      213: 6569409989545866057
-    second: eyes_closed_3
+      213: -7698787779135392643
+    second: daisy_neutral_mouth_closed_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -150,13 +144,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: eyes_closed_0
+      name: daisy_neutral_mouth_closed_0
       rect:
         serializedVersion: 2
-        x: 905
-        y: 2251
-        width: 118
-        height: 30
+        x: 951
+        y: 1794
+        width: 73
+        height: 15
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -165,20 +159,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 30113f6ca9cb69500800000000000000
-      internalID: 402716589645041923
+      spriteID: 810728c51d0ee9520800000000000000
+      internalID: 2710851215528456216
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: eyes_closed_1
+      name: daisy_neutral_mouth_closed_1
       rect:
         serializedVersion: 2
-        x: 1145
-        y: 2268
-        width: 123
-        height: 22
+        x: 957
+        y: 1779
+        width: 63
+        height: 12
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -187,52 +181,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d05eb8758a96669e0800000000000000
-      internalID: -1628498043503647475
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: eyes_closed_2
-      rect:
-        serializedVersion: 2
-        x: 895
-        y: 2210
-        width: 141
-        height: 34
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 297f8d4a20e2836c0800000000000000
-      internalID: -4163527266613528686
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: eyes_closed_3
-      rect:
-        serializedVersion: 2
-        x: 1135
-        y: 2222
-        width: 145
-        height: 39
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 943b8ca449b3b2b50800000000000000
-      internalID: 6569409989545866057
+      spriteID: d7434870e49682590800000000000000
+      internalID: -7698787779135392643
       vertices: []
       indices: 
       edges: []
@@ -251,10 +201,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      eyes_closed_0: 402716589645041923
-      eyes_closed_1: -1628498043503647475
-      eyes_closed_2: -4163527266613528686
-      eyes_closed_3: 6569409989545866057
+      daisy_neutral_mouth_closed_0: 2710851215528456216
+      daisy_neutral_mouth_closed_1: -7698787779135392643
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

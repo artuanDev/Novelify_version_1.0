@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 4b2475ccd3737bf4387437b1b821b8d2
+guid: 775d3b1edc860b24fb391de30e98f2ef
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6931457739662176905
-    second: hoodie Fusionada_0
+      213: -83782277246964069
+    second: hoki_neutral_body_pose_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -141,7 +141,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: hoodie Fusionada_0
+      name: hoki_neutral_body_pose_0
       rect:
         serializedVersion: 2
         x: 237
@@ -156,8 +156,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 77dcdc309e38ecf90800000000000000
-      internalID: -6931457739662176905
+      spriteID: b9ea836767856def0800000000000000
+      internalID: -83782277246964069
       vertices: []
       indices: 
       edges: []
@@ -176,7 +176,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      hoodie Fusionada_0: -6931457739662176905
+      hoki_neutral_body_pose_0: -83782277246964069
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

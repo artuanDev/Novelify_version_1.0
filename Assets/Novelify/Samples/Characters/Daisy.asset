@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: Daisy
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelCharacter
   SpeakerName: Daisy
-  PortraitBody: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
-  PortraitMouth: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
-  PortraitFaceDetails: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
-  PortraitEyes: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
-  PortraitMouthOpen: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
+  PortraitBody: {fileID: 21300000, guid: 7f2fc7d6141340140b4af7c8c3db9d18, type: 3}
+  PortraitMouth: {fileID: 21300000, guid: 6a87276caa0d1884b8f7504c16489ccb, type: 3}
+  PortraitFaceDetails: {fileID: 21300000, guid: cc9402855b715dd46b32676731f212d2, type: 3}
+  PortraitEyes: {fileID: 21300000, guid: 0d1ae173efc930843b1aa46c04daf0ee, type: 3}
+  PortraitMouthOpen: {fileID: 21300000, guid: 7d61c2aec69d40b40809dfa1665008e5, type: 3}
   MouthFrameInterval: 0.12
   MouthTimingVariation: 0.4
   MouthPauseChance: 0.14
   MouthPauseMultiplier: 1.85
-  PortraitEyesClosed: {fileID: 21300000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
+  PortraitEyesClosed: {fileID: 21300000, guid: fd338ab3520eac2498be242d4fa9637e, type: 3}
   BlinkIntervalMin: 2.5
   BlinkIntervalMax: 5
   BlinkDuration: 0.12

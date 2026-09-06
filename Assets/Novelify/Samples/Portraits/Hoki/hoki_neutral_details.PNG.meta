@@ -1,25 +1,19 @@
 fileFormatVersion: 2
-guid: 0fb80943c16776d47999ff402cc6680c
+guid: 4d87015bc97b08b428dbf652e703fbc7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -3536303915179993498
-    second: eyes_neutral_0
+      213: 3846471257506930365
+    second: hoki_neutral_details_0
   - first:
-      213: 8444222145079707165
-    second: eyes_neutral_1
+      213: 2407694849190886896
+    second: hoki_neutral_details_1
   - first:
-      213: -2538704188840436429
-    second: eyes_neutral_2
+      213: 3368928810902222586
+    second: hoki_neutral_details_2
   - first:
-      213: 4854858848861027223
-    second: eyes_neutral_3
-  - first:
-      213: 7376928577522432212
-    second: eyes_neutral_4
-  - first:
-      213: 6193589576710949755
-    second: eyes_neutral_5
+      213: 3753782343317610030
+    second: hoki_neutral_details_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -156,13 +150,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: eyes_neutral_0
+      name: hoki_neutral_details_0
       rect:
         serializedVersion: 2
-        x: 898
-        y: 2252
-        width: 130
-        height: 21
+        x: 903
+        y: 2292
+        width: 137
+        height: 50
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -171,20 +165,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 6669fd543568ceec0800000000000000
-      internalID: -3536303915179993498
+      spriteID: dbe537eaa39616530800000000000000
+      internalID: 3846471257506930365
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: eyes_neutral_1
+      name: hoki_neutral_details_1
       rect:
         serializedVersion: 2
-        x: 1144
-        y: 2221
-        width: 140
-        height: 60
+        x: 1105
+        y: 2297
+        width: 154
+        height: 48
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -193,20 +187,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d1686f13d47ef2570800000000000000
-      internalID: 8444222145079707165
+      spriteID: 0fd7f8575b9d96120800000000000000
+      internalID: 2407694849190886896
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: eyes_neutral_2
+      name: hoki_neutral_details_2
       rect:
         serializedVersion: 2
-        x: 1145
-        y: 2268
-        width: 130
-        height: 20
+        x: 1045
+        y: 2126
+        width: 45
+        height: 120
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -215,20 +209,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 33d9e5aadf5b4ccd0800000000000000
-      internalID: -2538704188840436429
+      spriteID: af6f76777e6d0ce20800000000000000
+      internalID: 3368928810902222586
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: eyes_neutral_3
+      name: hoki_neutral_details_3
       rect:
         serializedVersion: 2
-        x: 889
-        y: 2206
-        width: 140
-        height: 60
+        x: 1088
+        y: 2132
+        width: 34
+        height: 14
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -237,52 +231,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 79bf501a66cef5340800000000000000
-      internalID: 4854858848861027223
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: eyes_neutral_4
-      rect:
-        serializedVersion: 2
-        x: 1014
-        y: 2210
-        width: 22
-        height: 28
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 4d8f6a4e47d106660800000000000000
-      internalID: 7376928577522432212
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: eyes_neutral_5
-      rect:
-        serializedVersion: 2
-        x: 1135
-        y: 2226
-        width: 23
-        height: 23
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b7b0b6ca7ec04f550800000000000000
-      internalID: 6193589576710949755
+      spriteID: e2e5491272d181430800000000000000
+      internalID: 3753782343317610030
       vertices: []
       indices: 
       edges: []
@@ -301,12 +251,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      eyes_neutral_0: -3536303915179993498
-      eyes_neutral_1: 8444222145079707165
-      eyes_neutral_2: -2538704188840436429
-      eyes_neutral_3: 4854858848861027223
-      eyes_neutral_4: 7376928577522432212
-      eyes_neutral_5: 6193589576710949755
+      hoki_neutral_details_0: 3846471257506930365
+      hoki_neutral_details_1: 2407694849190886896
+      hoki_neutral_details_2: 3368928810902222586
+      hoki_neutral_details_3: 3753782343317610030
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
