@@ -118,6 +118,21 @@ namespace Novelify.Editor
 
                     runtimeNode = runtimeTranslateSpeakerPortrait;
                 }
+                else if (editorNode is FlipCharacterNode flipCharacterNode)
+                {
+                    var runtimeFlipCharacterNode =
+                        new RuntimeFlipCharacterNode
+                        {
+                            NodeID = nodeIDMap[editorNode]
+                        };
+
+                    ProcessFlipCharacterNode(
+                        flipCharacterNode,
+                        runtimeFlipCharacterNode,
+                        nodeIDMap);
+
+                    runtimeNode = runtimeFlipCharacterNode;
+                }
                 else
                 {
                     runtimeNode = CreateUtilityNode(editorNode);
@@ -262,6 +277,27 @@ namespace Novelify.Editor
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);
+        }
+
+        private void ProcessFlipCharacterNode(
+            FlipCharacterNode node,
+            RuntimeFlipCharacterNode runtimeNode,
+            Dictionary<INode, string> nodeIDMap)
+        {
+            runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
+
+            runtimeNode.FlipX = GetOptionValue(node.GetNodeOptionByName("FlipX"),true);
+            runtimeNode.FlipY = GetOptionValue(node.GetNodeOptionByName("FlipY"),false);
+
+            runtimeNode.InstanceID =
+                GetOptionValue(
+                    node.GetNodeOptionByName("Instance ID"),
+                    string.Empty);
+
+            if (runtimeNode.Character == null)
+                _context?.LogImportWarning(
+                    "Flip Character needs a Character input.");
+            runtimeNode.NextNodeID = GetNextNodeID(node, nodeIDMap);
         }
 
         private string GetNextNodeID(

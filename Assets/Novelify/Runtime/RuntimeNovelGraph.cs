@@ -93,6 +93,15 @@ namespace Novelify
     }
 
     [Serializable]
+    public class RuntimeFlipCharacterNode : RuntimeNode
+    {
+        public string InstanceID;
+        public NovelCharacter Character;
+        public bool FlipX;
+        public bool FlipY;
+    }
+
+    [Serializable]
     public class RuntimeShowCharacterNode : RuntimeNode
     {
         public NovelCharacter Character;

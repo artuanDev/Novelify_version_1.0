@@ -13,24 +13,24 @@ MonoBehaviour:
   m_Name: Hoki
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelCharacter
   SpeakerName: Hoki
-  PortraitBody: {fileID: 21300000, guid: 4b2475ccd3737bf4387437b1b821b8d2, type: 3}
-  PortraitMouth: {fileID: 21300000, guid: f10d71592f6e45e46a65af37886c6e32, type: 3}
-  PortraitFaceDetails: {fileID: 21300000, guid: 17ee3c8d55f1e1140839114e55ed1349, type: 3}
-  PortraitEyes: {fileID: 21300000, guid: 0fb80943c16776d47999ff402cc6680c, type: 3}
-  PortraitMouthOpen: {fileID: 21300000, guid: b899607234571a946809a51cb71a492f, type: 3}
+  PortraitBody: {fileID: 21300000, guid: 775d3b1edc860b24fb391de30e98f2ef, type: 3}
+  PortraitMouth: {fileID: 21300000, guid: 77addb70d25f72b4ca3d65eb3bab833c, type: 3}
+  PortraitFaceDetails: {fileID: 21300000, guid: 4d87015bc97b08b428dbf652e703fbc7, type: 3}
+  PortraitEyes: {fileID: 21300000, guid: 217c929bbb41c6845bbeba12713cfbd0, type: 3}
+  PortraitMouthOpen: {fileID: 21300000, guid: df28984fcc97fe149beed7f6749bac63, type: 3}
   MouthFrameInterval: 0.12
   MouthTimingVariation: 0.4
   MouthPauseChance: 0.14
   MouthPauseMultiplier: 1.85
-  PortraitEyesClosed: {fileID: 21300000, guid: 5c39dc969420c8848a13746b9ab9225f, type: 3}
+  PortraitEyesClosed: {fileID: 21300000, guid: 960344465794ebe4d96a32e82b64039d, type: 3}
   BlinkIntervalMin: 2.5
   BlinkIntervalMax: 5
   BlinkDuration: 0.12
   TalkSound: {fileID: 8300000, guid: 6f0d90f29b9149908dde0b073d3766a8, type: 3}
   PitchMinVariation: -0.2
   PitchMaxVariation: -0.1
-  PreviewWidth: 155
-  PreviewHeight: 155
+  PreviewWidth: 220
+  PreviewHeight: 220
   PreviewZoom: 2.01
   PreviewOffsetX: 0.16
   PreviewOffsetY: -0.74

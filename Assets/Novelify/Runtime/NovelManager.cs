@@ -194,6 +194,19 @@ namespace Novelify
                             }
                         }
                         break;
+                    case RuntimeFlipCharacterNode flip:
+
+                        CharacterInfo flipping = ShowCharacter(flip.Character, flip.InstanceID);
+                        flipping.gameObject.transform.localScale =
+                            new Vector3(
+                                flip.FlipX ? flipping.gameObject.transform.localScale.x * -1:
+                                    flipping.gameObject.transform.localScale.x,
+                                flip.FlipY ? flipping.gameObject.transform.localScale.y * -1 :
+                                    flipping.gameObject.transform.localScale.y,
+                                flipping.gameObject.transform.localScale.z
+                                );
+
+                        break;
                     case RuntimeShowCharacterNode show:
                         CharacterInfo shown = ShowCharacter(show.Character, show.InstanceID);
                         if (shown != null)

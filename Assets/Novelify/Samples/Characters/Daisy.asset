@@ -27,11 +27,11 @@ MonoBehaviour:
   BlinkIntervalMax: 5
   BlinkDuration: 0.12
   TalkSound: {fileID: 8300000, guid: 6f0d90f29b9149908dde0b073d3766a8, type: 3}
-  PitchMinVariation: 0.01
-  PitchMaxVariation: 0.47
-  PreviewWidth: 155
-  PreviewHeight: 155
+  PitchMinVariation: 0.5
+  PitchMaxVariation: 1
+  PreviewWidth: 220
+  PreviewHeight: 220
   PreviewZoom: 2.01
   PreviewOffsetX: 0.16
-  PreviewOffsetY: -0.737
+  PreviewOffsetY: -0.391
   Expressions: []

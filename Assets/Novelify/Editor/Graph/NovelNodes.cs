@@ -100,6 +100,34 @@ namespace Novelify.Editor
     }
 
     [Serializable]
+    [Node("Novelify/Utilities")]
+    [UseWithGraph(typeof(NovelGraph))]
+    public class FlipCharacterNode : CharacterActionNode
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Move character",
+                "Creates the selected character if needed, then moves that instance on the stage.",
+                new Color32(251, 191, 36, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<bool>("FlipX").WithTooltip("Flip in the X Axis.").WithDefaultValue(true).Build();
+            context.AddOption<bool>("FlipY").WithTooltip("Flip in the Y Axis.").WithDefaultValue(false).Build();
+        }
+    }
+
+    [Serializable]
     [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph))]
