@@ -14,6 +14,7 @@ namespace Novelify
         public RuntimeNovelGraph RuntimeGraph;
 
         private readonly Stack<GraphCallFrame> _graphCalls = new Stack<GraphCallFrame>();
+        private RuntimeValueScope _valueScope = new RuntimeValueScope();
 
         [Header("Sound Settings")]
         public AudioSource TalkSource;
@@ -63,15 +64,30 @@ namespace Novelify
         private const int MaxAutomaticNodesPerTraversal = 1000;
         private const int MaxGraphCallDepth = 128;
 
+        private sealed class RuntimeValueScope
+        {
+            public readonly Dictionary<string, RuntimeValue> Inputs = new Dictionary<string, RuntimeValue>();
+            private readonly Dictionary<string, RuntimeValue> _outputs = new Dictionary<string, RuntimeValue>();
+
+            private static string OutputKey(string nodeID, string name) => (nodeID ?? string.Empty) + "\n" + (name ?? string.Empty);
+            public void SetOutput(string nodeID, string name, RuntimeValue value) => _outputs[OutputKey(nodeID, name)] = value ?? RuntimeValue.None();
+            public RuntimeValue GetOutput(string nodeID, string name) =>
+                _outputs.TryGetValue(OutputKey(nodeID, name), out RuntimeValue value) ? value : RuntimeValue.None();
+        }
+
         private readonly struct GraphCallFrame
         {
             public readonly RuntimeNovelGraph Graph;
             public readonly string ReturnNodeID;
+            public readonly RuntimeValueScope Scope;
+            public readonly string FunctionCallNodeID;
 
-            public GraphCallFrame(RuntimeNovelGraph graph, string returnNodeID)
+            public GraphCallFrame(RuntimeNovelGraph graph, string returnNodeID, RuntimeValueScope scope, string functionCallNodeID = null)
             {
                 Graph = graph;
                 ReturnNodeID = returnNodeID;
+                Scope = scope;
+                FunctionCallNodeID = functionCallNodeID;
             }
         }
 
@@ -106,6 +122,7 @@ namespace Novelify
             EndDialogue();
             _stage?.StopMovement();
             _graphCalls.Clear();
+            _valueScope = new RuntimeValueScope();
             LoadGraph(graph);
             if (graph == null)
             {
@@ -180,22 +197,28 @@ namespace Novelify
                 switch (node)
                 {
                     case RuntimeTransformSpeakerPortraitNode move:
-                        CharacterInfo moving = ShowCharacter(move.Character, move.InstanceID);
+                        NovelCharacter movingCharacter = AsObject(Evaluate(move.CharacterValue), move.Character);
+                        CharacterInfo moving = ShowCharacter(movingCharacter, move.InstanceID);
                         if (moving != null)
                         {
-                            Vector2 offset = new Vector2(move.OffsetX, move.OffsetY);
+                            Vector2 offset = move.PositionValue != null
+                                ? AsVector2(Evaluate(move.PositionValue), new Vector2(move.OffsetX, move.OffsetY))
+                                : new Vector2(move.OffsetX, move.OffsetY);
+                            float margin = Mathf.Max(0f, AsFloat(Evaluate(move.MarginValue), move.Margin));
+                            float rotation = AsFloat(Evaluate(move.RotationValue), move.Rotation);
+                            Vector2 scale = AsVector2(Evaluate(move.ScaleValue), move.Scale);
                             Vector2 target = move.PositionIsNormalized
-                                ? moving.NormalizedToAnchoredPosition(offset, move.Margin)
+                                ? moving.NormalizedToAnchoredPosition(offset, margin)
                                 : offset;
                             if (move.Relative) target += moving.Position;
                             if (move.PositionIsNormalized)
-                                target = moving.ClampToStageBounds(target, move.Margin);
+                                target = moving.ClampToStageBounds(target, margin);
                             if (move.PositionIsNormalized)
                             {
                                 moving.TransformTo(
                                     target,
-                                    move.Rotation,
-                                    move.Scale,
+                                    rotation,
+                                    scale,
                                     move.SmoothMovement,
                                     move.Duration,
                                     move.EaseInOut);
@@ -217,7 +240,7 @@ namespace Novelify
                         }
                         break;
                     case RuntimeFlipCharacterNode flip:
-                        CharacterInfo flipping = ShowCharacter(flip.Character, flip.InstanceID);
+                        CharacterInfo flipping = ShowCharacter(AsObject(Evaluate(flip.CharacterValue), flip.Character), flip.InstanceID);
                         if (flipping != null)
                             flipping.gameObject.transform.localScale =
                             new Vector3(
@@ -230,17 +253,19 @@ namespace Novelify
 
                         break;
                     case RuntimeShowCharacterNode show:
-                        CharacterInfo shown = ShowCharacter(show.Character, show.InstanceID);
+                        CharacterInfo shown = ShowCharacter(AsObject(Evaluate(show.CharacterValue), show.Character), show.InstanceID);
                         if (shown != null)
                         {
-                            shown.MoveTo(show.Position, false, 0f);
+                            shown.MoveTo(AsVector2(Evaluate(show.PositionValue), show.Position), false, 0f);
                             shown.SetEmotion(show.Emotion);
                         }
                         break;
-                    case RuntimeHideCharacterNode hide: Stage.Hide(hide.Character, hide.InstanceID); break;
+                    case RuntimeHideCharacterNode hide:
+                        Stage.Hide(AsObject(Evaluate(hide.CharacterValue), hide.Character), hide.InstanceID);
+                        break;
                     case RuntimeHideAllCharactersNode _: Stage.HideAll(); break;
                     case RuntimeSetCharacterEmotionNode emotion:
-                        ShowCharacter(emotion.Character, emotion.InstanceID)?.SetEmotion(emotion.Emotion);
+                        ShowCharacter(AsObject(Evaluate(emotion.CharacterValue), emotion.Character), emotion.InstanceID)?.SetEmotion(emotion.Emotion);
                         break;
                     case RuntimeWaitNode wait:
                         if (wait.Duration > 0f && !float.IsInfinity(wait.Duration))
@@ -268,9 +293,37 @@ namespace Novelify
                             EndDialogue();
                             return;
                         }
-                        _graphCalls.Push(new GraphCallFrame(RuntimeGraph, node.NextNodeID));
+                        _graphCalls.Push(new GraphCallFrame(RuntimeGraph, node.NextNodeID, _valueScope));
                         LoadGraph(call.Graph);
                         nodeID = call.Graph.EntryNodeID;
+                        continue;
+                    case RuntimeCallNovelFunctionNode callFunction:
+                        if (callFunction.Function == null)
+                        {
+                            Debug.LogWarning("Novel Function node has no compiled function assigned; continuing in the caller.", this);
+                            break;
+                        }
+                        if (_graphCalls.Count >= MaxGraphCallDepth)
+                        {
+                            Debug.LogError($"Novel Function call depth exceeded {MaxGraphCallDepth}. Check for recursive functions.", this);
+                            EndDialogue();
+                            return;
+                        }
+                        var functionScope = new RuntimeValueScope();
+                        if (callFunction.Function.Inputs != null)
+                        {
+                            foreach (RuntimeFunctionInput input in callFunction.Function.Inputs)
+                                functionScope.Inputs[input.Name] = input.DefaultValue ?? RuntimeValue.None();
+                        }
+                        if (callFunction.Arguments != null)
+                        {
+                            foreach (RuntimeFunctionArgument argument in callFunction.Arguments)
+                                functionScope.Inputs[argument.Name] = Evaluate(argument.Value);
+                        }
+                        _graphCalls.Push(new GraphCallFrame(RuntimeGraph, node.NextNodeID, _valueScope, node.NodeID));
+                        _valueScope = functionScope;
+                        LoadGraph(callFunction.Function);
+                        nodeID = callFunction.Function.EntryNodeID;
                         continue;
                 }
                 nodeID = node.NextNodeID;
@@ -283,6 +336,15 @@ namespace Novelify
             while (_graphCalls.Count > 0)
             {
                 GraphCallFrame frame = _graphCalls.Pop();
+                if (!string.IsNullOrEmpty(frame.FunctionCallNodeID) && RuntimeGraph is RuntimeNovelFunction function)
+                {
+                    if (function.Outputs != null)
+                    {
+                        foreach (RuntimeFunctionOutput output in function.Outputs)
+                            frame.Scope.SetOutput(frame.FunctionCallNodeID, output.Name, Evaluate(output.Value));
+                    }
+                }
+                _valueScope = frame.Scope;
                 LoadGraph(frame.Graph);
                 if (!string.IsNullOrEmpty(frame.ReturnNodeID))
                 {
@@ -293,6 +355,104 @@ namespace Novelify
             nodeID = null;
             return false;
         }
+
+        private RuntimeValue Evaluate(RuntimeValueExpression expression)
+        {
+            switch (expression)
+            {
+                case null:
+                    return RuntimeValue.None();
+                case RuntimeConstantExpression constant:
+                    return constant.Value ?? RuntimeValue.None();
+                case RuntimeFunctionInputExpression input:
+                    return _valueScope.Inputs.TryGetValue(input.Name ?? string.Empty, out RuntimeValue inputValue)
+                        ? inputValue
+                        : RuntimeValue.None();
+                case RuntimeFunctionOutputExpression output:
+                    return _valueScope.GetOutput(output.CallNodeID, output.Name);
+                case RuntimeArithmeticExpression arithmetic:
+                    return EvaluateArithmetic(arithmetic);
+                case RuntimeCharacterComponentExpression character:
+                    return EvaluateCharacterComponent(character);
+                default:
+                    return RuntimeValue.None();
+            }
+        }
+
+        private RuntimeValue EvaluateArithmetic(RuntimeArithmeticExpression expression)
+        {
+            RuntimeValue a = Evaluate(expression.A);
+            RuntimeValue b = Evaluate(expression.B);
+            if (expression.ValueKind == RuntimeValueKind.Vector2)
+            {
+                Vector2 left = AsVector2(a, Vector2.zero);
+                Vector2 right = AsVector2(b, Vector2.zero);
+                switch (expression.Operation)
+                {
+                    case RuntimeArithmeticOperation.Subtract: return RuntimeValue.From(left - right);
+                    case RuntimeArithmeticOperation.Multiply: return RuntimeValue.From(Vector2.Scale(left, right));
+                    case RuntimeArithmeticOperation.Divide:
+                        return RuntimeValue.From(new Vector2(SafeDivide(left.x, right.x), SafeDivide(left.y, right.y)));
+                    default: return RuntimeValue.From(left + right);
+                }
+            }
+
+            float first = AsFloat(a, 0f);
+            float second = AsFloat(b, 0f);
+            switch (expression.Operation)
+            {
+                case RuntimeArithmeticOperation.Subtract: return RuntimeValue.From(first - second);
+                case RuntimeArithmeticOperation.Multiply: return RuntimeValue.From(first * second);
+                case RuntimeArithmeticOperation.Divide: return RuntimeValue.From(SafeDivide(first, second));
+                default: return RuntimeValue.From(first + second);
+            }
+        }
+
+        private RuntimeValue EvaluateCharacterComponent(RuntimeCharacterComponentExpression expression)
+        {
+            NovelCharacter character = AsObject<NovelCharacter>(Evaluate(expression.Character), null);
+            string instanceID = AsString(Evaluate(expression.InstanceID), string.Empty);
+            CharacterInfo live = null;
+            if (character != null) Stage.TryGet(character, instanceID, out live);
+
+            switch (expression.Component)
+            {
+                case RuntimeCharacterComponent.Character: return RuntimeValue.From(character);
+                case RuntimeCharacterComponent.SpeakerName: return RuntimeValue.From(character != null ? character.SpeakerName : string.Empty);
+                case RuntimeCharacterComponent.Body: return RuntimeValue.From(live?.Body != null ? live.Body.sprite : character?.PortraitBody);
+                case RuntimeCharacterComponent.Eyes: return RuntimeValue.From(live?.Eyes != null ? live.Eyes.sprite : character?.PortraitEyes);
+                case RuntimeCharacterComponent.EyesClosed: return RuntimeValue.From(character?.PortraitEyesClosed);
+                case RuntimeCharacterComponent.Details: return RuntimeValue.From(live?.Details != null ? live.Details.sprite : character?.PortraitFaceDetails);
+                case RuntimeCharacterComponent.Mouth: return RuntimeValue.From(live?.Mouth != null ? live.Mouth.sprite : character?.PortraitMouth);
+                case RuntimeCharacterComponent.MouthOpen: return RuntimeValue.From(character?.PortraitMouthOpen);
+                case RuntimeCharacterComponent.NormalizedPosition:
+                    return RuntimeValue.From(live != null ? live.AnchoredToNormalizedPosition(live.Position) : Vector2.zero);
+                case RuntimeCharacterComponent.CanvasPosition:
+                    return RuntimeValue.From(live != null ? live.Position : Vector2.zero);
+                case RuntimeCharacterComponent.Rotation:
+                    return RuntimeValue.From(live != null ? live.Rotation : 0f);
+                case RuntimeCharacterComponent.Scale:
+                    return RuntimeValue.From(live != null ? live.Scale : Vector2.one);
+                default:
+                    return RuntimeValue.None();
+            }
+        }
+
+        private static float SafeDivide(float numerator, float denominator) =>
+            Mathf.Approximately(denominator, 0f) ? 0f : numerator / denominator;
+
+        private static float AsFloat(RuntimeValue value, float fallback) =>
+            value?.Kind == RuntimeValueKind.Float ? value.FloatValue :
+            value?.Kind == RuntimeValueKind.Integer ? value.IntegerValue : fallback;
+
+        private static Vector2 AsVector2(RuntimeValue value, Vector2 fallback) =>
+            value?.Kind == RuntimeValueKind.Vector2 ? value.Vector2Value : fallback;
+
+        private static string AsString(RuntimeValue value, string fallback) =>
+            value?.Kind == RuntimeValueKind.String ? value.StringValue ?? string.Empty : fallback;
+
+        private static T AsObject<T>(RuntimeValue value, T fallback) where T : UnityEngine.Object =>
+            value?.Kind == RuntimeValueKind.Object && value.ObjectValue is T typed ? typed : fallback;
 
         private IEnumerator WaitThenContinue(RuntimeNode node, int version, float seconds, CharacterInfo moving = null)
         {
@@ -311,16 +471,19 @@ namespace Novelify
         {
             _nodeEnteredFrame = Time.frameCount;
             SetPanelVisible(DialoguePanel, true);
-            if (SpeakerNameText != null) SpeakerNameText.SetText(node.SpeakerName ?? string.Empty);
-            if (NameBackground != null) NameBackground.SetActive(!string.IsNullOrEmpty(node.SpeakerName));
+            NovelCharacter speakingCharacter = AsObject(Evaluate(node.CharacterValue), node.NovelCharacter);
+            string speakerName = speakingCharacter != null ? speakingCharacter.SpeakerName : node.SpeakerName ?? string.Empty;
+            if (SpeakerNameText != null) SpeakerNameText.SetText(speakerName);
+            if (NameBackground != null) NameBackground.SetActive(!string.IsNullOrEmpty(speakerName));
             if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
             StopAudio(NodeSoundSource);
-            if (NodeSoundSource != null && node.PlaySound != null)
+            AudioClip nodeClip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
+            if (NodeSoundSource != null && nodeClip != null)
             {
-                NodeSoundSource.clip = node.PlaySound;
+                NodeSoundSource.clip = nodeClip;
                 NodeSoundSource.Play();
             }
-            _speaker = node.NovelCharacter != null ? ShowCharacter(node.NovelCharacter, node.InstanceID) : null;
+            _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, node.InstanceID) : null;
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
             if (DialogueText != null)
@@ -340,9 +503,13 @@ namespace Novelify
 
         private IEnumerator RevealText(RuntimeDialogueNode node)
         {
+            NovelCharacter character = _speaker != null ? _speaker.character : node.NovelCharacter;
             yield return NovelifyUtilities.ShowTextLetterByLetter(
-                node.DialogueText ?? string.Empty, DialogueText, node.TalkSound, TalkSource,
-                node.PitchMinVariation, node.PitchMaxVariation, node.CharactersPerSecond,
+                node.DialogueText ?? string.Empty, DialogueText,
+                character != null ? character.TalkSound : node.TalkSound, TalkSource,
+                character != null ? character.PitchMinVariation : node.PitchMinVariation,
+                character != null ? character.PitchMaxVariation : node.PitchMaxVariation,
+                node.CharactersPerSecond,
                 letter => _speaker?.RevealLetter(letter));
             if (_currentNode != node) yield break;
             _textRevealCoroutine = null;
@@ -365,7 +532,7 @@ namespace Novelify
                 if (choice == null) continue;
                 Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
                 TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null) label.SetText(choice.ChoiceText ?? string.Empty);
+                if (label != null) label.SetText(AsString(Evaluate(choice.ChoiceTextValue), choice.ChoiceText ?? string.Empty));
                 button.onClick.AddListener(() =>
                 {
                     if (_currentNode != node || _isWaiting) return;
@@ -381,8 +548,9 @@ namespace Novelify
         private void PlaySound(RuntimePlaySoundNode node)
         {
             StopAudio(PlaySoundSource);
-            if (PlaySoundSource == null || node.ClipSound == null) return;
-            PlaySoundSource.clip = node.ClipSound;
+            AudioClip clip = AsObject(Evaluate(node.ClipValue), node.ClipSound);
+            if (PlaySoundSource == null || clip == null) return;
+            PlaySoundSource.clip = clip;
             PlaySoundSource.loop = node.Loop;
             PlaySoundSource.volume = Mathf.Clamp01(node.Volume);
             PlaySoundSource.priority = Mathf.Clamp(node.Priority, 0, 256);

@@ -11,7 +11,7 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Flow", "d_PlayButton", "Start",
         "Assets/Novelify/Editor/Graph/Styles/StartNode.uss")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class StartNode: Node
     {
         public override void OnEnable()
@@ -36,7 +36,7 @@ namespace Novelify.Editor
 
     [Serializable]
     [Node("Novelify/Utilities")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class PlaySoundNode : Node
     {
         public override void OnEnable()
@@ -68,7 +68,7 @@ namespace Novelify.Editor
 
     [Serializable]
     [Node("Novelify/Utilities")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class TransformSpeakerPortraitNode : CharacterActionNode
     {
         public override void OnEnable()
@@ -84,16 +84,39 @@ namespace Novelify.Editor
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             base.OnDefinePorts(context);
+            context.AddInputPort<Vector2>("Position")
+                .WithDefaultValue(Vector2.zero)
+                .WithTooltip("Normalized target: (-1,-1) is bottom-left and (1,1) is top-right.")
+                .Build();
+            context.AddInputPort<float>("Rotation")
+                .WithDefaultValue(0f)
+                .WithTooltip("Target Z rotation in degrees.")
+                .Build();
+            context.AddInputPort<Vector2>("Scale")
+                .WithDefaultValue(Vector2.one)
+                .WithTooltip("Target local X/Y scale.")
+                .Build();
+            context.AddInputPort<float>("Margin")
+                .WithDefaultValue(0f)
+                .WithTooltip("Canvas-unit distance allowed beyond each screen edge.")
+                .Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
-            context.AddOption<float>("OffsetX").WithTooltip("Normalized horizontal target from -1 (left) to 1 (right).").WithDefaultValue(0f).Build();
-            context.AddOption<float>("OffsetY").WithTooltip("Normalized vertical target from -1 (bottom) to 1 (top).").WithDefaultValue(0f).Build();
-            context.AddOption<float>("Rotation").WithTooltip("Target Z rotation in degrees.").WithDefaultValue(0f).Build();
-            context.AddOption<Vector2>("Scale").WithTooltip("Target local X/Y scale.").WithDefaultValue(Vector2.one).Build();
-            context.AddOption<float>("Margin").WithTooltip("Canvas-unit distance beyond each screen edge. Increase it to move portraits completely off-screen.").WithDefaultValue(0f).Build();
+            // Keep the original serialized option IDs so graphs created before the
+            // value-port upgrade retain their transform values on reimport.
+            context.AddOption<float>("OffsetX").WithDisplayName("Legacy Offset X")
+                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
+            context.AddOption<float>("OffsetY").WithDisplayName("Legacy Offset Y")
+                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
+            context.AddOption<float>("Rotation").WithDisplayName("Legacy Rotation")
+                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
+            context.AddOption<Vector2>("Scale").WithDisplayName("Legacy Scale")
+                .WithDefaultValue(Vector2.one).ShowInInspectorOnly().Build();
+            context.AddOption<float>("Margin").WithDisplayName("Legacy Margin")
+                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
             context.AddOption<bool>("Relative").WithTooltip("Add the normalized X/Y displacement to the current position. Rotation and scale remain absolute.").Build();
             context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
             context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
@@ -122,7 +145,7 @@ namespace Novelify.Editor
 
     [Serializable]
     [Node("Novelify/Utilities")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class FlipCharacterNode : CharacterActionNode
     {
         public override void OnEnable()
@@ -151,7 +174,7 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Flow", "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class EndNode: Node
     {
         public override void OnEnable()
@@ -176,7 +199,7 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Story", "d_console.infoicon", "SimpleDialogue",
         "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SimpleDialogueNode : Node
     {
         internal const string SoundPortName = "Sound";
@@ -229,7 +252,7 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Story", "d_console.infoicon", "Dialogue",
         "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DialogueNode: SimpleDialogueNode
     {
         public override void OnEnable()
@@ -282,7 +305,7 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Story", "d_TreeEditor.Duplicate", "Choice",
         "Assets/Novelify/Editor/Graph/Styles/ChoiceNode.uss")]
-    [UseWithGraph(typeof(NovelGraph))]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class ChoiceNode: Node
     {
         const string optionID = "portCount";

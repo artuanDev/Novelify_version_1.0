@@ -88,11 +88,10 @@ namespace Novelify.Tests
             TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
             DialogueNode dialogue = Add<DialogueNode>();
             transform.GetInputPortByName("Character").TrySetValue(_character);
-            transform.GetNodeOptionByName("OffsetX").TrySetValue(0.75f);
-            transform.GetNodeOptionByName("OffsetY").TrySetValue(-0.25f);
-            transform.GetNodeOptionByName("Rotation").TrySetValue(35f);
-            transform.GetNodeOptionByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
-            transform.GetNodeOptionByName("Margin").TrySetValue(120f);
+            transform.GetInputPortByName("Position").TrySetValue(new Vector2(0.75f, -0.25f));
+            transform.GetInputPortByName("Rotation").TrySetValue(35f);
+            transform.GetInputPortByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
+            transform.GetInputPortByName("Margin").TrySetValue(120f);
             transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
             Connect(start, transform);
             Connect(transform, dialogue);
@@ -110,6 +109,109 @@ namespace Novelify.Tests
             Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
             Assert.That(result.Margin, Is.EqualTo(120f));
             Assert.That(result.SmoothMovement, Is.True);
+            Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
+        }
+
+        [Test]
+        public void VectorMathAndCharacterSplitCompileIntoLiveExpressions()
+        {
+            StartNode start = Add<StartNode>();
+            SplitNovelCharacterNode split = Add<SplitNovelCharacterNode>();
+            SubtractVector2Node subtract = Add<SubtractVector2Node>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+
+            split.GetInputPortByName("Character").TrySetValue(_character);
+            subtract.GetInputPortByName("B").TrySetValue(new Vector2(0.1f, 0f));
+            _graph.Connect(split.GetOutputPortByName("Character"), transform.GetInputPortByName("Character"));
+            _graph.Connect(split.GetOutputPortByName("Position (Normalized)"), subtract.GetInputPortByName("A"));
+            _graph.Connect(subtract.GetOutputPortByName("Result"), transform.GetInputPortByName("Position"));
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeTransformSpeakerPortraitNode result = runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            Assert.That(result.CharacterValue, Is.TypeOf<RuntimeCharacterComponentExpression>());
+            Assert.That(result.PositionValue, Is.TypeOf<RuntimeArithmeticExpression>());
+            Assert.That(runtime.AllNodes.Count, Is.EqualTo(2),
+                "Only Transform and End should be emitted; pure value nodes are expressions.");
+        }
+
+        [Test]
+        public void NovelFunctionAssetExposesInputsOutputsAndCompilesAsCallableNode()
+        {
+            string functionPath = _folder + "/MoveTarget.novelfunction";
+            NovelFunctionGraph function = GraphDatabase.CreateGraph<NovelFunctionGraph>(functionPath);
+            function.UndoBeginRecordGraph("Build function");
+            try
+            {
+                function.EnsureFlowInterface();
+                Assert.That(function.GetVariables().Any(variable =>
+                    variable.Name == NovelFunctionGraph.EnterVariableName && variable.VariableKind == VariableKind.Input), Is.True);
+                Assert.That(function.GetVariables().Any(variable =>
+                    variable.Name == NovelFunctionGraph.ContinueVariableName && variable.VariableKind == VariableKind.Output), Is.True);
+
+                IVariable target = function.CreateInterfaceVariable("Target", typeof(NovelCharacter), _character, VariableKind.Input);
+                IVariable destination = function.CreateInterfaceVariable("Destination", typeof(Vector2), Vector2.zero, VariableKind.Input);
+                IVariable finalPosition = function.CreateInterfaceVariable("Final Position", typeof(Vector2), Vector2.zero, VariableKind.Output);
+                var start = new StartNode();
+                var transform = new TransformSpeakerPortraitNode();
+                var split = new SplitNovelCharacterNode();
+                var end = new EndNode();
+                function.AddNode(start);
+                function.AddNode(transform);
+                function.AddNode(split);
+                function.AddNode(end);
+                IVariableNode targetNode = function.AddVariableNode(target, Vector2.zero);
+                IVariableNode destinationNode = function.AddVariableNode(destination, Vector2.zero);
+                IVariableNode outputNode = function.AddVariableNode(finalPosition, Vector2.zero);
+
+                Assert.That(function.Connect(start.GetOutputPortByName("out"), transform.GetInputPortByName("in")), Is.True);
+                Assert.That(function.Connect(transform.GetOutputPortByName("out"), end.GetInputPortByName("in")), Is.True);
+                Assert.That(function.Connect(targetNode.GetOutputPorts().Single(), transform.GetInputPortByName("Character")), Is.True);
+                Assert.That(function.Connect(targetNode.GetOutputPorts().Single(), split.GetInputPortByName("Character")), Is.True);
+                Assert.That(function.Connect(destinationNode.GetOutputPorts().Single(), transform.GetInputPortByName("Position")), Is.True);
+                Assert.That(function.Connect(split.GetOutputPortByName("Position (Normalized)"), outputNode.GetInputPorts().Single()), Is.True);
+
+                function.UndoEndRecordGraph();
+                GraphDatabase.SaveGraph(function);
+                AssetDatabase.ImportAsset(functionPath, ImportAssetOptions.ForceUpdate);
+                RuntimeNovelFunction compiledFunction = AssetDatabase.LoadAssetAtPath<RuntimeNovelFunction>(functionPath);
+                Assert.That(compiledFunction, Is.Not.Null);
+                Assert.That(compiledFunction.Inputs.Select(input => input.Name), Is.EquivalentTo(new[] { "Target", "Destination" }));
+                Assert.That(compiledFunction.Outputs.Single().Name, Is.EqualTo("Final Position"));
+
+                _graph.UndoEndRecordGraph();
+                GraphDatabase.SaveGraph(_graph);
+                _graph = GraphDatabase.LoadGraph<NovelGraph>(_folder + "/Story.novelgraph");
+                _graph.UndoBeginRecordGraph("Add function call");
+                var graphStart = new StartNode();
+                var graphEnd = new EndNode();
+                _graph.AddNode(graphStart);
+                _graph.AddNode(graphEnd);
+                INode call = _graph.AddSubgraphNode(function, Vector2.zero);
+                IPort targetPort = call.GetInputPorts().Single(port => port.DisplayName == "Target");
+                IPort destinationPort = call.GetInputPorts().Single(port => port.DisplayName == "Destination");
+                IPort enterPort = call.GetInputPorts().Single(port => port.DisplayName == "Enter");
+                IPort continuePort = call.GetOutputPorts().Single(port => port.DisplayName == "Continue");
+                targetPort.TrySetValue(_character);
+                destinationPort.TrySetValue(new Vector2(0.5f, 0f));
+                Assert.That(_graph.Connect(graphStart.GetOutputPortByName("out"), enterPort), Is.True);
+                Assert.That(_graph.Connect(continuePort, graphEnd.GetInputPortByName("in")), Is.True);
+
+                RuntimeNovelGraph compiledGraph = Import();
+                RuntimeCallNovelFunctionNode runtimeCall = compiledGraph.AllNodes.OfType<RuntimeCallNovelFunctionNode>().Single();
+                Assert.That(runtimeCall.Function, Is.SameAs(compiledFunction));
+                Assert.That(runtimeCall.Arguments.Select(argument => argument.Name), Is.EquivalentTo(new[] { "Target", "Destination" }));
+                RuntimeFunctionArgument targetArgument = runtimeCall.Arguments.Single(argument => argument.Name == "Target");
+                Assert.That(targetArgument.Value, Is.TypeOf<RuntimeConstantExpression>());
+                Assert.That(((RuntimeConstantExpression)targetArgument.Value).Value.ObjectValue, Is.SameAs(_character));
+                Assert.That(runtimeCall.NextNodeID, Is.Not.Null.And.Not.Empty);
+            }
+            finally
+            {
+                if (function != null) function.OnDisable();
+            }
         }
 
         [Test]
@@ -135,7 +237,7 @@ namespace Novelify.Tests
         [Test]
         public void ExampleStoryImportsMusicThenNarrationHokiTranslateDaisyAndEnd()
         {
-            const string path = "Assets/Novelify/NovelGraphs/ExampleStory.novelgraph";
+            const string path = "Assets/Novelify/Samples/NovelGraphs/ExampleStory.novelgraph";
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             RuntimeNovelGraph runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(path);
             Assert.That(runtime, Is.Not.Null);
@@ -149,7 +251,8 @@ namespace Novelify.Tests
             current = lookup[current.NextNodeID];
             Assert.That(((RuntimeDialogueNode)current).NovelCharacter.name, Is.EqualTo("Hoki"));
             current = lookup[current.NextNodeID];
-            Assert.That(current, Is.TypeOf<RuntimeTranslateSpeakerPortraitNode>());
+            Assert.That(current, Is.TypeOf<RuntimeTransformSpeakerPortraitNode>());
+            Assert.That(((RuntimeTransformSpeakerPortraitNode)current).OffsetX, Is.EqualTo(-0.5f));
             current = lookup[current.NextNodeID];
             Assert.That(((RuntimeDialogueNode)current).NovelCharacter.name, Is.EqualTo("Daisy"));
             current = lookup[current.NextNodeID];

@@ -36,6 +36,9 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Reusable `NovelCharacter` ScriptableObjects.
 - Multiple characters on a dedicated stage, with optional instance IDs for additional copies.
 - Character-specific Transform nodes with normalized positioning, rotation, scale, easing and parallel animation.
+- Reusable `.novelfunction` graphs with typed input/output ports and isolated runtime call scopes.
+- Float and Vector2 Add, Subtract, Multiply and Divide value nodes.
+- Split Novel Character data with live normalized/canvas position, rotation, scale and portrait layers.
 - Label and Jump flow nodes for explicit non-local story routing.
 - Show/Hide Character, Hide All Characters, Set Character Emotion, Wait, Dialogue Event and Stop Sound nodes.
 - A custom character creator with layered emotion, blinking and talking previews.
@@ -94,7 +97,7 @@ Assets/Novelify/Samples/Scenes/TestScene.unity
 
 Press **Play**. The sample scene uses:
 
-- `Assets/Novelify/NovelGraphs/SelfReflection.novelgraph`.
+- `Assets/Novelify/Samples/NovelGraphs/SelfReflection.novelgraph`.
 - `Assets/Novelify/Samples/Characters/Hoki.asset`.
 - A configured `NovelManager`.
 - A TextMesh Pro dialogue interface.
@@ -118,6 +121,18 @@ A left mouse click advances the current dialogue. During text reveal, the first 
 - **SimpleDialogue** displays a line without requiring a character asset.
 - **Dialogue** accepts a `NovelCharacter` speaker and exposes portrait preview, emotion metadata, text timing and portrait animation options.
 - **Choice** combines dialogue presentation with multiple player-selected branches.
+
+## Creating and Using Novel Functions
+
+1. In the Project window, choose **Create > Novelify > Novel Function**.
+2. Open the `.novelfunction` asset and add a **Start**, the reusable actions/value nodes, and an **End**.
+3. In the Blackboard, create variables with kind **Input** for values supplied by the caller and **Output** for values returned to it. Drag those variables into the function graph and wire them normally.
+4. Save the function. Open any `.novelgraph`, open the node library, and select the function asset (or drag the asset into the graph) to create its callable node.
+5. Connect its reserved **Enter** and **Continue** ports to story flow, then connect its typed data ports.
+
+`Enter` and `Continue` are maintained automatically and are reserved for function flow. Every call receives its own input/output scope, so the same function can safely be used for different characters and nested calls. Outputs are evaluated when the function reaches End, which means a live position output observes the character after the function's actions have completed.
+
+For a reusable movement function, add a `NovelCharacter` Input and a `Vector2` Input, feed them into **Transform Speaker Portrait**, then optionally expose the result through an Output. The system does not special-case movement: function ports can use any supported Graph Toolkit variable type, while runtime value composition currently supports float, integer, bool, string, Vector2 and Unity object references.
 
 ## Creating a Character
 
@@ -152,17 +167,21 @@ Characters have no fixed slot limit. Each character asset gets its own default i
 
 Use **Show Character** to place a character before their first line, or connect a character to **Transform Speaker Portrait > Character**. Transform creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
 
-- **OffsetX / OffsetY:** normalized target position, clamped from -1 to 1 across the current character stage or game-screen bounds.
-- **Margin:** expands each bound in canvas units. Use at least half the portrait's relevant dimension to move it completely beyond that edge.
-- **Rotation:** absolute target Z rotation in degrees.
-- **Scale:** absolute target local X/Y scale.
+- **Position input:** normalized Vector2 target, where `(-1,-1)` is bottom-left and `(1,1)` is top-right across the current character stage or game-screen bounds.
+- **Margin input:** expands each bound in canvas units. Use at least half the portrait's relevant dimension to move it completely beyond that edge.
+- **Rotation input:** absolute target Z rotation in degrees.
+- **Scale input:** absolute target local X/Y scale.
 - **Relative:** interpret normalized X/Y as a displacement from the current position; rotation and scale remain absolute.
 - **Animate Transform:** animate position, rotation and scale together. Disabled applies them instantly.
 - **Duration:** transform time in real-time seconds. Zero applies instantly.
 - **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
 - **Wait For Completion:** pause story flow until the transform finishes. Disable to continue to dialogue or animate multiple characters in parallel.
 
-For example: `Start → Transform Speaker Portrait (Hoki, X=-0.65) → Dialogue → End`. A new transform on the same instance replaces its previous animation from the current position, rotation and scale. Legacy Translate nodes remain readable and retain their original canvas-unit positioning, but new nodes use normalized coordinates.
+For example: `Start → Transform Speaker Portrait (Hoki, Position=(-0.65, 0)) → Dialogue → End`. A new transform on the same instance replaces its previous animation from the current position, rotation and scale. Legacy Translate nodes remain readable and retain their original canvas-unit positioning, but new nodes use normalized coordinates.
+
+Use **Split Novel Character** when a graph needs the selected character's data. It returns the character asset, speaker name, current portrait sprites, live normalized position, live canvas position, rotation and scale. Supply the same **Instance ID** used by the character nodes when reading a non-default copy. The normalized position connects directly to Transform Speaker Portrait and Vector2 math nodes.
+
+Math nodes are non-flow expressions and do not execute on their own. Float and Vector2 versions of **Add**, **Subtract**, **Multiply** and **Divide** can be chained into action inputs or function outputs. Vector2 multiply/divide operate component-by-component; division by zero produces zero for that component.
 
 **Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
 

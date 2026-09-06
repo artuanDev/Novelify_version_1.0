@@ -6,9 +6,9 @@ namespace Novelify.Editor
     /// <summary>Shared import/preview resolution, including portals and character pass-through ports.</summary>
     internal static class NovelGraphValues
     {
-        public static T Resolve<T>(NovelGraph graph, IPort input) => Resolve<T>(graph, input, new HashSet<IPort>());
+        public static T Resolve<T>(Graph graph, IPort input) => Resolve<T>(graph, input, new HashSet<IPort>());
 
-        private static T Resolve<T>(NovelGraph graph, IPort input, HashSet<IPort> visited)
+        private static T Resolve<T>(Graph graph, IPort input, HashSet<IPort> visited)
         {
             if (input == null || !visited.Add(input)) return default;
             var connected = new List<IPort>();
@@ -18,7 +18,7 @@ namespace Novelify.Editor
             return input.TryGetValue(out T fallback) ? fallback : default;
         }
 
-        private static bool TryResolveSource<T>(NovelGraph graph, IPort source, HashSet<IPort> visited, out T value)
+        private static bool TryResolveSource<T>(Graph graph, IPort source, HashSet<IPort> visited, out T value)
         {
             value = default;
             if (source == null) return false;
@@ -31,7 +31,7 @@ namespace Novelify.Editor
             return true;
         }
 
-        public static INode FlowDestination(NovelGraph graph, IPort output)
+        public static INode FlowDestination(Graph graph, IPort output)
         {
             if (output == null) return null;
             return output.FirstConnectedPort?.GetNode();

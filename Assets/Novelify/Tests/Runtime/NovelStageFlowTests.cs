@@ -181,7 +181,7 @@ namespace Novelify.Tests
         {
             CreateNestedManagerPanel();
             RuntimeNovelGraph example = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(
-                "Assets/Novelify/NovelGraphs/ExampleStory.novelgraph");
+                "Assets/Novelify/Samples/NovelGraphs/ExampleStory.novelgraph");
             Assert.That(example, Is.Not.Null);
             _manager.PlayGraph(example);
             Assert.That(_manager.CurrentNode, Is.TypeOf<RuntimeDialogueNode>());
@@ -280,6 +280,84 @@ namespace Novelify.Tests
             {
                 Object.DestroyImmediate(child);
                 Object.DestroyImmediate(grandchild);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator NovelFunctionInputsOutputsMathAndLiveCharacterPositionComposeAtRuntime()
+        {
+            RuntimeNovelFunction function = ScriptableObject.CreateInstance<RuntimeNovelFunction>();
+            try
+            {
+                var characterInput = new RuntimeFunctionInputExpression { Name = "Target" };
+                var deltaInput = new RuntimeFunctionInputExpression { Name = "Delta" };
+                var livePosition = new RuntimeCharacterComponentExpression
+                {
+                    Component = RuntimeCharacterComponent.NormalizedPosition,
+                    Character = characterInput,
+                    InstanceID = new RuntimeConstantExpression { Value = RuntimeValue.From(string.Empty) }
+                };
+                function.Inputs.Add(new RuntimeFunctionInput { Name = "Target", DefaultValue = RuntimeValue.None() });
+                function.Inputs.Add(new RuntimeFunctionInput { Name = "Delta", DefaultValue = RuntimeValue.From(Vector2.zero) });
+                function.EntryNodeID = "function-move";
+                function.AllNodes.Add(new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "function-move",
+                    CharacterValue = characterInput,
+                    PositionValue = new RuntimeArithmeticExpression
+                    {
+                        Operation = RuntimeArithmeticOperation.Add,
+                        ValueKind = RuntimeValueKind.Vector2,
+                        A = livePosition,
+                        B = deltaInput
+                    }
+                });
+                function.Outputs.Add(new RuntimeFunctionOutput { Name = "Final Position", Value = livePosition });
+
+                var call = new RuntimeCallNovelFunctionNode
+                {
+                    NodeID = "call",
+                    NextNodeID = "adjust",
+                    Function = function,
+                    Arguments = new List<RuntimeFunctionArgument>
+                    {
+                        new RuntimeFunctionArgument
+                        {
+                            Name = "Target",
+                            Value = new RuntimeConstantExpression { Value = RuntimeValue.From(_character) }
+                        },
+                        new RuntimeFunctionArgument
+                        {
+                            Name = "Delta",
+                            Value = new RuntimeConstantExpression { Value = RuntimeValue.From(new Vector2(0.5f, 0f)) }
+                        }
+                    }
+                };
+                var adjust = new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "adjust",
+                    NextNodeID = "line",
+                    Character = _character,
+                    PositionValue = new RuntimeArithmeticExpression
+                    {
+                        Operation = RuntimeArithmeticOperation.Subtract,
+                        ValueKind = RuntimeValueKind.Vector2,
+                        A = new RuntimeFunctionOutputExpression { CallNodeID = "call", Name = "Final Position" },
+                        B = new RuntimeConstantExpression { Value = RuntimeValue.From(new Vector2(0.25f, 0f)) }
+                    }
+                };
+
+                Play(call, adjust, new RuntimeDialogueNode { NodeID = "line" });
+
+                CharacterInfo info = _manager.ShowCharacter(_character);
+                Assert.That(info.Position.x, Is.EqualTo(100f).Within(0.01f));
+                Assert.That(info.Position.y, Is.Zero.Within(0.01f));
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(function);
             }
             yield return null;
         }

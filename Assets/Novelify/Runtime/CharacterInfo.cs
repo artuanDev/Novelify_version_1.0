@@ -125,6 +125,14 @@ namespace Novelify
             return Vector2.Scale(normalizedPosition, GetStageExtent(margin));
         }
 
+        public Vector2 AnchoredToNormalizedPosition(Vector2 anchoredPosition, float margin = 0f)
+        {
+            Vector2 extent = GetStageExtent(margin);
+            return new Vector2(
+                extent.x > 0f ? anchoredPosition.x / extent.x : 0f,
+                extent.y > 0f ? anchoredPosition.y / extent.y : 0f);
+        }
+
         public Vector2 ClampToStageBounds(Vector2 position, float margin)
         {
             Vector2 extent = GetStageExtent(margin);
