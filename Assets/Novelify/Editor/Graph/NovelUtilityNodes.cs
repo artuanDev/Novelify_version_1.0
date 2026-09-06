@@ -66,6 +66,32 @@ namespace Novelify.Editor
         }
     }
 
+    [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph))]
+    public class LabelNode : ActionNode
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<string>("Label")
+                .WithDefaultValue(string.Empty)
+                .WithTooltip("Unique destination name used by Jump nodes.")
+                .Build();
+        }
+    }
+
+    [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph))]
+    public class JumpNode : Node
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort("in").WithDisplayName("Enter").Build();
+            context.AddInputPort<string>("Label")
+                .WithDefaultValue(string.Empty)
+                .WithTooltip("Name of the Label node where story flow should continue.")
+                .Build();
+        }
+    }
+
     [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph))]
     public class ShowCharacterNode : CharacterActionNode
     {

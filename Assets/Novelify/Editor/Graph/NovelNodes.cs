@@ -69,15 +69,15 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Utilities")]
     [UseWithGraph(typeof(NovelGraph))]
-    public class TranslateSpeakerPortraitNode : CharacterActionNode
+    public class TransformSpeakerPortraitNode : CharacterActionNode
     {
         public override void OnEnable()
         {
             base.OnEnable();
             NovelNodePresentation.Apply(
                 this,
-                "Move character",
-                "Creates the selected character if needed, then moves that instance on the stage.",
+                "Transform character",
+                "Moves, rotates, and scales one character instance using normalized screen coordinates.",
                 new Color32(251, 191, 36, 255));
         }
 
@@ -89,13 +89,34 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
-            context.AddOption<float>("OffsetX").WithTooltip("Target X in canvas units; an offset when Relative is enabled.").WithDefaultValue(0f).Build();
-            context.AddOption<float>("OffsetY").WithTooltip("Target Y in canvas units; an offset when Relative is enabled.").WithDefaultValue(0f).Build();
-            context.AddOption<bool>("Relative").WithTooltip("Move by this offset from the current position.").Build();
-            context.AddOption<bool>("Smooth Movement").WithTooltip("Animate the move over Duration; disable to move instantly.").WithDefaultValue(false).Build();
-            context.AddOption<float>("Duration").WithTooltip("Movement time in seconds. Zero moves instantly.").WithDefaultValue(0.5f).Build();
+            context.AddOption<float>("OffsetX").WithTooltip("Normalized horizontal target from -1 (left) to 1 (right).").WithDefaultValue(0f).Build();
+            context.AddOption<float>("OffsetY").WithTooltip("Normalized vertical target from -1 (bottom) to 1 (top).").WithDefaultValue(0f).Build();
+            context.AddOption<float>("Rotation").WithTooltip("Target Z rotation in degrees.").WithDefaultValue(0f).Build();
+            context.AddOption<Vector2>("Scale").WithTooltip("Target local X/Y scale.").WithDefaultValue(Vector2.one).Build();
+            context.AddOption<float>("Margin").WithTooltip("Canvas-unit distance beyond each screen edge. Increase it to move portraits completely off-screen.").WithDefaultValue(0f).Build();
+            context.AddOption<bool>("Relative").WithTooltip("Add the normalized X/Y displacement to the current position. Rotation and scale remain absolute.").Build();
+            context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
+            context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
             context.AddOption<bool>("Ease In Out").WithTooltip("Accelerate and decelerate smoothly; disable for constant speed.").WithDefaultValue(true).Build();
-            context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for this move before continuing the story. Disable to move during dialogue.").WithDefaultValue(true).Build();
+            context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for the transform before continuing. Disable to animate during following dialogue.").WithDefaultValue(true).Build();
+        }
+    }
+
+    // Retained so existing graph assets containing the old node type continue to load.
+    // New nodes should use TransformSpeakerPortraitNode above.
+    [Serializable]
+    public class TranslateSpeakerPortraitNode : CharacterActionNode
+    {
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<float>("OffsetX").WithTooltip("Legacy target X in canvas units.").WithDefaultValue(0f).Build();
+            context.AddOption<float>("OffsetY").WithTooltip("Legacy target Y in canvas units.").WithDefaultValue(0f).Build();
+            context.AddOption<bool>("Relative").WithTooltip("Move by this offset from the current position.").Build();
+            context.AddOption<bool>("Smooth Movement").WithTooltip("Animate the move over Duration.").WithDefaultValue(false).Build();
+            context.AddOption<float>("Duration").WithDefaultValue(0.5f).Build();
+            context.AddOption<bool>("Ease In Out").WithDefaultValue(true).Build();
+            context.AddOption<bool>("Wait For Completion").WithDefaultValue(true).Build();
         }
     }
 

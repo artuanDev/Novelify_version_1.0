@@ -17,6 +17,7 @@ namespace Novelify.Tests
         public void SetUp()
         {
             _root = new GameObject("Stage", typeof(RectTransform));
+            _root.GetComponent<RectTransform>().sizeDelta = new Vector2(800f, 600f);
             _prefab = new GameObject("Portrait", typeof(RectTransform), typeof(CharacterInfo));
             _prefab.SetActive(false);
             _managerObject = new GameObject("Manager");
@@ -213,6 +214,36 @@ namespace Novelify.Tests
             Assert.That(events, Is.EqualTo(1));
             _manager.enabled = false;
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator TransformUsesNormalizedStageBoundsMarginRotationAndScale()
+        {
+            Play(new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "transform",
+                    NextNodeID = "line",
+                    Character = _character,
+                    OffsetX = 0.5f,
+                    OffsetY = -0.5f,
+                    Margin = 100f,
+                    Rotation = 90f,
+                    Scale = new Vector2(2f, 0.5f),
+                    SmoothMovement = true,
+                    Duration = 0.2f
+                },
+                new RuntimeDialogueNode { NodeID = "line" });
+
+            CharacterInfo info = _manager.ShowCharacter(_character);
+            Assert.That(_manager.IsWaiting, Is.True);
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            Assert.That(info.Position.x, Is.EqualTo(250f).Within(0.01f));
+            Assert.That(info.Position.y, Is.EqualTo(-200f).Within(0.01f));
+            Assert.That(Mathf.DeltaAngle(info.Rotation, 90f), Is.Zero.Within(0.01f));
+            Assert.That(info.Scale.x, Is.EqualTo(2f).Within(0.01f));
+            Assert.That(info.Scale.y, Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
         }
 
         [UnityTest]

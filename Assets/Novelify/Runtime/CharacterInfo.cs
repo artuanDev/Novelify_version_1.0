@@ -18,6 +18,8 @@ namespace Novelify
         public CharacterPortrait Portrait { get; private set; }
 
         private Vector2 _moveStart, _moveTarget;
+        private Vector2 _scaleStart, _scaleTarget;
+        private float _rotationStart, _rotationTarget;
         private float _moveElapsed, _moveDuration;
         private bool _easeMovement;
         private bool _speaking, _animateMouth, _animateBlinking = true, _speechPause;
@@ -32,6 +34,18 @@ namespace Novelify
                 if (transform is RectTransform rect) rect.anchoredPosition = value;
                 else transform.localPosition = new Vector3(value.x, value.y, transform.localPosition.z);
             }
+        }
+
+        public float Rotation
+        {
+            get => transform.localEulerAngles.z;
+            set => transform.localRotation = Quaternion.Euler(0f, 0f, value);
+        }
+
+        public Vector2 Scale
+        {
+            get => new Vector2(transform.localScale.x, transform.localScale.y);
+            set => transform.localScale = new Vector3(value.x, value.y, transform.localScale.z);
         }
 
         private void Awake() => ResolveLayers();
@@ -101,13 +115,69 @@ namespace Novelify
 
         public void MoveTo(Vector2 target, bool smooth, float duration, bool easeInOut = true)
         {
+            TransformTo(target, Rotation, Scale, smooth, duration, easeInOut);
+        }
+
+        public Vector2 NormalizedToAnchoredPosition(Vector2 normalizedPosition, float margin)
+        {
+            normalizedPosition.x = Mathf.Clamp(normalizedPosition.x, -1f, 1f);
+            normalizedPosition.y = Mathf.Clamp(normalizedPosition.y, -1f, 1f);
+            return Vector2.Scale(normalizedPosition, GetStageExtent(margin));
+        }
+
+        public Vector2 ClampToStageBounds(Vector2 position, float margin)
+        {
+            Vector2 extent = GetStageExtent(margin);
+            return new Vector2(
+                Mathf.Clamp(position.x, -extent.x, extent.x),
+                Mathf.Clamp(position.y, -extent.y, extent.y));
+        }
+
+        private Vector2 GetStageExtent(float margin)
+        {
+            margin = Mathf.Max(0f, margin);
+
+            Vector2 stageSize = Vector2.zero;
+            if (transform.parent is RectTransform parentRect)
+                stageSize = parentRect.rect.size;
+
+            if (stageSize.x <= 0f || stageSize.y <= 0f)
+            {
+                Canvas canvas = GetComponentInParent<Canvas>();
+                float scaleFactor = canvas != null ? Mathf.Max(0.0001f, canvas.scaleFactor) : 1f;
+                stageSize = new Vector2(Screen.width / scaleFactor, Screen.height / scaleFactor);
+            }
+
+            return stageSize * 0.5f + Vector2.one * margin;
+        }
+
+        public void TransformTo(
+            Vector2 targetPosition,
+            float targetRotation,
+            Vector2 targetScale,
+            bool smooth,
+            float duration,
+            bool easeInOut = true)
+        {
             _moveStart = Position;
-            _moveTarget = target;
+            _moveTarget = targetPosition;
+            _rotationStart = Rotation;
+            _rotationTarget = targetRotation;
+            _scaleStart = Scale;
+            _scaleTarget = targetScale;
             _moveElapsed = 0f;
             _moveDuration = duration;
             _easeMovement = easeInOut;
-            IsMoving = smooth && duration > 0f && !float.IsInfinity(duration) && _moveStart != target;
-            if (!IsMoving) Position = target;
+            bool hasChanged = _moveStart != targetPosition ||
+                              !Mathf.Approximately(Mathf.DeltaAngle(_rotationStart, targetRotation), 0f) ||
+                              _scaleStart != targetScale;
+            IsMoving = smooth && duration > 0f && !float.IsInfinity(duration) && hasChanged;
+            if (!IsMoving)
+            {
+                Position = targetPosition;
+                Rotation = targetRotation;
+                Scale = targetScale;
+            }
         }
 
         public void StopMovement() => IsMoving = false;
@@ -118,10 +188,15 @@ namespace Novelify
             {
                 _moveElapsed += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(_moveElapsed / _moveDuration);
-                Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, _easeMovement ? t * t * (3f - 2f * t) : t);
+                float easedT = _easeMovement ? t * t * (3f - 2f * t) : t;
+                Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, easedT);
+                Rotation = Mathf.LerpAngle(_rotationStart, _rotationTarget, easedT);
+                Scale = Vector2.LerpUnclamped(_scaleStart, _scaleTarget, easedT);
                 if (t >= 1f)
                 {
                     Position = _moveTarget;
+                    Rotation = _rotationTarget;
+                    Scale = _scaleTarget;
                     IsMoving = false;
                 }
             }

@@ -79,17 +79,27 @@ namespace Novelify
     }
 
     [Serializable]
-    public class RuntimeTranslateSpeakerPortraitNode : RuntimeNode
+    public class RuntimeTransformSpeakerPortraitNode : RuntimeNode
     {
         public NovelCharacter Character;
         public string InstanceID;
         public float OffsetX;
         public float OffsetY;
+        public float Rotation;
+        public Vector2 Scale = Vector2.one;
+        public float Margin;
+        public bool PositionIsNormalized = true;
         public bool SmoothMovement;
         public float Duration = 0.5f;
         public bool WaitForCompletion = true;
         public bool EaseInOut = true;
         public bool Relative;
+    }
+
+    [Serializable]
+    public class RuntimeTranslateSpeakerPortraitNode : RuntimeTransformSpeakerPortraitNode
+    {
+        public RuntimeTranslateSpeakerPortraitNode() => PositionIsNormalized = false;
     }
 
     [Serializable]

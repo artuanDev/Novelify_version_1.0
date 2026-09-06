@@ -179,13 +179,35 @@ namespace Novelify
                 HideDialoguePanel();
                 switch (node)
                 {
-                    case RuntimeTranslateSpeakerPortraitNode move:
+                    case RuntimeTransformSpeakerPortraitNode move:
                         CharacterInfo moving = ShowCharacter(move.Character, move.InstanceID);
                         if (moving != null)
                         {
-                            Vector2 target = new Vector2(move.OffsetX, move.OffsetY);
+                            Vector2 offset = new Vector2(move.OffsetX, move.OffsetY);
+                            Vector2 target = move.PositionIsNormalized
+                                ? moving.NormalizedToAnchoredPosition(offset, move.Margin)
+                                : offset;
                             if (move.Relative) target += moving.Position;
-                            moving.MoveTo(target, move.SmoothMovement, move.Duration, move.EaseInOut);
+                            if (move.PositionIsNormalized)
+                                target = moving.ClampToStageBounds(target, move.Margin);
+                            if (move.PositionIsNormalized)
+                            {
+                                moving.TransformTo(
+                                    target,
+                                    move.Rotation,
+                                    move.Scale,
+                                    move.SmoothMovement,
+                                    move.Duration,
+                                    move.EaseInOut);
+                            }
+                            else
+                            {
+                                moving.MoveTo(
+                                    target,
+                                    move.SmoothMovement,
+                                    move.Duration,
+                                    move.EaseInOut);
+                            }
                             if (move.WaitForCompletion && moving.IsMoving)
                             {
                                 _isWaiting = true;
@@ -195,9 +217,9 @@ namespace Novelify
                         }
                         break;
                     case RuntimeFlipCharacterNode flip:
-
                         CharacterInfo flipping = ShowCharacter(flip.Character, flip.InstanceID);
-                        flipping.gameObject.transform.localScale =
+                        if (flipping != null)
+                            flipping.gameObject.transform.localScale =
                             new Vector3(
                                 flip.FlipX ? flipping.gameObject.transform.localScale.x * -1:
                                     flipping.gameObject.transform.localScale.x,

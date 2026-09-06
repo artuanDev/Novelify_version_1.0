@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(5, NovelGraph.AssetExtension)]
+    [ScriptedImporter(6, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         private NovelGraph _editorGraph;
@@ -31,6 +31,20 @@ namespace Novelify.Editor
             foreach (INode node in editorGraph.GetNodes())
             {
                 nodeIDMap[node] = Guid.NewGuid().ToString();
+            }
+
+            var labelNodeIDs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (LabelNode labelNode in editorGraph.GetNodes().OfType<LabelNode>())
+            {
+                string label = GetPortValue<string>(labelNode.GetInputPortByName("Label"))?.Trim();
+                if (string.IsNullOrEmpty(label))
+                {
+                    _context?.LogImportWarning("Label node has an empty Label.");
+                }
+                else if (!labelNodeIDs.TryAdd(label, nodeIDMap[labelNode]))
+                {
+                    _context?.LogImportWarning($"Duplicate label '{label}'. Labels must be unique.");
+                }
             }
 
             StartNode startNode =
@@ -103,7 +117,7 @@ namespace Novelify.Editor
 
                     runtimeNode = soundRuntimeNode;
                 }
-                else if (editorNode is TranslateSpeakerPortraitNode translateSpeakerPortraitNode)
+                else if (editorNode is TranslateSpeakerPortraitNode legacyTranslateNode)
                 {
                     var runtimeTranslateSpeakerPortrait =
                         new RuntimeTranslateSpeakerPortraitNode
@@ -111,12 +125,27 @@ namespace Novelify.Editor
                             NodeID = nodeIDMap[editorNode]
                         };
 
-                    ProcessTranslateSpeakerNode(
-                        translateSpeakerPortraitNode,
+                    ProcessTransformSpeakerNode(
+                        legacyTranslateNode,
                         runtimeTranslateSpeakerPortrait,
                         nodeIDMap);
 
                     runtimeNode = runtimeTranslateSpeakerPortrait;
+                }
+                else if (editorNode is TransformSpeakerPortraitNode transformSpeakerPortraitNode)
+                {
+                    var runtimeTransformSpeakerPortrait =
+                        new RuntimeTransformSpeakerPortraitNode
+                        {
+                            NodeID = nodeIDMap[editorNode]
+                        };
+
+                    ProcessTransformSpeakerNode(
+                        transformSpeakerPortraitNode,
+                        runtimeTransformSpeakerPortrait,
+                        nodeIDMap);
+
+                    runtimeNode = runtimeTransformSpeakerPortrait;
                 }
                 else if (editorNode is FlipCharacterNode flipCharacterNode)
                 {
@@ -137,7 +166,22 @@ namespace Novelify.Editor
                 {
                     runtimeNode = CreateUtilityNode(editorNode);
                     runtimeNode.NodeID = nodeIDMap[editorNode];
-                    runtimeNode.NextNodeID = GetNextNodeID(editorNode, nodeIDMap);
+                    if (editorNode is JumpNode jumpNode)
+                    {
+                        string label = GetPortValue<string>(jumpNode.GetInputPortByName("Label"))?.Trim();
+                        if (string.IsNullOrEmpty(label) || !labelNodeIDs.TryGetValue(label, out string targetNodeID))
+                        {
+                            _context?.LogImportWarning($"Jump target '{label}' was not found.");
+                        }
+                        else
+                        {
+                            runtimeNode.NextNodeID = targetNodeID;
+                        }
+                    }
+                    else
+                    {
+                        runtimeNode.NextNodeID = GetNextNodeID(editorNode, nodeIDMap);
+                    }
                 }
 
                 runtimeGraph.AllNodes.Add(runtimeNode);
@@ -257,23 +301,29 @@ namespace Novelify.Editor
                 GetNextNodeID(node, nodeIDMap);
         }
 
-        private void ProcessTranslateSpeakerNode(
-            TranslateSpeakerPortraitNode node,
-            RuntimeTranslateSpeakerPortraitNode runtimeNode,
+        private void ProcessTransformSpeakerNode(
+            CharacterActionNode node,
+            RuntimeTransformSpeakerPortraitNode runtimeNode,
             Dictionary<INode, string> nodeIDMap)
         {
             runtimeNode.OffsetX = GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0.0f);
             runtimeNode.OffsetY = GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0.0f);
+            runtimeNode.Rotation = GetOptionValue(node.GetNodeOptionByName("Rotation"), 0f);
+            runtimeNode.Scale = GetOptionValue(node.GetNodeOptionByName("Scale"), Vector2.one);
+            runtimeNode.Margin = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Margin"), 0f));
+            runtimeNode.PositionIsNormalized = node is TransformSpeakerPortraitNode;
             runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
             runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
-            runtimeNode.SmoothMovement = GetOptionValue(node.GetNodeOptionByName("Smooth Movement"), false);
+            runtimeNode.SmoothMovement = node is TranslateSpeakerPortraitNode
+                ? GetOptionValue(node.GetNodeOptionByName("Smooth Movement"), false)
+                : GetOptionValue(node.GetNodeOptionByName("Animate Transform"), false);
             runtimeNode.Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.5f));
             runtimeNode.WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true);
             runtimeNode.EaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
 
             if (runtimeNode.Character == null)
-                _context?.LogImportWarning("Translate Speaker Portrait needs a Character input. Assign a character asset or connect a Current Speaker output.");
+                _context?.LogImportWarning("Transform Speaker Portrait needs a Character input. Assign a character asset or connect a Current Speaker output.");
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);

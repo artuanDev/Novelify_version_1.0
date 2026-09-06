@@ -82,6 +82,57 @@ namespace Novelify.Tests
         }
 
         [Test]
+        public void TransformSpeakerPortraitOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            transform.GetNodeOptionByName("OffsetX").TrySetValue(0.75f);
+            transform.GetNodeOptionByName("OffsetY").TrySetValue(-0.25f);
+            transform.GetNodeOptionByName("Rotation").TrySetValue(35f);
+            transform.GetNodeOptionByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
+            transform.GetNodeOptionByName("Margin").TrySetValue(120f);
+            transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
+            Connect(start, transform);
+            Connect(transform, dialogue);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeTransformSpeakerPortraitNode result = runtime.AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single(node => node is not RuntimeTranslateSpeakerPortraitNode);
+
+            Assert.That(result.Character, Is.EqualTo(_character));
+            Assert.That(result.PositionIsNormalized, Is.True);
+            Assert.That(result.OffsetX, Is.EqualTo(0.75f));
+            Assert.That(result.OffsetY, Is.EqualTo(-0.25f));
+            Assert.That(result.Rotation, Is.EqualTo(35f));
+            Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
+            Assert.That(result.Margin, Is.EqualTo(120f));
+            Assert.That(result.SmoothMovement, Is.True);
+        }
+
+        [Test]
+        public void JumpResolvesItsLabelAndContinuesFromThere()
+        {
+            StartNode start = Add<StartNode>();
+            JumpNode jump = Add<JumpNode>();
+            LabelNode label = Add<LabelNode>();
+            DialogueNode destination = Add<DialogueNode>();
+            jump.GetInputPortByName("Label").TrySetValue("Ending");
+            label.GetInputPortByName("Label").TrySetValue("ending");
+            Connect(start, jump);
+            Connect(label, destination);
+
+            RuntimeNovelGraph runtime = Import();
+            var lookup = runtime.AllNodes.ToDictionary(node => node.NodeID);
+            RuntimeNode jumpRuntime = lookup[runtime.EntryNodeID];
+            RuntimeNode labelRuntime = lookup[jumpRuntime.NextNodeID];
+
+            Assert.That(lookup[labelRuntime.NextNodeID], Is.TypeOf<RuntimeDialogueNode>());
+        }
+
+        [Test]
         public void ExampleStoryImportsMusicThenNarrationHokiTranslateDaisyAndEnd()
         {
             const string path = "Assets/Novelify/NovelGraphs/ExampleStory.novelgraph";

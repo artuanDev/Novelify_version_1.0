@@ -35,7 +35,8 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Branching conversations with dynamically generated choice buttons.
 - Reusable `NovelCharacter` ScriptableObjects.
 - Multiple characters on a dedicated stage, with optional instance IDs for additional copies.
-- Character-specific Translate nodes with optional smooth motion, duration, easing and parallel movement.
+- Character-specific Transform nodes with normalized positioning, rotation, scale, easing and parallel animation.
+- Label and Jump flow nodes for explicit non-local story routing.
 - Show/Hide Character, Hide All Characters, Set Character Emotion, Wait, Dialogue Event and Stop Sound nodes.
 - A custom character creator with layered emotion, blinking and talking previews.
 - Layered 2D portraits using body, eyes, facial details and mouth sprites.
@@ -149,16 +150,19 @@ Assign **Portrait Prefab** on `NovelManager`. Its `CharacterInfo` component expo
 
 Characters have no fixed slot limit. Each character asset gets its own default instance, even when two assets share a speaker name. To show additional copies of one asset, use different **Instance ID** values. Use the same character asset and ID in Dialogue, Choice and character utility nodes to address the same copy; a blank ID always means the default copy. Character output wires pass the asset, so set the matching Instance ID on each node when targeting a named copy.
 
-Use **Show Character** to place a character before their first line, or connect a character to **Translate Speaker Portrait > Character**. Translate creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
+Use **Show Character** to place a character before their first line, or connect a character to **Transform Speaker Portrait > Character**. Transform creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
 
-- **OffsetX / OffsetY:** target position in canvas units relative to the portrait's anchors (centered in the supplied prefab).
-- **Relative:** interpret X/Y as an offset from the character's current position.
-- **Smooth Movement:** toggle animated movement. Disabled moves instantly.
-- **Duration:** movement time in real-time seconds. Zero moves instantly.
+- **OffsetX / OffsetY:** normalized target position, clamped from -1 to 1 across the current character stage or game-screen bounds.
+- **Margin:** expands each bound in canvas units. Use at least half the portrait's relevant dimension to move it completely beyond that edge.
+- **Rotation:** absolute target Z rotation in degrees.
+- **Scale:** absolute target local X/Y scale.
+- **Relative:** interpret normalized X/Y as a displacement from the current position; rotation and scale remain absolute.
+- **Animate Transform:** animate position, rotation and scale together. Disabled applies them instantly.
+- **Duration:** transform time in real-time seconds. Zero applies instantly.
 - **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
-- **Wait For Completion:** pause story flow until arrival. Disable to continue to dialogue or start other characters moving in parallel.
+- **Wait For Completion:** pause story flow until the transform finishes. Disable to continue to dialogue or animate multiple characters in parallel.
 
-For example: `Start → Show Character (Hoki, X=-300) → Translate (Daisy, X=300, Smooth Movement=true) → Dialogue → End`. Give characters different positions to keep their portraits from overlapping. A new move on the same instance replaces its previous move from its current position.
+For example: `Start → Transform Speaker Portrait (Hoki, X=-0.65) → Dialogue → End`. A new transform on the same instance replaces its previous animation from the current position, rotation and scale. Legacy Translate nodes remain readable and retain their original canvas-unit positioning, but new nodes use normalized coordinates.
 
 **Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
 
@@ -173,8 +177,10 @@ For example: `Start → Show Character (Hoki, X=-300) → Translate (Daisy, X=30
 | Wait | Pauses flow for real-time seconds; dialogue clicks cannot skip it. |
 | Dialogue Event | Sends Event Name to `NovelManager.OnDialogueEvent`, then continues. Connect listeners in the manager inspector. |
 | Stop Sound | Stops the audio channel used by Play Sound nodes. |
+| Label | Declares a unique named flow destination and continues through its output. |
+| Jump | Continues immediately at the Label node with the matching name. |
 
-Connect the **Enter/Continue** flow ports to execute these nodes. Character data wires select the target and do not execute nodes on their own. Place a Dialogue, Choice or Wait after automatic nodes to hold the scene before End. Existing Translate nodes need their new Character input assigned; their X/Y fields now use canvas coordinates instead of world coordinates.
+Connect the **Enter/Continue** flow ports to execute these nodes. Character data wires select the target and do not execute nodes on their own. Place a Dialogue, Choice or Wait after automatic nodes to hold the scene before End. Label matching is case-insensitive; missing, empty and duplicate labels produce import warnings. Connect matching Label fields to the same string variable when you want one rename point.
 
 Each Continue output has one story destination: connect `Dialogue → Translate → Dialogue` in sequence. Turn off Translate's **Wait For Completion** to keep moving during the following line. Use Choice outputs for alternative story paths.
 
