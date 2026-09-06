@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(4, NovelGraph.AssetExtension)]
+    [ScriptedImporter(5, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         private NovelGraph _editorGraph;
@@ -305,6 +305,14 @@ namespace Novelify.Editor
                 case DialogueEventNode _:
                     return new RuntimeDialogueEventNode { EventName = GetOptionValue(node.GetNodeOptionByName("Event Name"), string.Empty) };
                 case StopSoundNode _: return new RuntimeStopSoundNode();
+                case CallNovelPageNode call:
+                    RuntimeNovelGraph calledGraph = GetPortValue<RuntimeNovelGraph>(
+                        call.GetInputPortByName(CallNovelPageNode.GraphPortName));
+                    if (calledGraph == null)
+                        _context?.LogImportWarning("Call Novel Page needs a Novel Graph input.");
+                    else if (AssetDatabase.GetAssetPath(calledGraph) == _context?.assetPath)
+                        _context?.LogImportWarning("Call Novel Page references its own graph. Runtime recursion is limited, but this is usually accidental.");
+                    return new RuntimeCallNovelPageNode { Graph = calledGraph };
                 default: return new RuntimeNode();
             }
         }

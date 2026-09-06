@@ -1,9 +1,40 @@
 using System;
 using Unity.GraphToolkit.Editor;
+using UnityEditor;
 using UnityEngine;
 
 namespace Novelify.Editor
 {
+    [Serializable, Node("Novelify/Flow", "d_UnityEditor.Graphs.AnimatorControllerTool", "Call Novel Page"), UseWithGraph(typeof(NovelGraph))]
+    public class CallNovelPageNode : ActionNode, ISubgraphNode
+    {
+        public const string GraphPortName = "Novel Graph";
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(this, "Reusable story beat",
+                "Runs another Novel Graph, then continues here when it finishes. Double-click to open it.",
+                new Color32(129, 140, 248, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<RuntimeNovelGraph>(GraphPortName)
+                .WithTooltip("Novel Graph to run. Its End returns through Continue.")
+                .Build();
+        }
+
+        public Graph GetSubgraph()
+        {
+            RuntimeNovelGraph runtimeGraph = NovelGraphValues.Resolve<RuntimeNovelGraph>(
+                (NovelGraph)Graph, GetInputPortByName(GraphPortName));
+            string path = AssetDatabase.GetAssetPath(runtimeGraph);
+            return string.IsNullOrEmpty(path) ? null : GraphDatabase.LoadGraph<NovelGraph>(path);
+        }
+    }
+
     [Serializable]
     public abstract class ActionNode : Node
     {

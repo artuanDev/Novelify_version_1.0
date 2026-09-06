@@ -214,5 +214,43 @@ namespace Novelify.Tests
             _manager.enabled = false;
             yield return null;
         }
+
+        [UnityTest]
+        public IEnumerator CalledGraphRunsAndReturnsToItsCaller()
+        {
+            RuntimeNovelGraph child = ScriptableObject.CreateInstance<RuntimeNovelGraph>();
+            RuntimeNovelGraph grandchild = ScriptableObject.CreateInstance<RuntimeNovelGraph>();
+            var events = new List<string>();
+            _manager.OnDialogueEvent.AddListener(events.Add);
+            try
+            {
+                grandchild.EntryNodeID = "grandchild-event";
+                grandchild.AllNodes.Add(new RuntimeDialogueEventNode
+                    { NodeID = "grandchild-event", EventName = "grandchild" });
+                child.EntryNodeID = "child-event";
+                child.AllNodes.Add(new RuntimeDialogueEventNode
+                    { NodeID = "child-event", NextNodeID = "nested-call", EventName = "child" });
+                child.AllNodes.Add(new RuntimeCallNovelPageNode
+                    { NodeID = "nested-call", Graph = grandchild });
+
+                Play(new RuntimeDialogueEventNode
+                        { NodeID = "before", NextNodeID = "call", EventName = "before" },
+                    new RuntimeCallNovelPageNode
+                        { NodeID = "call", NextNodeID = "after", Graph = child },
+                    new RuntimeDialogueEventNode
+                        { NodeID = "after", NextNodeID = "line", EventName = "after" },
+                    new RuntimeDialogueNode { NodeID = "line" });
+
+                CollectionAssert.AreEqual(new[] { "before", "child", "grandchild", "after" }, events);
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+                Assert.That(_manager.RuntimeGraph, Is.SameAs(_graph));
+            }
+            finally
+            {
+                Object.DestroyImmediate(child);
+                Object.DestroyImmediate(grandchild);
+            }
+            yield return null;
+        }
     }
 }

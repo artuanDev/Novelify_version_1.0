@@ -135,6 +135,12 @@ namespace Novelify
     public class RuntimeStopSoundNode : RuntimeNode { }
 
     [Serializable]
+    public class RuntimeCallNovelPageNode : RuntimeNode
+    {
+        public RuntimeNovelGraph Graph;
+    }
+
+    [Serializable]
     public class ChoiceData
     {
         public string ChoiceText;

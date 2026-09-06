@@ -9,9 +9,11 @@ using UnityEngine.UI;
 
 namespace Novelify
 {
-    public class NovelManager : MonoBehaviour
+    public partial class NovelManager : MonoBehaviour
     {
         public RuntimeNovelGraph RuntimeGraph;
+
+        private readonly Stack<GraphCallFrame> _graphCalls = new Stack<GraphCallFrame>();
 
         [Header("Sound Settings")]
         public AudioSource TalkSource;
@@ -59,28 +61,17 @@ namespace Novelify
         private int _textCompletedFrame = -1;
         private int _flowVersion;
         private const int MaxAutomaticNodesPerTraversal = 1000;
+        private const int MaxGraphCallDepth = 128;
 
-        private NovelCharacterStage Stage
+        private readonly struct GraphCallFrame
         {
-            get
+            public readonly RuntimeNovelGraph Graph;
+            public readonly string ReturnNodeID;
+
+            public GraphCallFrame(RuntimeNovelGraph graph, string returnNodeID)
             {
-                if (_stage != null) return _stage;
-                if (CharacterContainer == null && CanvasDialogue != null)
-                {
-                    Canvas canvas = CanvasDialogue.GetComponentInParent<Canvas>();
-                    Transform parent = canvas != null ? canvas.transform : CanvasDialogue.transform;
-                    var container = new GameObject("Novelify Character Stage", typeof(RectTransform));
-                    var rect = (RectTransform)container.transform;
-                    rect.SetParent(parent, false);
-                    rect.anchorMin = Vector2.zero;
-                    rect.anchorMax = Vector2.one;
-                    rect.sizeDelta = Vector2.zero;
-                    rect.SetAsFirstSibling();
-                    CharacterContainer = rect;
-                    _ownsContainer = true;
-                }
-                _stage = new NovelCharacterStage(CharacterContainer, PortraitPrefab);
-                return _stage;
+                Graph = graph;
+                ReturnNodeID = returnNodeID;
             }
         }
 
@@ -114,17 +105,23 @@ namespace Novelify
             _hasStartedGraph = true;
             EndDialogue();
             _stage?.StopMovement();
-            RuntimeGraph = graph;
-            _nodeLookup.Clear();
+            _graphCalls.Clear();
+            LoadGraph(graph);
             if (graph == null)
             {
                 Debug.LogError("NovelManager has no RuntimeNovelGraph assigned.", this);
                 return;
             }
-            if (graph.AllNodes != null)
-                foreach (RuntimeNode node in graph.AllNodes)
-                    if (node != null && !string.IsNullOrEmpty(node.NodeID)) _nodeLookup[node.NodeID] = node;
             if (!string.IsNullOrEmpty(graph.EntryNodeID)) ShowNode(graph.EntryNodeID);
+        }
+
+        private void LoadGraph(RuntimeNovelGraph graph)
+        {
+            RuntimeGraph = graph;
+            _nodeLookup.Clear();
+            if (graph?.AllNodes == null) return;
+            foreach (RuntimeNode node in graph.AllNodes)
+                if (node != null && !string.IsNullOrEmpty(node.NodeID)) _nodeLookup[node.NodeID] = node;
         }
 
         private void Update()
@@ -144,6 +141,7 @@ namespace Novelify
         private void AdvanceCurrentNode()
         {
             if (!string.IsNullOrEmpty(_currentNode?.NextNodeID)) ShowNode(_currentNode.NextNodeID);
+            else if (TryReturnFromGraph(out string returnNodeID)) ShowNode(returnNodeID);
             else EndDialogue();
         }
 
@@ -154,8 +152,13 @@ namespace Novelify
             ClearChoiceButtons();
             int version = ++_flowVersion;
             int automaticNodes = 0;
-            while (!string.IsNullOrEmpty(nodeID))
+            while (true)
             {
+                if (string.IsNullOrEmpty(nodeID))
+                {
+                    if (TryReturnFromGraph(out nodeID)) continue;
+                    break;
+                }
                 if (!_nodeLookup.TryGetValue(nodeID, out RuntimeNode node))
                 {
                     Debug.LogWarning($"NovelManager could not find node '{nodeID}'.", this);
@@ -218,10 +221,42 @@ namespace Novelify
                         break;
                     case RuntimePlaySoundNode sound: PlaySound(sound); break;
                     case RuntimeStopSoundNode _: StopAudio(PlaySoundSource); break;
+                    case RuntimeCallNovelPageNode call:
+                        if (call.Graph == null)
+                        {
+                            Debug.LogWarning("Call Novel Page has no graph assigned; continuing in the caller.", this);
+                            break;
+                        }
+                        if (_graphCalls.Count >= MaxGraphCallDepth)
+                        {
+                            Debug.LogError($"Novel Graph call depth exceeded {MaxGraphCallDepth}. Check for recursive Call Novel Page nodes.", this);
+                            EndDialogue();
+                            return;
+                        }
+                        _graphCalls.Push(new GraphCallFrame(RuntimeGraph, node.NextNodeID));
+                        LoadGraph(call.Graph);
+                        nodeID = call.Graph.EntryNodeID;
+                        continue;
                 }
                 nodeID = node.NextNodeID;
             }
             EndDialogue();
+        }
+
+        private bool TryReturnFromGraph(out string nodeID)
+        {
+            while (_graphCalls.Count > 0)
+            {
+                GraphCallFrame frame = _graphCalls.Pop();
+                LoadGraph(frame.Graph);
+                if (!string.IsNullOrEmpty(frame.ReturnNodeID))
+                {
+                    nodeID = frame.ReturnNodeID;
+                    return true;
+                }
+            }
+            nodeID = null;
+            return false;
         }
 
         private IEnumerator WaitThenContinue(RuntimeNode node, int version, float seconds, CharacterInfo moving = null)
@@ -236,11 +271,6 @@ namespace Novelify
             _isWaiting = false;
             if (version == _flowVersion && _currentNode == node) AdvanceCurrentNode();
         }
-
-        public CharacterInfo ShowCharacter(NovelCharacter character, string instanceID = "") => Stage.Show(character, instanceID);
-
-        public bool SearchAlreadyCreatedCharacter(NovelCharacter character, string instanceID = "") =>
-            Stage.TryGet(character, instanceID, out _);
 
         private void ShowDialogueNode(RuntimeDialogueNode node)
         {
@@ -307,6 +337,7 @@ namespace Novelify
                     if (_isTextRevealing) { CompleteTextImmediately(); return; }
                     if (_textCompletedFrame == Time.frameCount) return;
                     if (!string.IsNullOrEmpty(choice.DestinationNodeID)) ShowNode(choice.DestinationNodeID);
+                    else if (TryReturnFromGraph(out string returnNodeID)) ShowNode(returnNodeID);
                     else EndDialogue();
                 });
             }
@@ -327,6 +358,7 @@ namespace Novelify
         public void EndDialogue()
         {
             ++_flowVersion;
+            _graphCalls.Clear();
             CancelWait();
             StopNodePresentation();
             StopAudio(PlaySoundSource);
@@ -416,9 +448,5 @@ namespace Novelify
             _stage?.StopMovement();
         }
 
-        private void OnDestroy()
-        {
-            if (_ownsContainer && CharacterContainer != null) Destroy(CharacterContainer.gameObject);
-        }
     }
 }

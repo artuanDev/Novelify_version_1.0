@@ -73,7 +73,7 @@ MonoBehaviour:
           serializedVersion: 2
           x: -2163
           y: 112
-          width: 3364
+          width: 3760
           height: 972
         m_GraphElementMetaData:
         - m_Guid:
@@ -409,6 +409,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - __option_Text Speed (Characters/Second)
           - Sound
+          - __option_Instance ID
           m_ValueList:
           - rid: 8564938349721158167
           - rid: 8564938349721158168
@@ -419,6 +420,7 @@ MonoBehaviour:
           - rid: 8564938376450932870
           - rid: 8564938376450932907
           - rid: 8564938383701049492
+          - rid: 8564938430776344647
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -524,7 +526,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 59e9f24e5d16fa7cee2ecb126aa9c8d6
         m_Version: 2
-        m_Position: {x: 1011.0543, y: 631.22156}
+        m_Position: {x: 1406.5878, y: 589.5864}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -613,6 +615,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - __option_Text Speed (Characters/Second)
           - Sound
+          - __option_Instance ID
           m_ValueList:
           - rid: 8564938376450932831
           - rid: 8564938376450932832
@@ -626,6 +629,7 @@ MonoBehaviour:
           - rid: 8564938376450932874
           - rid: 8564938376450932908
           - rid: 8564938383701049507
+          - rid: 8564938430776344648
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -803,6 +807,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - __option_Text Speed (Characters/Second)
           - Sound
+          - __option_Instance ID
           m_ValueList:
           - rid: 8564938376450932848
           - rid: 8564938376450932849
@@ -813,6 +818,7 @@ MonoBehaviour:
           - rid: 8564938376450932878
           - rid: 8564938376450932909
           - rid: 8564938383701049493
+          - rid: 8564938430776344657
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -973,6 +979,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - __option_Text Speed (Characters/Second)
           - Sound
+          - __option_Instance ID
           m_ValueList:
           - rid: 8564938376450932860
           - rid: 8564938376450932861
@@ -983,6 +990,7 @@ MonoBehaviour:
           - rid: 8564938376450932882
           - rid: 8564938376450932910
           - rid: 8564938383701049494
+          - rid: 8564938430776344658
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1270,6 +1278,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Speaker
           - Sound
+          - __option_Instance ID
           m_ValueList:
           - rid: 8564938383701049447
           - rid: 8564938383701049448
@@ -1280,6 +1289,7 @@ MonoBehaviour:
           - rid: 8564938383701049453
           - rid: 8564938383701049454
           - rid: 8564938383701049495
+          - rid: 8564938430776344659
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1768,3 +1778,23 @@ MonoBehaviour:
       type: {class: 'Constant`1[[UnityEngine.AudioClip, UnityEngine.AudioModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: {fileID: 0}
+    - rid: 8564938430776344647
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 
+    - rid: 8564938430776344648
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 
+    - rid: 8564938430776344657
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 
+    - rid: 8564938430776344658
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 
+    - rid: 8564938430776344659
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 

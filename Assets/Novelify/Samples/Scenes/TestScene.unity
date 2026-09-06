@@ -1042,6 +1042,8 @@ MonoBehaviour:
   PlaySoundSource: {fileID: 40008851}
   CanvasDialogue: {fileID: 791819471}
   PortraitPrefab: {fileID: 8260414849546726027, guid: fe2f401b10de4204da126cb25895bee6, type: 3}
+  CharacterContainer: {fileID: 0}
+  HideCharactersOnEnd: 1
   DialoguePanel: {fileID: 791819471}
   CharacterPortrait: {fileID: 791819471}
   BackgroundChoicesPanel: {fileID: 1338701998}
@@ -1050,7 +1052,9 @@ MonoBehaviour:
   DialogueText: {fileID: 560500012}
   ChoiceButtonPrefab: {fileID: 3333394051927053726, guid: 253e878b45e800e4ba565c78ede2518f, type: 3}
   ChoiceButtonContainer: {fileID: 728397537}
-  AllCharacters: []
+  OnDialogueEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1639377564
 GameObject:
   m_ObjectHideFlags: 0
