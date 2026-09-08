@@ -75,6 +75,145 @@ namespace Novelify.Tests
             }
         }
 
+        [Test]
+        public void StoryVariablesModifyAndBranchThroughBooleanExpressions()
+        {
+            NovelVariableDefinition trust = CreateVariable("Trust", NovelVariableType.Integer, NovelVariableScope.Story);
+            NovelVariableDefinition helped = CreateVariable("Helped", NovelVariableType.Boolean, NovelVariableScope.Story);
+            var events = new List<string>();
+            _manager.OnDialogueEvent.AddListener(events.Add);
+            try
+            {
+                RuntimeValueExpression trustValue = new RuntimeVariableExpression { Variable = trust };
+                RuntimeValueExpression helpedValue = new RuntimeVariableExpression { Variable = helped };
+                Play(
+                    new RuntimeSetVariableNode
+                    {
+                        NodeID = "set-trust", NextNodeID = "set-helped", Variable = trust,
+                        Value = Constant(RuntimeValue.From(1))
+                    },
+                    new RuntimeSetVariableNode
+                    {
+                        NodeID = "set-helped", NextNodeID = "modify", Variable = helped,
+                        Value = Constant(RuntimeValue.From(true))
+                    },
+                    new RuntimeModifyVariableNode
+                    {
+                        NodeID = "modify", NextNodeID = "branch", Variable = trust,
+                        Operation = RuntimeVariableModifyOperation.Add,
+                        Amount = Constant(RuntimeValue.From(2))
+                    },
+                    new RuntimeBranchNode
+                    {
+                        NodeID = "branch", TrueNodeID = "success", FalseNodeID = "failure",
+                        Condition = new RuntimeBooleanExpression
+                        {
+                            Operation = RuntimeBooleanOperation.And,
+                            A = helpedValue,
+                            B = new RuntimeComparisonExpression
+                            {
+                                Operation = RuntimeComparisonOperation.GreaterOrEqual,
+                                ValueKind = RuntimeValueKind.Integer,
+                                A = trustValue,
+                                B = Constant(RuntimeValue.From(3))
+                            }
+                        }
+                    },
+                    new RuntimeDialogueEventNode { NodeID = "success", EventName = "trusted" },
+                    new RuntimeDialogueEventNode { NodeID = "failure", EventName = "blocked" });
+
+                CollectionAssert.AreEqual(new[] { "trusted" }, events);
+                Assert.That(_manager.StateStore.Get(trust).IntegerValue, Is.EqualTo(3));
+                Assert.That(_manager.StateStore.Get(helped).BooleanValue, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(trust);
+                Object.DestroyImmediate(helped);
+            }
+        }
+
+        [Test]
+        public void ManagersOwnSeparateStateStoresByDefault()
+        {
+            NovelVariableDefinition score = CreateVariable("Score", NovelVariableType.Integer, NovelVariableScope.Story);
+            GameObject secondObject = new GameObject("Second Manager");
+            NovelManager second = secondObject.AddComponent<NovelManager>();
+            try
+            {
+                Assert.That(_manager.StateStore.TrySet(score, RuntimeValue.From(8), out string error), Is.True, error);
+                Assert.That(_manager.StateStore.Get(score).IntegerValue, Is.EqualTo(8));
+                Assert.That(second.StateStore.Get(score).IntegerValue, Is.Zero);
+            }
+            finally
+            {
+                Object.DestroyImmediate(secondObject);
+                Object.DestroyImmediate(score);
+            }
+        }
+
+        [Test]
+        public void FunctionCallLocalVariablesStartFreshForEveryCall()
+        {
+            NovelVariableDefinition local = CreateVariable("Temporary Count", NovelVariableType.Integer, NovelVariableScope.CallLocal);
+            RuntimeNovelFunction function = ScriptableObject.CreateInstance<RuntimeNovelFunction>();
+            var events = new List<string>();
+            _manager.OnDialogueEvent.AddListener(events.Add);
+            try
+            {
+                function.EntryNodeID = "increment";
+                function.AllNodes.Add(new RuntimeModifyVariableNode
+                {
+                    NodeID = "increment", Variable = local,
+                    Operation = RuntimeVariableModifyOperation.Add,
+                    Amount = Constant(RuntimeValue.From(1))
+                });
+                function.Outputs.Add(new RuntimeFunctionOutput
+                {
+                    Name = "Count",
+                    Value = new RuntimeVariableExpression { Variable = local }
+                });
+
+                Play(
+                    new RuntimeCallNovelFunctionNode { NodeID = "call-one", NextNodeID = "call-two", Function = function },
+                    new RuntimeCallNovelFunctionNode { NodeID = "call-two", NextNodeID = "branch", Function = function },
+                    new RuntimeBranchNode
+                    {
+                        NodeID = "branch", TrueNodeID = "isolated", FalseNodeID = "leaked",
+                        Condition = new RuntimeComparisonExpression
+                        {
+                            Operation = RuntimeComparisonOperation.Equal,
+                            ValueKind = RuntimeValueKind.Integer,
+                            A = new RuntimeFunctionOutputExpression { CallNodeID = "call-two", Name = "Count" },
+                            B = Constant(RuntimeValue.From(1))
+                        }
+                    },
+                    new RuntimeDialogueEventNode { NodeID = "isolated", EventName = "isolated" },
+                    new RuntimeDialogueEventNode { NodeID = "leaked", EventName = "leaked" });
+
+                CollectionAssert.AreEqual(new[] { "isolated" }, events);
+            }
+            finally
+            {
+                Object.DestroyImmediate(function);
+                Object.DestroyImmediate(local);
+            }
+        }
+
+        private static NovelVariableDefinition CreateVariable(
+            string name, NovelVariableType type, NovelVariableScope scope)
+        {
+            NovelVariableDefinition variable = ScriptableObject.CreateInstance<NovelVariableDefinition>();
+            variable.DisplayName = name;
+            variable.Type = type;
+            variable.Scope = scope;
+            variable.EnsureID();
+            return variable;
+        }
+
+        private static RuntimeConstantExpression Constant(RuntimeValue value) =>
+            new RuntimeConstantExpression { Value = value };
+
         [UnityTest]
         public IEnumerator TranslateCreatesItsTargetMovesAcrossFramesAndBlocksClicksUntilFinished()
         {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -12,6 +13,9 @@ namespace Novelify
     public partial class NovelManager : MonoBehaviour
     {
         public RuntimeNovelGraph RuntimeGraph;
+        private NovelStateStore _stateStore = new NovelStateStore();
+        public NovelStateStore StateStore => _stateStore ??= new NovelStateStore();
+        public event Action<NovelVariableDefinition, RuntimeValue> LocalVariableChanged;
 
         [Header("Dialogue Timing")]
         [Tooltip("Unscaled keeps conversations, waits, reveals, and character transitions running while gameplay is paused. Scaled pauses them with Time.timeScale.")]
@@ -71,6 +75,7 @@ namespace Novelify
         private sealed class RuntimeValueScope
         {
             public readonly Dictionary<string, RuntimeValue> Inputs = new Dictionary<string, RuntimeValue>();
+            public readonly Dictionary<string, RuntimeValue> Locals = new Dictionary<string, RuntimeValue>();
             private readonly Dictionary<string, RuntimeValue> _outputs = new Dictionary<string, RuntimeValue>();
 
             private static string OutputKey(string nodeID, string name) => (nodeID ?? string.Empty) + "\n" + (name ?? string.Empty);
@@ -114,6 +119,9 @@ namespace Novelify
             source.playOnAwake = false;
             return source;
         }
+
+        public void UseStateStore(NovelStateStore stateStore) =>
+            _stateStore = stateStore ?? new NovelStateStore();
 
         private void Start()
         {
@@ -304,6 +312,19 @@ namespace Novelify
                             return;
                         }
                         break;
+                    case RuntimeSetVariableNode setVariable:
+                        if (!TryWriteVariable(setVariable.Variable, Evaluate(setVariable.Value), out string setError))
+                            Debug.LogError(setError, this);
+                        break;
+                    case RuntimeModifyVariableNode modifyVariable:
+                        if (!TryModifyVariable(modifyVariable, out string modifyError))
+                            Debug.LogError(modifyError, this);
+                        break;
+                    case RuntimeBranchNode branch:
+                        nodeID = AsBool(Evaluate(branch.Condition), false)
+                            ? branch.TrueNodeID
+                            : branch.FalseNodeID;
+                        continue;
                     case RuntimeDialogueEventNode signal:
                         OnDialogueEvent?.Invoke(signal.EventName ?? string.Empty);
                         if (version != _flowVersion || !isActiveAndEnabled) return;
@@ -412,6 +433,12 @@ namespace Novelify
                     return referenceComponent.Component == RuntimeCharacterReferenceComponent.InstanceID
                         ? RuntimeValue.From(reference.InstanceID)
                         : RuntimeValue.From(reference.Character);
+                case RuntimeVariableExpression variable:
+                    return ReadVariable(variable.Variable);
+                case RuntimeComparisonExpression comparison:
+                    return RuntimeValue.From(EvaluateComparison(comparison));
+                case RuntimeBooleanExpression boolean:
+                    return RuntimeValue.From(EvaluateBoolean(boolean));
                 default:
                     return RuntimeValue.None();
             }
@@ -476,6 +503,121 @@ namespace Novelify
             }
         }
 
+        private RuntimeValue ReadVariable(NovelVariableDefinition definition)
+        {
+            if (definition == null) return RuntimeValue.None();
+            if (definition.Scope != NovelVariableScope.CallLocal) return StateStore.Get(definition);
+            if (!_valueScope.Locals.TryGetValue(definition.ID, out RuntimeValue value))
+            {
+                value = NovelStateStore.Clone(definition.CreateDefaultValue());
+                _valueScope.Locals[definition.ID] = value;
+            }
+            return NovelStateStore.Clone(value);
+        }
+
+        private bool TryWriteVariable(NovelVariableDefinition definition, RuntimeValue value, out string error)
+        {
+            if (definition == null) { error = "State node has no variable definition."; return false; }
+            if (!NovelStateStore.Matches(definition, value))
+            {
+                error = $"Variable '{definition.Name}' expects {definition.Type}, but received {value?.Kind.ToString() ?? "None"}.";
+                return false;
+            }
+            if (definition.Scope != NovelVariableScope.CallLocal)
+                return StateStore.TrySet(definition, value, out error);
+
+            RuntimeValue stored = NovelStateStore.Clone(value);
+            _valueScope.Locals[definition.ID] = stored;
+            LocalVariableChanged?.Invoke(definition, NovelStateStore.Clone(stored));
+            error = null;
+            return true;
+        }
+
+        private bool TryModifyVariable(RuntimeModifyVariableNode node, out string error)
+        {
+            error = null;
+            if (node?.Variable == null) { error = "Modify Variable has no variable definition."; return false; }
+            RuntimeValue current = ReadVariable(node.Variable);
+            RuntimeValue amount = Evaluate(node.Amount);
+            RuntimeValue result;
+            if (node.Variable.Type == NovelVariableType.Integer &&
+                current.Kind == RuntimeValueKind.Integer && amount.Kind == RuntimeValueKind.Integer)
+            {
+                int left = current.IntegerValue;
+                int right = amount.IntegerValue;
+                result = node.Operation switch
+                {
+                    RuntimeVariableModifyOperation.Subtract => RuntimeValue.From(left - right),
+                    RuntimeVariableModifyOperation.Multiply => RuntimeValue.From(left * right),
+                    RuntimeVariableModifyOperation.Divide => RuntimeValue.From(right == 0 ? 0 : left / right),
+                    _ => RuntimeValue.From(left + right)
+                };
+            }
+            else if (node.Variable.Type == NovelVariableType.Float &&
+                     current.Kind == RuntimeValueKind.Float && amount.Kind == RuntimeValueKind.Float)
+            {
+                float left = current.FloatValue;
+                float right = amount.FloatValue;
+                result = node.Operation switch
+                {
+                    RuntimeVariableModifyOperation.Subtract => RuntimeValue.From(left - right),
+                    RuntimeVariableModifyOperation.Multiply => RuntimeValue.From(left * right),
+                    RuntimeVariableModifyOperation.Divide => RuntimeValue.From(Mathf.Approximately(right, 0f) ? 0f : left / right),
+                    _ => RuntimeValue.From(left + right)
+                };
+            }
+            else
+            {
+                error = $"Modify Variable requires matching numeric values for '{node.Variable.Name}'.";
+                return false;
+            }
+            return TryWriteVariable(node.Variable, result, out error);
+        }
+
+        private bool EvaluateBoolean(RuntimeBooleanExpression expression)
+        {
+            bool first = AsBool(Evaluate(expression.A), false);
+            if (expression.Operation == RuntimeBooleanOperation.Not) return !first;
+            bool second = AsBool(Evaluate(expression.B), false);
+            return expression.Operation == RuntimeBooleanOperation.And ? first && second : first || second;
+        }
+
+        private bool EvaluateComparison(RuntimeComparisonExpression expression)
+        {
+            RuntimeValue a = Evaluate(expression.A);
+            RuntimeValue b = Evaluate(expression.B);
+            if (a == null || b == null || a.Kind != expression.ValueKind || b.Kind != expression.ValueKind)
+                return false;
+            switch (expression.ValueKind)
+            {
+                case RuntimeValueKind.Boolean:
+                    return CompareOrder(a.BooleanValue.CompareTo(b.BooleanValue), expression.Operation);
+                case RuntimeValueKind.Integer:
+                    return CompareOrder(a.IntegerValue.CompareTo(b.IntegerValue), expression.Operation);
+                case RuntimeValueKind.Float:
+                    if (expression.Operation == RuntimeComparisonOperation.Equal)
+                        return Mathf.Approximately(a.FloatValue, b.FloatValue);
+                    if (expression.Operation == RuntimeComparisonOperation.NotEqual)
+                        return !Mathf.Approximately(a.FloatValue, b.FloatValue);
+                    return CompareOrder(a.FloatValue.CompareTo(b.FloatValue), expression.Operation);
+                case RuntimeValueKind.String:
+                    return CompareOrder(string.Compare(a.StringValue ?? string.Empty, b.StringValue ?? string.Empty, StringComparison.Ordinal), expression.Operation);
+                default:
+                    return false;
+            }
+        }
+
+        private static bool CompareOrder(int order, RuntimeComparisonOperation operation) => operation switch
+        {
+            RuntimeComparisonOperation.Equal => order == 0,
+            RuntimeComparisonOperation.NotEqual => order != 0,
+            RuntimeComparisonOperation.Less => order < 0,
+            RuntimeComparisonOperation.LessOrEqual => order <= 0,
+            RuntimeComparisonOperation.Greater => order > 0,
+            RuntimeComparisonOperation.GreaterOrEqual => order >= 0,
+            _ => false
+        };
+
         private static float SafeDivide(float numerator, float denominator) =>
             Mathf.Approximately(denominator, 0f) ? 0f : numerator / denominator;
 
@@ -488,6 +630,9 @@ namespace Novelify
 
         private static string AsString(RuntimeValue value, string fallback) =>
             value?.Kind == RuntimeValueKind.String ? value.StringValue ?? string.Empty : fallback;
+
+        private static bool AsBool(RuntimeValue value, bool fallback) =>
+            value?.Kind == RuntimeValueKind.Boolean ? value.BooleanValue : fallback;
 
         private static T AsObject<T>(RuntimeValue value, T fallback) where T : UnityEngine.Object =>
             value?.Kind == RuntimeValueKind.Object && value.ObjectValue is T typed ? typed : fallback;

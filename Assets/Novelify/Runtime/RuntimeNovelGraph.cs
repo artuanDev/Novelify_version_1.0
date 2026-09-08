@@ -96,12 +96,38 @@ namespace Novelify
     }
 
     public enum RuntimeArithmeticOperation { Add, Subtract, Multiply, Divide }
+    public enum RuntimeComparisonOperation { Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual }
+    public enum RuntimeBooleanOperation { And, Or, Not }
+    public enum RuntimeVariableModifyOperation { Add, Subtract, Multiply, Divide }
 
     [Serializable]
     public class RuntimeArithmeticExpression : RuntimeValueExpression
     {
         public RuntimeArithmeticOperation Operation;
         public RuntimeValueKind ValueKind;
+        [SerializeReference] public RuntimeValueExpression A;
+        [SerializeReference] public RuntimeValueExpression B;
+    }
+
+    [Serializable]
+    public class RuntimeVariableExpression : RuntimeValueExpression
+    {
+        public NovelVariableDefinition Variable;
+    }
+
+    [Serializable]
+    public class RuntimeComparisonExpression : RuntimeValueExpression
+    {
+        public RuntimeComparisonOperation Operation;
+        public RuntimeValueKind ValueKind;
+        [SerializeReference] public RuntimeValueExpression A;
+        [SerializeReference] public RuntimeValueExpression B;
+    }
+
+    [Serializable]
+    public class RuntimeBooleanExpression : RuntimeValueExpression
+    {
+        public RuntimeBooleanOperation Operation;
         [SerializeReference] public RuntimeValueExpression A;
         [SerializeReference] public RuntimeValueExpression B;
     }
@@ -259,6 +285,29 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression RotationValue;
         [SerializeReference] public RuntimeValueExpression ScaleValue;
         [SerializeReference] public RuntimeValueExpression MarginValue;
+    }
+
+    [Serializable]
+    public class RuntimeSetVariableNode : RuntimeNode
+    {
+        public NovelVariableDefinition Variable;
+        [SerializeReference] public RuntimeValueExpression Value;
+    }
+
+    [Serializable]
+    public class RuntimeModifyVariableNode : RuntimeNode
+    {
+        public NovelVariableDefinition Variable;
+        public RuntimeVariableModifyOperation Operation;
+        [SerializeReference] public RuntimeValueExpression Amount;
+    }
+
+    [Serializable]
+    public class RuntimeBranchNode : RuntimeNode
+    {
+        [SerializeReference] public RuntimeValueExpression Condition;
+        public string TrueNodeID;
+        public string FalseNodeID;
     }
 
     [Serializable]

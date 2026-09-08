@@ -542,6 +542,11 @@ namespace Novelify.Editor
         private static IEnumerable<string> Destinations(RuntimeNode node)
         {
             if (!string.IsNullOrEmpty(node?.NextNodeID)) yield return node.NextNodeID;
+            if (node is RuntimeBranchNode branch)
+            {
+                if (!string.IsNullOrEmpty(branch.TrueNodeID)) yield return branch.TrueNodeID;
+                if (!string.IsNullOrEmpty(branch.FalseNodeID)) yield return branch.FalseNodeID;
+            }
             if (node is RuntimeChoiceNode choice && choice.Choices != null)
                 foreach (ChoiceData option in choice.Choices)
                     if (!string.IsNullOrEmpty(option?.DestinationNodeID)) yield return option.DestinationNodeID;
@@ -562,6 +567,9 @@ namespace Novelify.Editor
                 case RuntimeDialogueNode dialogue: return string.IsNullOrEmpty(dialogue.DialogueText) ? "Empty dialogue line" : Trim(dialogue.DialogueText, 90);
                 case RuntimeWaitNode wait: return $"Wait {wait.Duration:0.###} dialogue-clock seconds";
                 case RuntimeDialogueEventNode signal: return $"Event: {signal.EventName}";
+                case RuntimeSetVariableNode set: return $"Set {VariableName(set.Variable)}";
+                case RuntimeModifyVariableNode modify: return $"{modify.Operation} {VariableName(modify.Variable)}";
+                case RuntimeBranchNode branch: return $"True → {ShortID(branch.TrueNodeID)}  ·  False → {ShortID(branch.FalseNodeID)}";
                 case RuntimeShowCharacterNode show: return $"{CharacterName(show.Character)}  ·  {show.PositionSpace} {show.Position}";
                 case RuntimeTransformSpeakerPortraitNode move: return $"{CharacterName(move.Character)}  ·  {move.PositionSpace} ({move.OffsetX:0.##}, {move.OffsetY:0.##})";
                 case RuntimeSetCharacterFacingNode facing: return $"{CharacterName(facing.Character)} faces {facing.Facing}";
@@ -601,6 +609,9 @@ namespace Novelify.Editor
                 RuntimePlaySoundNode => "d_AudioSource Icon",
                 RuntimeWaitNode => "d_WaitSpin00",
                 RuntimeDialogueEventNode => "d_EventSystem Icon",
+                RuntimeSetVariableNode => "d_Animation.Record",
+                RuntimeModifyVariableNode => "d_Animation.AddKeyframe",
+                RuntimeBranchNode => "d_TreeEditor.Duplicate",
                 RuntimeTransformSpeakerPortraitNode => "d_MoveTool",
                 RuntimeShowCharacterNode => "d_SceneViewVisibility",
                 RuntimeHideCharacterNode => "d_scenevis_hidden_hover",
@@ -608,6 +619,10 @@ namespace Novelify.Editor
             };
             return EditorGUIUtility.IconContent(icon).image;
         }
+
+        private static string VariableName(NovelVariableDefinition variable) =>
+            variable == null ? "missing variable" :
+            string.IsNullOrWhiteSpace(variable.DisplayName) ? variable.name : variable.DisplayName;
 
         private void OpenSelectedGraph()
         {

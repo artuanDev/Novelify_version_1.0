@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(9, NovelGraph.AssetExtension)]
+    [ScriptedImporter(10, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -208,6 +208,16 @@ namespace Novelify.Editor
                     };
                     ProcessSetCharacterFacingNode(setFacingNode, runtimeSetFacingNode, nodeIDMap);
                     runtimeNode = runtimeSetFacingNode;
+                }
+                else if (editorNode is BranchNovelNode branchNode)
+                {
+                    runtimeNode = new RuntimeBranchNode
+                    {
+                        NodeID = nodeIDMap[editorNode],
+                        Condition = BuildExpression(branchNode.GetInputPortByName("Condition")),
+                        TrueNodeID = GetDestinationID(branchNode.GetOutputPortByName("True"), nodeIDMap),
+                        FalseNodeID = GetDestinationID(branchNode.GetOutputPortByName("False"), nodeIDMap)
+                    };
                 }
                 else
                 {
@@ -516,6 +526,30 @@ namespace Novelify.Editor
                 case DialogueEventNode _:
                     return new RuntimeDialogueEventNode { EventName = GetOptionValue(node.GetNodeOptionByName("Event Name"), string.Empty) };
                 case StopSoundNode _: return new RuntimeStopSoundNode();
+                case SetNovelVariableNode setVariable:
+                {
+                    NovelVariableDefinition variable = GetPortValue<NovelVariableDefinition>(setVariable.GetInputPortByName("Variable"));
+                    ValidateVariablePort(variable, GetOptionValue(setVariable.GetNodeOptionByName("Value Type"), NovelVariableType.Boolean), "Set Variable");
+                    return new RuntimeSetVariableNode
+                    {
+                        Variable = variable,
+                        Value = BuildExpression(setVariable.GetInputPortByName("Value"))
+                    };
+                }
+                case ModifyNovelVariableNode modifyVariable:
+                {
+                    NovelVariableDefinition variable = GetPortValue<NovelVariableDefinition>(modifyVariable.GetInputPortByName("Variable"));
+                    NovelVariableType expectedType = GetOptionValue(modifyVariable.GetNodeOptionByName("Value Type"), NovelNumericType.Integer) == NovelNumericType.Integer
+                        ? NovelVariableType.Integer
+                        : NovelVariableType.Float;
+                    ValidateVariablePort(variable, expectedType, "Modify Variable");
+                    return new RuntimeModifyVariableNode
+                    {
+                        Variable = variable,
+                        Operation = GetOptionValue(modifyVariable.GetNodeOptionByName("Operation"), RuntimeVariableModifyOperation.Add),
+                        Amount = BuildExpression(modifyVariable.GetInputPortByName("Amount"))
+                    };
+                }
                 case CallNovelPageNode call:
                     RuntimeNovelGraph calledGraph = GetPortValue<RuntimeNovelGraph>(
                         call.GetInputPortByName(CallNovelPageNode.GraphPortName));
@@ -594,7 +628,20 @@ namespace Novelify.Editor
 
         private static bool IsValueNode(INode node) =>
             node is FloatBinaryNode || node is Vector2BinaryNode || node is SplitNovelCharacterNode ||
-            node is MakeNovelCharacterReferenceNode || node is SplitNovelCharacterReferenceNode;
+            node is MakeNovelCharacterReferenceNode || node is SplitNovelCharacterReferenceNode ||
+            node is GetNovelVariableNode || node is CompareNovelValuesNode ||
+            node is AndNovelValuesNode || node is OrNovelValuesNode || node is NotNovelValueNode;
+
+        private void ValidateVariablePort(NovelVariableDefinition variable, NovelVariableType expectedType, string nodeName)
+        {
+            if (variable == null)
+            {
+                _context?.LogImportError($"{nodeName} needs a Variable definition.");
+                return;
+            }
+            if (variable.Type != expectedType)
+                _context?.LogImportError($"{nodeName} is configured for {expectedType}, but variable '{variable.Name}' is {variable.Type}.");
+        }
 
         private static bool IsMissingConstant(RuntimeValueExpression expression) =>
             expression is RuntimeConstantExpression constant &&
@@ -660,6 +707,46 @@ namespace Novelify.Editor
                     ValueKind = node is FloatBinaryNode ? RuntimeValueKind.Float : RuntimeValueKind.Vector2,
                     A = BuildExpression(node.GetInputPortByName("A"), activePath),
                     B = BuildExpression(node.GetInputPortByName("B"), activePath)
+                };
+            }
+
+            if (node is GetNovelVariableNode getVariable)
+            {
+                NovelVariableDefinition variable = GetPortValue<NovelVariableDefinition>(getVariable.GetInputPortByName("Variable"));
+                NovelVariableType expectedType = GetOptionValue(getVariable.GetNodeOptionByName("Value Type"), NovelVariableType.Boolean);
+                ValidateVariablePort(variable, expectedType, "Get Variable");
+                return new RuntimeVariableExpression { Variable = variable };
+            }
+
+            if (node is CompareNovelValuesNode compare)
+            {
+                NovelVariableType valueType = GetOptionValue(compare.GetNodeOptionByName("Value Type"), NovelVariableType.Boolean);
+                RuntimeComparisonOperation operation = GetOptionValue(compare.GetNodeOptionByName("Operator"), RuntimeComparisonOperation.Equal);
+                if ((valueType == NovelVariableType.Boolean || valueType == NovelVariableType.String) &&
+                    operation != RuntimeComparisonOperation.Equal && operation != RuntimeComparisonOperation.NotEqual)
+                    _context?.LogImportError($"Compare supports only Equal and Not Equal for {valueType} values.");
+                return new RuntimeComparisonExpression
+                {
+                    Operation = operation,
+                    ValueKind = RuntimeKind(valueType),
+                    A = BuildExpression(compare.GetInputPortByName("A"), activePath),
+                    B = BuildExpression(compare.GetInputPortByName("B"), activePath)
+                };
+            }
+
+            if (node is AndNovelValuesNode || node is OrNovelValuesNode || node is NotNovelValueNode)
+            {
+                RuntimeBooleanOperation operation = node is AndNovelValuesNode
+                    ? RuntimeBooleanOperation.And
+                    : node is OrNovelValuesNode ? RuntimeBooleanOperation.Or : RuntimeBooleanOperation.Not;
+                string firstPort = node is NotNovelValueNode ? "Value" : "A";
+                return new RuntimeBooleanExpression
+                {
+                    Operation = operation,
+                    A = BuildExpression(node.GetInputPortByName(firstPort), activePath),
+                    B = operation == RuntimeBooleanOperation.Not
+                        ? null
+                        : BuildExpression(node.GetInputPortByName("B"), activePath)
                 };
             }
 
@@ -777,6 +864,15 @@ namespace Novelify.Editor
             if (node is DivideFloatNode || node is DivideVector2Node) return RuntimeArithmeticOperation.Divide;
             return RuntimeArithmeticOperation.Add;
         }
+
+        private static RuntimeValueKind RuntimeKind(NovelVariableType type) => type switch
+        {
+            NovelVariableType.Boolean => RuntimeValueKind.Boolean,
+            NovelVariableType.Integer => RuntimeValueKind.Integer,
+            NovelVariableType.Float => RuntimeValueKind.Float,
+            NovelVariableType.String => RuntimeValueKind.String,
+            _ => RuntimeValueKind.None
+        };
 
         private static RuntimeCharacterComponent GetCharacterComponent(string portName)
         {
@@ -1056,7 +1152,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(4, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(5, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
