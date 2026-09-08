@@ -435,9 +435,18 @@ namespace Novelify.Editor
                 }
 
                 if (node is RuntimeChoiceNode choice && choice.Choices != null)
+                {
                     for (int index = 0; index < choice.Choices.Count; index++)
+                    {
+                        ChoiceData option = choice.Choices[index];
+                        string behavior = option == null ? string.Empty :
+                            $"  [{option.UnavailablePolicy}{(option.OnceOnly ? ", once" : string.Empty)}" +
+                            $"{(option.StateChanges?.Count > 0 ? $", {option.StateChanges.Count} changes" : string.Empty)}]";
                         EditorGUILayout.LabelField($"Choice {index + 1}",
-                            $"{choice.Choices[index]?.ChoiceText ?? ""}  →  {ShortID(choice.Choices[index]?.DestinationNodeID)}");
+                            $"{option?.ChoiceText ?? ""}{behavior}  →  {ShortID(option?.DestinationNodeID)}");
+                    }
+                    EditorGUILayout.LabelField("Fallback", ShortID(choice.UnavailableDestinationNodeID));
+                }
             }
         }
 
@@ -548,8 +557,12 @@ namespace Novelify.Editor
                 if (!string.IsNullOrEmpty(branch.FalseNodeID)) yield return branch.FalseNodeID;
             }
             if (node is RuntimeChoiceNode choice && choice.Choices != null)
+            {
                 foreach (ChoiceData option in choice.Choices)
                     if (!string.IsNullOrEmpty(option?.DestinationNodeID)) yield return option.DestinationNodeID;
+                if (!string.IsNullOrEmpty(choice.UnavailableDestinationNodeID))
+                    yield return choice.UnavailableDestinationNodeID;
+            }
         }
 
         private static string NodeTitle(RuntimeNode node)
@@ -570,6 +583,10 @@ namespace Novelify.Editor
                 case RuntimeSetVariableNode set: return $"Set {VariableName(set.Variable)}";
                 case RuntimeModifyVariableNode modify: return $"{modify.Operation} {VariableName(modify.Variable)}";
                 case RuntimeBranchNode branch: return $"True → {ShortID(branch.TrueNodeID)}  ·  False → {ShortID(branch.FalseNodeID)}";
+                case RuntimeCheckpointNode checkpoint:
+                    return checkpoint.SaveMode == NovelCheckpointSaveMode.Autosave
+                        ? $"{checkpoint.CheckpointID}  ·  autosave → {checkpoint.AutosaveSlotID}"
+                        : $"{checkpoint.CheckpointID}  ·  snapshot only";
                 case RuntimeShowCharacterNode show: return $"{CharacterName(show.Character)}  ·  {show.PositionSpace} {show.Position}";
                 case RuntimeTransformSpeakerPortraitNode move: return $"{CharacterName(move.Character)}  ·  {move.PositionSpace} ({move.OffsetX:0.##}, {move.OffsetY:0.##})";
                 case RuntimeSetCharacterFacingNode facing: return $"{CharacterName(facing.Character)} faces {facing.Facing}";

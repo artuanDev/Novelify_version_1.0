@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Novelify
 {
-    public partial class NovelManager
+    public partial class NovelGraphRunner
     {
         private NovelCharacterStage Stage
         {
@@ -48,3 +48,4 @@ namespace Novelify
         }
     }
 }
+

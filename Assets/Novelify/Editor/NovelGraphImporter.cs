@@ -9,12 +9,16 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(10, NovelGraph.AssetExtension)]
+    [ScriptedImporter(11, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
         protected AssetImportContext _context;
         private Dictionary<INode, string> _nodeIDMap;
+        private HashSet<string> _choiceIDs;
+        private HashSet<string> _expressionDiagnostics;
+        private string _expressionDiagnosticIdentity;
+        private static readonly HashSet<string> LoggedExpressionDiagnostics = new HashSet<string>(StringComparer.Ordinal);
 
         public override void OnImportAsset(AssetImportContext ctx)
         {
@@ -44,9 +48,12 @@ namespace Novelify.Editor
             runtimeGraph.ContentVersion = File.Exists(sourcePath)
                 ? Hash128.Compute(File.ReadAllText(sourcePath)).ToString()
                 : string.Empty;
+            _expressionDiagnosticIdentity = ctx.assetPath + "|" + runtimeGraph.ContentVersion;
 
             var nodeIDMap = new Dictionary<INode, string>();
             _nodeIDMap = nodeIDMap;
+            _choiceIDs = new HashSet<string>(StringComparer.Ordinal);
+            _expressionDiagnostics = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (INode node in editorGraph.GetNodes())
             {
@@ -267,6 +274,8 @@ namespace Novelify.Editor
         {
             SetSpeaker(node, runtimeNode);
             SetPresentationOptions(node, runtimeNode);
+            runtimeNode.UnavailableDestinationNodeID =
+                GetDestinationID(node.GetOutputPortByName("Fallback"), nodeIDMap);
 
             IEnumerable<IPort> choiceOutputPorts =
                 node.GetOutputPorts()
@@ -282,18 +291,79 @@ namespace Novelify.Editor
                     node.GetInputPortByName(
                         $"Choice Text {index}");
 
+                string choiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
+                if (string.IsNullOrEmpty(choiceID)) choiceID = $"{nodeIDMap[node]}:{index}";
+                if (!_choiceIDs.Add(choiceID))
+                    _context?.LogImportError($"Duplicate Choice ID '{choiceID}'. Choice IDs must be unique within a graph.");
+
                 var choiceData = new ChoiceData
                 {
+                    ChoiceID = choiceID,
                     ChoiceText =
                         GetPortValue<string>(textPort),
 
                     ChoiceTextValue = BuildExpression(textPort),
 
+                    Condition = BuildExpression(node.GetInputPortByName($"Condition {index}")),
+
+                    UnavailablePolicy = GetPortValue<NovelChoiceUnavailablePolicy>(
+                        node.GetInputPortByName($"Unavailable Policy {index}")),
+
+                    DisabledReason = GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
+
+                    DisabledReasonValue = BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
+
+                    OnceOnly = GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
+
                     DestinationNodeID = GetDestinationID(outputPort, nodeIDMap)
                 };
 
+                NovelChoiceTransactionDefinition transaction = GetPortValue<NovelChoiceTransactionDefinition>(
+                    node.GetInputPortByName($"Transaction {index}"));
+                if (transaction != null)
+                {
+                    string transactionPath = AssetDatabase.GetAssetPath(transaction);
+                    if (!string.IsNullOrEmpty(transactionPath)) _context?.DependsOnSourceAsset(transactionPath);
+                    foreach (NovelChoiceStateChangeDefinition change in transaction.Changes ??
+                             Enumerable.Empty<NovelChoiceStateChangeDefinition>())
+                    {
+                        if (change?.Variable == null)
+                        {
+                            _context?.LogImportError($"Choice '{choiceID}' has a transaction entry without a Variable.");
+                            continue;
+                        }
+                        bool numeric = change.Variable.Type is NovelVariableType.Integer or NovelVariableType.Float;
+                        if (change.Operation != NovelChoiceStateOperation.Set && !numeric)
+                        {
+                            _context?.LogImportError(
+                                $"Choice '{choiceID}' uses {change.Operation} on non-numeric variable '{change.Variable.Name}'.");
+                            continue;
+                        }
+                        RuntimeValue value = change.CreateValue();
+                        if (change.Operation == NovelChoiceStateOperation.Spend &&
+                            ((value.Kind == RuntimeValueKind.Integer && value.IntegerValue < 0) ||
+                             (value.Kind == RuntimeValueKind.Float && value.FloatValue < 0f)))
+                        {
+                            _context?.LogImportError($"Choice '{choiceID}' has a negative Spend amount.");
+                            continue;
+                        }
+                        choiceData.StateChanges.Add(new RuntimeChoiceStateChange
+                        {
+                            Variable = change.Variable,
+                            Operation = change.Operation,
+                            Value = new RuntimeConstantExpression { Value = value }
+                        });
+                    }
+                }
+
                 runtimeNode.Choices.Add(choiceData);
             }
+
+            bool reactive = runtimeNode.Choices.Any(choice => choice.OnceOnly || choice.StateChanges.Count > 0 ||
+                choice.Condition is not RuntimeConstantExpression condition ||
+                condition.Value?.Kind != RuntimeValueKind.Boolean || !condition.Value.BooleanValue);
+            if (reactive && string.IsNullOrEmpty(runtimeNode.UnavailableDestinationNodeID))
+                _context?.LogImportWarning("Reactive Choice has no Fallback connection for an all-unavailable menu.");
         }
 
         private void ProcessPlaySoundNode(
@@ -523,6 +593,21 @@ namespace Novelify.Editor
                         CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")) };
                 case WaitNode _:
                     return new RuntimeWaitNode { Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 1f)) };
+                case CheckpointNode _:
+                    string checkpointID = GetPortValue<string>(node.GetInputPortByName("Checkpoint ID"))?.Trim();
+                    if (string.IsNullOrEmpty(checkpointID))
+                        _context?.LogImportWarning("Checkpoint has an empty Checkpoint ID; it cannot be used as a migration fallback.");
+                    NovelCheckpointSaveMode saveMode = GetOptionValue(
+                        node.GetNodeOptionByName("Save Mode"), NovelCheckpointSaveMode.SnapshotOnly);
+                    string autosaveSlot = GetOptionValue(node.GetNodeOptionByName("Autosave Slot"), "autosave")?.Trim();
+                    if (saveMode == NovelCheckpointSaveMode.Autosave && !NovelSaveStorage.IsValidSlotID(autosaveSlot))
+                        _context?.LogImportError("Checkpoint Autosave Slot must use only letters, numbers, '-' or '_', up to 64 characters.");
+                    return new RuntimeCheckpointNode
+                    {
+                        CheckpointID = checkpointID ?? string.Empty,
+                        SaveMode = saveMode,
+                        AutosaveSlotID = string.IsNullOrEmpty(autosaveSlot) ? "autosave" : autosaveSlot
+                    };
                 case DialogueEventNode _:
                     return new RuntimeDialogueEventNode { EventName = GetOptionValue(node.GetNodeOptionByName("Event Name"), string.Empty) };
                 case StopSoundNode _: return new RuntimeStopSoundNode();
@@ -664,8 +749,12 @@ namespace Novelify.Editor
             if (!activePath.Add(port))
             {
                 INode cycleNode = port.GetNode();
-                _context?.LogImportError(
-                    $"Cyclic value expression detected at '{cycleNode?.Title ?? cycleNode?.GetType().Name ?? "unknown node"}' port '{port.Name}'.");
+                string message =
+                    $"Cyclic value expression detected at '{cycleNode?.Title ?? cycleNode?.GetType().Name ?? "unknown node"}' port '{port.Name}'.";
+                string diagnosticKey = _expressionDiagnosticIdentity + "|" + message;
+                if ((_expressionDiagnostics == null || _expressionDiagnostics.Add(message)) &&
+                    LoggedExpressionDiagnostics.Add(diagnosticKey))
+                    _context?.LogImportError(message);
                 return new RuntimeConstantExpression { Value = RuntimeValue.None() };
             }
 
@@ -1152,7 +1241,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(5, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(6, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

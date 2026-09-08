@@ -83,6 +83,57 @@ namespace Novelify.Tests
         }
 
         [Test]
+        public void ChoiceExtensionCompilesConditionsStableIdsPoliciesTransactionsAndFallback()
+        {
+            NovelVariableDefinition coins = ScriptableObject.CreateInstance<NovelVariableDefinition>();
+            coins.name = "Coins";
+            coins.DisplayName = "Coins";
+            coins.Type = NovelVariableType.Integer;
+            coins.Scope = NovelVariableScope.Story;
+            coins.EnsureID();
+            AssetDatabase.CreateAsset(coins, _folder + "/Coins.asset");
+            NovelChoiceTransactionDefinition transaction = ScriptableObject.CreateInstance<NovelChoiceTransactionDefinition>();
+            transaction.Changes.Add(new NovelChoiceStateChangeDefinition
+            {
+                Variable = coins,
+                Operation = NovelChoiceStateOperation.Spend,
+                IntegerValue = 20
+            });
+            AssetDatabase.CreateAsset(transaction, _folder + "/BuyKey.asset");
+
+            StartNode start = Add<StartNode>();
+            ChoiceNode choice = Add<ChoiceNode>();
+            EndNode purchaseEnd = Add<EndNode>();
+            EndNode leaveEnd = Add<EndNode>();
+            EndNode fallbackEnd = Add<EndNode>();
+            choice.GetInputPortByName("Choice ID 0").TrySetValue("buy-key");
+            choice.GetInputPortByName("Choice Text 0").TrySetValue("Buy the key -- 20 coins");
+            choice.GetInputPortByName("Condition 0").TrySetValue(false);
+            choice.GetInputPortByName("Unavailable Policy 0").TrySetValue(NovelChoiceUnavailablePolicy.Disable);
+            choice.GetInputPortByName("Disabled Reason 0").TrySetValue("Need 20 coins.");
+            choice.GetInputPortByName("Once Only 0").TrySetValue(true);
+            choice.GetInputPortByName("Transaction 0").TrySetValue(transaction);
+            choice.GetInputPortByName("Choice Text 1").TrySetValue("Leave");
+            Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), purchaseEnd.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 1"), leaveEnd.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Fallback"), fallbackEnd.GetInputPortByName("in")), Is.True);
+
+            RuntimeChoiceNode runtime = Import().AllNodes.OfType<RuntimeChoiceNode>().Single();
+            ChoiceData purchase = runtime.Choices[0];
+            Assert.That(purchase.ChoiceID, Is.EqualTo("buy-key"));
+            Assert.That(purchase.Condition, Is.TypeOf<RuntimeConstantExpression>());
+            Assert.That(((RuntimeConstantExpression)purchase.Condition).Value.BooleanValue, Is.False);
+            Assert.That(purchase.UnavailablePolicy, Is.EqualTo(NovelChoiceUnavailablePolicy.Disable));
+            Assert.That(purchase.DisabledReason, Is.EqualTo("Need 20 coins."));
+            Assert.That(purchase.OnceOnly, Is.True);
+            Assert.That(purchase.StateChanges.Single().Operation, Is.EqualTo(NovelChoiceStateOperation.Spend));
+            Assert.That(((RuntimeConstantExpression)purchase.StateChanges.Single().Value).Value.IntegerValue, Is.EqualTo(20));
+            Assert.That(runtime.Choices[1].ChoiceID, Is.Not.Null.And.Not.Empty, "Blank IDs must derive a stable fallback ID.");
+            Assert.That(runtime.UnavailableDestinationNodeID, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
         public void TransformSpeakerPortraitOptionsSurviveImport()
         {
             StartNode start = Add<StartNode>();
@@ -359,6 +410,10 @@ namespace Novelify.Tests
             _graph.Connect(show.GetOutputPortByName("Character"), hide.GetInputPortByName("Character"));
             Connect(start, show);
             Add<HideAllCharactersNode>(); Add<SetCharacterEmotionNode>(); Add<WaitNode>();
+            CheckpointNode checkpoint = Add<CheckpointNode>();
+            checkpoint.GetInputPortByName("Checkpoint ID").TrySetValue("chapter-one");
+            checkpoint.GetNodeOptionByName("Save Mode").TrySetValue(NovelCheckpointSaveMode.Autosave);
+            checkpoint.GetNodeOptionByName("Autosave Slot").TrySetValue("chapter_autosave");
             Add<DialogueEventNode>(); Add<StopSoundNode>();
             RuntimeNovelGraph runtime = Import();
             Assert.That(runtime.AllNodes.OfType<RuntimeShowCharacterNode>().Single().NextNodeID, Is.Null.Or.Empty);
@@ -366,6 +421,10 @@ namespace Novelify.Tests
             Assert.That(runtime.AllNodes.OfType<RuntimeHideAllCharactersNode>().Count(), Is.EqualTo(1));
             Assert.That(runtime.AllNodes.OfType<RuntimeSetCharacterEmotionNode>().Count(), Is.EqualTo(1));
             Assert.That(runtime.AllNodes.OfType<RuntimeWaitNode>().Count(), Is.EqualTo(1));
+            RuntimeCheckpointNode runtimeCheckpoint = runtime.AllNodes.OfType<RuntimeCheckpointNode>().Single();
+            Assert.That(runtimeCheckpoint.CheckpointID, Is.EqualTo("chapter-one"));
+            Assert.That(runtimeCheckpoint.SaveMode, Is.EqualTo(NovelCheckpointSaveMode.Autosave));
+            Assert.That(runtimeCheckpoint.AutosaveSlotID, Is.EqualTo("chapter_autosave"));
             Assert.That(runtime.AllNodes.OfType<RuntimeDialogueEventNode>().Count(), Is.EqualTo(1));
             Assert.That(runtime.AllNodes.OfType<RuntimeStopSoundNode>().Count(), Is.EqualTo(1));
         }

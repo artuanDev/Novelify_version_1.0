@@ -17,7 +17,7 @@ Create branching conversations visually with custom Graph Toolkit nodes, reusabl
 
 ## About
 
-Novelify is a visual dialogue framework built for Unity. Stories are authored inside custom `.novelgraph` assets using Unity Graph Toolkit and then imported into runtime data that can be played by the `NovelManager`.
+Novelify is a visual dialogue framework built for Unity. Stories are authored inside custom `.novelgraph` assets using Unity Graph Toolkit and then imported into runtime data played by `NovelGraphRunner`. The included `NovelManager` is a minimal example controller built on that runner.
 
 The editor graph and runtime presentation are intentionally separated: graph nodes are used for authoring, while the importer generates a `RuntimeNovelGraph` that can be consumed by normal Unity components during play mode.
 
@@ -51,6 +51,7 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Rich dialogue editing with bold, italic, colour and multiple text sizes.
 - Wave and shake text effects with an animated editor preview.
 - Automatic conversion from editor graphs to runtime dialogue data.
+- A compact `NovelGraphSession` gameplay API for graph playback, variables, choices, events and saves.
 - Included sample graphs, character assets, UI setup and playable scene.
 - A ready-to-use layered template character with sprites for all ten supported emotions.
 
@@ -61,7 +62,7 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 | Graph authoring | Create and connect nodes in a `.novelgraph` asset. |
 | Character data | Store a speaker's name, portrait layers, voice clip and animation timing in a `NovelCharacter` asset. |
 | Import | `NovelGraphImporter` converts the editor graph into a `RuntimeNovelGraph`. |
-| Runtime | `NovelManager` displays dialogue, reveals text, plays audio, animates portraits and routes choices. |
+| Runtime | `NovelGraphRunner` executes graphs; the built-in or a custom presentation displays dialogue, audio, portraits and choices. |
 
 ## Requirements
 
@@ -169,7 +170,7 @@ For a complete reference, inspect or duplicate `Assets/Novelify/Samples/Characte
 
 ### Multiple Characters and Movement
 
-Assign **Portrait Prefab** on `NovelManager`. Its `CharacterInfo` component exposes Body, Eyes, Details and Mouth image references. The supplied prefab's named layers are detected automatically. Empty sprite layers are hidden and portrait images do not intercept clicks.
+Assign **Portrait Prefab** on the built-in `NovelManager`/`NovelGraphRunner`. Its `CharacterInfo` component exposes Body, Eyes, Details and Mouth image references. The supplied prefab's named layers are detected automatically. Empty sprite layers are hidden and portrait images do not intercept clicks.
 
 Characters have no fixed slot limit. Each character asset gets its own default instance, even when two assets share a speaker name. To show additional copies of one asset, use different **Instance ID** values. Use the same character asset and ID in Dialogue, Choice and character utility nodes to address the same copy; a blank ID always means the default copy. Legacy Character wires pass only the asset. Use **Make Novel Character Reference** and the **Character Reference** ports to carry the asset and instance ID together; **Split Novel Character Reference** separates them again when needed.
 
@@ -206,7 +207,7 @@ Math nodes are non-flow expressions and do not execute on their own. Float and V
 | Set Character Emotion | Applies the selected expression, creating the character if needed. |
 | Wait | Pauses flow for dialogue-clock seconds; dialogue clicks cannot skip it. |
 | Set Facing | Sets left/right orientation idempotently. |
-| Dialogue Event | Sends Event Name to `NovelManager.OnDialogueEvent`, then continues. Connect listeners in the manager inspector. |
+| Dialogue Event | Sends Event Name to the runner's `OnDialogueEvent` and `Session.EventRaised` listeners, then continues. |
 | Stop Sound | Stops the audio channel used by Play Sound nodes. |
 | Label | Declares a unique named flow destination and continues through its output. |
 | Jump | Continues immediately at the Label node with the matching name. |
@@ -217,9 +218,88 @@ Each Continue output has one story destination: connect `Dialogue → Translate 
 
 The dialogue panel is hidden with a CanvasGroup, keeping its GameObject active. This allows the manager and audio sources to live inside the panel without being disabled between nodes. Play Sound continues across dialogue, waits and movement until Stop Sound or the story ends.
 
-`NovelManager.TimeMode` defines the dialogue clock. **Unscaled** is the default and keeps text reveal, waits, portrait transitions, blinking and mouth animation running while gameplay is paused. Choose **Scaled** when pausing gameplay should also pause the conversation.
+`NovelGraphRunner.TimeMode` defines the dialogue clock. **Unscaled** is the default and keeps text reveal, waits, portrait transitions, blinking and mouth animation running while gameplay is paused. Choose **Scaled** when pausing gameplay should also pause the conversation.
 
 Imported runtime graphs contain a stable graph ID, stable authored node IDs, a content hash and a schema version. Player builds automatically bake `Resources/NovelGraphCatalog.asset`, which resolves graph IDs without editor-only asset lookup. Double-click the catalogue asset (or use **Window > Novelify > Graph Catalogue**) for searchable graph previews, flow diagnostics and source navigation. Refresh it with **Tools > Novelify > Rebuild Runtime Graph Catalog**; builds also refresh it automatically.
+
+## Save, Load and Checkpoints
+
+`NovelGraphRunner` supports bounded saves at fully presented Dialogue and Choice nodes. Calls made during Wait, portrait movement, text reveal or automatic flow return `Pending`; the requested slot is written when the next supported boundary is reached. Subscribe to `SlotSaveCompleted` or read `IsSavePending` to reflect this in custom UI.
+
+```csharp
+NovelPersistenceResult save = manager.SaveSlot("slot_1");
+NovelPersistenceResult load = manager.LoadSlot("slot_1");
+
+manager.CaptureSnapshot(out NovelSaveData snapshot);
+manager.RestoreSnapshot(snapshot);
+
+manager.SaveProfile(); // profile-scoped variables use a separate file
+manager.LoadProfile();
+```
+
+Add a **Checkpoint** flow node with a stable Checkpoint ID. It passes through immediately and captures at the next safe line; if a later content revision removes the saved line, load can migrate to that known checkpoint. Its **Snapshot Only** mode leaves disk storage to the game's UI. Use **Autosave** at deliberate milestones to also write a reserved autosave slot. Avoid targeting manual player slots from graph content. Loading validates schema, graphs, nodes, call frames, values and character assets before replacing the running session.
+
+Each story slot stores graph/content identity, current boundary, nested graph/function frames, return and call-site IDs, inputs, locals, cached outputs, story variables, selected choices, visits, read-line IDs, bounded history, and visible character instances with emotion and transform. The generated runtime catalogue now includes graphs, characters and variable definitions. General Unity object values remain intentionally unsupported until they have stable asset-ID serializers.
+
+Slots are checksum-protected JSON beneath `Application.persistentDataPath/Novelify`. Writes use a temporary file, replace the active slot only after verification, and retain `.bak` as the last-good copy. `NovelSaveSlotMenu` can bind an existing TMP dropdown/input, Save/Load/Delete buttons and status label into a resume menu without imposing a visual style.
+
+## Gameplay Scripting API
+
+`NovelGraphRunner` is the reusable runtime component. It owns traversal, nested graph/function calls, variables, conditional choices, checkpoints and persistence boundaries. `NovelManager` is only the supplied example controller: it derives from the runner, starts the assigned graph, and maps a left mouse click to `Session.Advance()`.
+
+Game code can attach `NovelGraphRunner` directly and decide when and how it should run:
+
+```csharp
+public sealed class QuestDialogue : MonoBehaviour
+{
+    [SerializeField] private NovelGraphRunner novel;
+    [SerializeField] private RuntimeNovelGraph intro;
+    [SerializeField] private NovelVariableDefinition trust;
+
+    private void OnEnable()
+    {
+        novel.Session.EventRaised += OnStoryEvent;
+        novel.Session.ChoiceCommitted += OnChoice;
+    }
+
+    private void Start()
+    {
+        novel.Session.SetVariable(trust, 3);
+        novel.Session.Play(intro);
+    }
+
+    private void OnDisable()
+    {
+        novel.Session.EventRaised -= OnStoryEvent;
+        novel.Session.ChoiceCommitted -= OnChoice;
+    }
+
+    private void OnStoryEvent(string eventName) { /* update the game */ }
+    private void OnChoice(RuntimeNovelGraph graph, RuntimeChoiceNode node, ChoiceData choice) { }
+}
+```
+
+Use `Play(graphID)` and `SetVariable(variableID, value)` when content must be selected by stable catalogue IDs. `CurrentGraph`, `CurrentNode`, `CurrentChoices`, `TryChoose`, typed getters, visit/choice history, `Capture`/`Restore`, and `Save`/`Load` support custom UI and game integrations. `GraphStarted`, `GraphStopped`, `NodeEntered`, `DialoguePresented`, `ChoiceCommitted`, and `EventRaised` allow scripts to react without polling. The original `NovelManager.PlayGraph`, `Advance`, `EndDialogue`, `UseStateStore`, and persistence methods remain available for existing scenes and UnityEvents.
+
+### Custom Presentation
+
+Implement `INovelPresentation` and either assign that component to **Presentation Behaviour** in the runner inspector or install it before playback with `runner.UsePresentation(presentation)`. The presenter receives `NovelDialoguePresentation` and read-only `NovelChoicePresentation` models, renders them however the game needs, and calls `dialogue.NotifyRevealCompleted()` when its own typewriter animation finishes. Choice UI selects an option through `dialogue.Session.TryChoose(choiceID, out error)`. Passing `null` restores Novelify's built-in TextMesh Pro and portrait presentation.
+
+### Custom Node Behaviour
+
+Handlers run before Novelify's built-in node implementations. Higher priority handlers run first; returning `NotHandled` lets the next handler or the built-in runtime process the node.
+
+```csharp
+IDisposable registration = runner.Session.RegisterNodeHandler<RuntimeDialogueEventNode>(
+    (context, node) =>
+    {
+        questSystem.Receive(node.EventName);
+        return NovelNodeExecutionResult.Continue();
+    },
+    priority: 100);
+```
+
+A handler can return `Continue`, `Jump`, `Stop`, or `Pause`. `Pause` is intended for asynchronous gameplay such as a battle, Timeline, scene transition, or network response. Resume it later with `runner.Session.Resume(out error)`. Dispose the returned registration to remove the handler cleanly.
 
 ## Rich Text and Text Effects
 
@@ -231,9 +311,9 @@ Dialogue text can be formatted from the custom inspector. Select text and use th
 - Wave motion.
 - Shake motion.
 
-At runtime, `NovelManager` enables TextMesh Pro rich text automatically. The `NovelTextEffects` component animates ranges marked with the wave or shake effect.
+The built-in presentation enables TextMesh Pro rich text automatically. The `NovelTextEffects` component animates ranges marked with the wave or shake effect.
 
-## Using NovelManager in Your Own Scene
+## Using the Built-In NovelManager Example
 
 Add a `NovelManager` component to a GameObject and assign:
 
@@ -245,7 +325,7 @@ Add a `NovelManager` component to a GameObject and assign:
 - A `Button` prefab and a container transform for generated choices.
 - Optional audio sources for talking sounds and node sounds.
 
-The manager builds its node lookup at startup and begins at the graph's Start node. Normal dialogue advances with a left mouse click; Choice nodes create their buttons at runtime.
+This example manager builds its node lookup at startup and begins at the graph's Start node. Normal dialogue advances with a left mouse click; Choice nodes create their buttons at runtime. Use `NovelGraphRunner` instead when the game owns input or presentation.
 
 ## Project Structure
 
@@ -255,7 +335,11 @@ Assets/Novelify/
 │   ├── Graph/                 # Graph, nodes, inspectors and visual styles
 │   └── NovelGraphImporter.cs  # Converts editor graphs to runtime data
 ├── Runtime/
-│   ├── NovelManager.cs        # Dialogue presentation and flow
+│   ├── NovelManager.cs        # Minimal auto-play/click example
+│   ├── NovelGraphRunner.cs    # Reusable graph runtime
+│   ├── NovelGraphSession.cs   # Gameplay-facing graph API
+│   ├── NovelGraphExtensibility.cs # Presentation and custom-node contracts
+│   ├── NovelGraphRunner.*.cs  # Focused flow, values, choices, UI, stage and save internals
 │   ├── NovelCharacter.cs      # Character ScriptableObject
 │   ├── RuntimeNovelGraph.cs   # Runtime graph data
 │   └── NovelTextEffects.cs    # Wave and shake text animation
@@ -289,7 +373,7 @@ Assets/Novelify/
 - [x] Add initial runtime flow controls and dialogue events (Wait and Dialogue Event nodes).
 - [x] Add custom character creator to preview emotions and examples and make tweaks to them.
 - [ ] Add localization support.
-- [ ] Add save, load and conversation history support.
+- [x] Add bounded save/load, checkpoints, save slots and conversation history snapshots.
 - [x] Add utility nodes that ease scenes with more than one character.
 - [x] Add a layered template character and a playable emotion showcase.
 - [ ] Continue expanding the sample content and documentation.

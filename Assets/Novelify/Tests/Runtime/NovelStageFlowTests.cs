@@ -1,8 +1,13 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Novelify.Tests
 {
@@ -213,6 +218,133 @@ namespace Novelify.Tests
 
         private static RuntimeConstantExpression Constant(RuntimeValue value) =>
             new RuntimeConstantExpression { Value = value };
+
+        [Test]
+        public void ReactiveChoicesHideDisableRefreshCommitOnceAndFallback()
+        {
+            NovelVariableDefinition coins = CreateVariable("Coins", NovelVariableType.Integer, NovelVariableScope.Story);
+            NovelVariableDefinition hasKey = CreateVariable("Has Key", NovelVariableType.Boolean, NovelVariableScope.Story);
+            GameObject containerObject = new GameObject("Choices", typeof(RectTransform));
+            GameObject buttonObject = new GameObject("Choice Button", typeof(RectTransform), typeof(UnityEngine.UI.Button));
+            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            _manager.ChoiceButtonContainer = containerObject.transform;
+            _manager.ChoiceButtonPrefab = buttonObject.GetComponent<UnityEngine.UI.Button>();
+            var events = new List<string>();
+            _manager.OnDialogueEvent.AddListener(events.Add);
+            try
+            {
+                Assert.That(_manager.StateStore.TrySet(coins, RuntimeValue.From(10), out string stateError), Is.True, stateError);
+                var purchase = new ChoiceData
+                {
+                    ChoiceID = "buy-key",
+                    ChoiceText = "Buy the key -- 20 coins",
+                    Condition = Constant(RuntimeValue.From(true)),
+                    UnavailablePolicy = NovelChoiceUnavailablePolicy.Disable,
+                    DisabledReason = "Need 20 coins.",
+                    DestinationNodeID = "bought",
+                    StateChanges = new List<RuntimeChoiceStateChange>
+                    {
+                        new RuntimeChoiceStateChange
+                        {
+                            Variable = coins, Operation = NovelChoiceStateOperation.Spend,
+                            Value = Constant(RuntimeValue.From(20))
+                        },
+                        new RuntimeChoiceStateChange
+                        {
+                            Variable = hasKey, Operation = NovelChoiceStateOperation.Set,
+                            Value = Constant(RuntimeValue.From(true))
+                        }
+                    }
+                };
+                var once = new ChoiceData
+                {
+                    ChoiceID = "past", ChoiceText = "Tell me about your past", OnceOnly = true,
+                    Condition = Constant(RuntimeValue.From(true)), DestinationNodeID = "past"
+                };
+                var choice = new RuntimeChoiceNode
+                {
+                    NodeID = "choice", UnavailableDestinationNodeID = "fallback",
+                    Choices = new List<ChoiceData>
+                    {
+                        new ChoiceData
+                        {
+                            ChoiceID = "hidden", ChoiceText = "Ask about the hidden room",
+                            Condition = Constant(RuntimeValue.From(false)),
+                            UnavailablePolicy = NovelChoiceUnavailablePolicy.Hide, DestinationNodeID = "hidden"
+                        },
+                        purchase,
+                        once,
+                        new ChoiceData
+                        {
+                            ChoiceID = "leave", ChoiceText = "Leave",
+                            Condition = Constant(RuntimeValue.From(true)), DestinationNodeID = "leave"
+                        }
+                    }
+                };
+                Play(choice,
+                    new RuntimeDialogueEventNode { NodeID = "hidden", EventName = "hidden" },
+                    new RuntimeDialogueEventNode { NodeID = "bought", EventName = "bought" },
+                    new RuntimeDialogueEventNode { NodeID = "past", EventName = "past" },
+                    new RuntimeDialogueEventNode { NodeID = "leave", EventName = "leave" },
+                    new RuntimeDialogueEventNode { NodeID = "fallback", EventName = "fallback" });
+
+                UnityEngine.UI.Button[] buttons = containerObject.GetComponentsInChildren<UnityEngine.UI.Button>();
+                Assert.That(buttons.Length, Is.EqualTo(3), "The hidden first option must not create a button.");
+                Assert.That(buttons[0].interactable, Is.False);
+                StringAssert.Contains("Need 20 coins", buttons[0].GetComponentInChildren<TextMeshProUGUI>().text);
+
+                buttons[1].onClick.Invoke();
+                buttons[1].onClick.Invoke();
+                CollectionAssert.AreEqual(new[] { "past" }, events, "Rapid activation must commit only once.");
+                Assert.That(_manager.StateStore.HasSelectedChoice("past"), Is.True);
+
+                events.Clear();
+                Play(choice,
+                    new RuntimeDialogueEventNode { NodeID = "hidden", EventName = "hidden" },
+                    new RuntimeDialogueEventNode { NodeID = "bought", EventName = "bought" },
+                    new RuntimeDialogueEventNode { NodeID = "past", EventName = "past" },
+                    new RuntimeDialogueEventNode { NodeID = "leave", EventName = "leave" },
+                    new RuntimeDialogueEventNode { NodeID = "fallback", EventName = "fallback" });
+                Assert.That(containerObject.GetComponentsInChildren<UnityEngine.UI.Button>().Length, Is.EqualTo(2),
+                    "The once-only option must remain hidden on the next visit.");
+
+                Assert.That(_manager.StateStore.TrySet(coins, RuntimeValue.From(20), out stateError), Is.True, stateError);
+                buttons = containerObject.GetComponentsInChildren<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button buy = buttons.Single(button =>
+                    button.GetComponentInChildren<TextMeshProUGUI>().text.StartsWith("Buy the key"));
+                Assert.That(buy.interactable, Is.True, "An open menu must refresh when relevant state changes.");
+                buy.onClick.Invoke();
+                buy.onClick.Invoke();
+                CollectionAssert.AreEqual(new[] { "bought" }, events);
+                Assert.That(_manager.StateStore.Get(coins).IntegerValue, Is.Zero);
+                Assert.That(_manager.StateStore.Get(hasKey).BooleanValue, Is.True);
+
+                events.Clear();
+                Play(new RuntimeChoiceNode
+                    {
+                        NodeID = "none", UnavailableDestinationNodeID = "fallback",
+                        Choices = new List<ChoiceData>
+                        {
+                            new ChoiceData
+                            {
+                                ChoiceID = "never", ChoiceText = "Never",
+                                Condition = Constant(RuntimeValue.From(false)),
+                                UnavailablePolicy = NovelChoiceUnavailablePolicy.Hide
+                            }
+                        }
+                    },
+                    new RuntimeDialogueEventNode { NodeID = "fallback", EventName = "fallback" });
+                CollectionAssert.AreEqual(new[] { "fallback" }, events);
+            }
+            finally
+            {
+                Object.DestroyImmediate(containerObject);
+                Object.DestroyImmediate(buttonObject);
+                Object.DestroyImmediate(coins);
+                Object.DestroyImmediate(hasKey);
+            }
+        }
 
         [UnityTest]
         public IEnumerator TranslateCreatesItsTargetMovesAcrossFramesAndBlocksClicksUntilFinished()
@@ -578,6 +710,285 @@ namespace Novelify.Tests
                 Object.DestroyImmediate(function);
             }
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator NestedFunctionCheckpointRoundTripsWithoutReplayingReward()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "NovelifyPersistence_" + Guid.NewGuid().ToString("N"));
+            NovelVariableDefinition coins = CreateVariable("Coins", NovelVariableType.Integer, NovelVariableScope.Story);
+            RuntimeNovelFunction function = ScriptableObject.CreateInstance<RuntimeNovelFunction>();
+            NovelGraphCatalog catalog = ScriptableObject.CreateInstance<NovelGraphCatalog>();
+            var events = new List<string>();
+            try
+            {
+                _graph.GraphID = "main-story";
+                _graph.ContentVersion = "main-v1";
+                function.GraphID = "interview-function";
+                function.ContentVersion = "function-v1";
+                function.EntryNodeID = "checkpoint";
+                function.Inputs.Add(new RuntimeFunctionInput { Name = "Question", DefaultValue = RuntimeValue.From("none") });
+                function.AllNodes.Add(new RuntimeCheckpointNode
+                    { NodeID = "checkpoint", CheckpointID = "inside-interview", NextNodeID = "question-line" });
+                function.AllNodes.Add(new RuntimeDialogueNode
+                    { NodeID = "question-line", DialogueText = "Choose an answer.", ShowTextImmediately = true });
+                catalog.ReplaceEntries(new[]
+                {
+                    new NovelGraphCatalog.Entry { GraphID = _graph.GraphID, Graph = _graph },
+                    new NovelGraphCatalog.Entry { GraphID = function.GraphID, Graph = function }
+                });
+                catalog.ReplaceAssetEntries(null, new[]
+                {
+                    new NovelGraphCatalog.VariableEntry { VariableID = coins.ID, Variable = coins }
+                });
+                _manager.AssetCatalog = catalog;
+                _manager.UseSaveStorage(new NovelSaveStorage(directory));
+                _manager.OnDialogueEvent.AddListener(events.Add);
+
+                Play(
+                    new RuntimeSetVariableNode
+                    {
+                        NodeID = "initial-coins", NextNodeID = "call", Variable = coins,
+                        Value = Constant(RuntimeValue.From(5))
+                    },
+                    new RuntimeCallNovelFunctionNode
+                    {
+                        NodeID = "call", NextNodeID = "reward", Function = function,
+                        Arguments = new List<RuntimeFunctionArgument>
+                        {
+                            new RuntimeFunctionArgument { Name = "Question", Value = Constant(RuntimeValue.From("trust")) }
+                        }
+                    },
+                    new RuntimeDialogueEventNode { NodeID = "reward", NextNodeID = "after", EventName = "reward" },
+                    new RuntimeDialogueNode { NodeID = "after", DialogueText = "Returned.", ShowTextImmediately = true });
+
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("question-line"));
+                Assert.That(_manager.LatestCheckpoint, Is.Not.Null);
+                Assert.That(_manager.LatestCheckpoint.Frames.Count, Is.EqualTo(1));
+                Assert.That(_manager.LatestCheckpoint.CurrentScope.Inputs.Single().Value.StringValue, Is.EqualTo("trust"));
+                Assert.That(_manager.SaveSlot("interview").Succeeded, Is.True);
+
+                Assert.That(_manager.StateStore.TrySet(coins, RuntimeValue.From(99), out string error), Is.True, error);
+                _manager.EndDialogue();
+                NovelPersistenceResult loaded = _manager.LoadSlot("interview");
+                Assert.That(loaded.Succeeded, Is.True, loaded.ToString());
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("question-line"));
+                Assert.That(_manager.StateStore.Get(coins).IntegerValue, Is.EqualTo(5));
+                CollectionAssert.IsEmpty(events, "Loading must not replay caller-side rewards.");
+
+                yield return null;
+                _manager.Advance();
+                CollectionAssert.AreEqual(new[] { "reward" }, events);
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+                Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(function);
+                Object.DestroyImmediate(coins);
+            }
+        }
+
+        [Test]
+        public void MissingSavedNodeMigratesToNamedCheckpointAndKeepsCallerFrame()
+        {
+            RuntimeNovelFunction function = ScriptableObject.CreateInstance<RuntimeNovelFunction>();
+            NovelGraphCatalog catalog = ScriptableObject.CreateInstance<NovelGraphCatalog>();
+            try
+            {
+                _graph.GraphID = "main";
+                _graph.ContentVersion = "v1";
+                function.GraphID = "function";
+                function.ContentVersion = "v1";
+                function.EntryNodeID = "checkpoint";
+                var checkpoint = new RuntimeCheckpointNode
+                    { NodeID = "checkpoint", CheckpointID = "safe", NextNodeID = "saved-line" };
+                function.AllNodes.Add(checkpoint);
+                function.AllNodes.Add(new RuntimeDialogueNode { NodeID = "saved-line", ShowTextImmediately = true });
+                catalog.ReplaceEntries(new[]
+                {
+                    new NovelGraphCatalog.Entry { GraphID = "main", Graph = _graph },
+                    new NovelGraphCatalog.Entry { GraphID = "function", Graph = function }
+                });
+                _manager.AssetCatalog = catalog;
+                Play(new RuntimeCallNovelFunctionNode
+                    { NodeID = "call", NextNodeID = "caller-line", Function = function },
+                    new RuntimeDialogueNode { NodeID = "caller-line", ShowTextImmediately = true });
+                Assert.That(_manager.CaptureSnapshot(out NovelSaveData snapshot).Succeeded, Is.True);
+
+                function.ContentVersion = "v2";
+                checkpoint.NextNodeID = "fallback-line";
+                function.AllNodes.RemoveAll(node => node.NodeID == "saved-line");
+                function.AllNodes.Add(new RuntimeDialogueNode { NodeID = "fallback-line", ShowTextImmediately = true });
+
+                NovelPersistenceResult result = _manager.RestoreSnapshot(snapshot);
+                Assert.That(result.Status, Is.EqualTo(NovelPersistenceStatus.Migrated), result.ToString());
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("fallback-line"));
+                Assert.That(snapshot.Frames.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(function);
+            }
+        }
+
+        [Test]
+        public void CorruptSlotDoesNotReplaceRunningSessionAndBackupRemainsLoadable()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "NovelifyStorage_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var storage = new NovelSaveStorage(directory);
+                var first = new NovelSaveData { TimestampUtc = "first" };
+                var second = new NovelSaveData { TimestampUtc = "second" };
+                Assert.That(storage.SaveSlot("slot", first).Succeeded, Is.True);
+                Assert.That(storage.SaveSlot("slot", second).Succeeded, Is.True);
+                File.WriteAllText(storage.GetSlotPath("slot"), "corrupt");
+                NovelPersistenceResult recovered = storage.LoadSlot("slot", out NovelSaveData loaded);
+                Assert.That(recovered.Status, Is.EqualTo(NovelPersistenceStatus.RestoredBackup));
+                Assert.That(loaded.TimestampUtc, Is.EqualTo("first"));
+
+                _graph.GraphID = "running";
+                _graph.ContentVersion = "v1";
+                Play(new RuntimeDialogueNode { NodeID = "still-running", ShowTextImmediately = true });
+                _manager.UseSaveStorage(storage);
+                File.WriteAllText(storage.GetSlotPath("broken"), "corrupt");
+                NovelPersistenceResult failed = _manager.LoadSlot("broken");
+                Assert.That(failed.Succeeded, Is.False);
+                Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("still-running"));
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            }
+        }
+
+        [Test]
+        public void StoryAndProfilePersistenceAreSeparate()
+        {
+            NovelVariableDefinition story = CreateVariable("Story", NovelVariableType.Integer, NovelVariableScope.Story);
+            NovelVariableDefinition profile = CreateVariable("Profile", NovelVariableType.Boolean, NovelVariableScope.Profile);
+            try
+            {
+                Assert.That(_manager.StateStore.TrySet(story, RuntimeValue.From(7), out string error), Is.True, error);
+                Assert.That(_manager.StateStore.TrySet(profile, RuntimeValue.From(true), out error), Is.True, error);
+                List<NovelSavedVariable> storyValues = _manager.StateStore.CaptureStoryVariables();
+                List<NovelSavedVariable> profileValues = _manager.StateStore.CaptureProfileVariables();
+                Assert.That(storyValues.Select(item => item.VariableID), Is.EquivalentTo(new[] { story.ID }));
+                Assert.That(profileValues.Select(item => item.VariableID), Is.EquivalentTo(new[] { profile.ID }));
+            }
+            finally
+            {
+                Object.DestroyImmediate(story);
+                Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
+        public void SnapshotRestoresCharacterIdentityVisibilityTransformEmotionAndFacing()
+        {
+            NovelGraphCatalog catalog = ScriptableObject.CreateInstance<NovelGraphCatalog>();
+            try
+            {
+                _graph.GraphID = "stage-story";
+                _graph.ContentVersion = "v1";
+                catalog.ReplaceEntries(new[] { new NovelGraphCatalog.Entry { GraphID = _graph.GraphID, Graph = _graph } });
+                catalog.ReplaceAssetEntries(new[]
+                {
+                    new NovelGraphCatalog.CharacterEntry { CharacterID = "hoki", Character = _character }
+                }, null);
+                _manager.AssetCatalog = catalog;
+                Play(
+                    new RuntimeShowCharacterNode
+                    {
+                        NodeID = "show", NextNodeID = "face", Character = _character,
+                        Position = new Vector2(120f, 45f), PositionSpace = CharacterPositionSpace.Canvas,
+                        Emotion = CharacterEmotion.Happy
+                    },
+                    new RuntimeSetCharacterFacingNode
+                    {
+                        NodeID = "face", NextNodeID = "checkpoint", Character = _character,
+                        Facing = CharacterFacing.Left
+                    },
+                    new RuntimeCheckpointNode
+                    {
+                        NodeID = "checkpoint", NextNodeID = "line", CheckpointID = "stage-ready"
+                    },
+                    new RuntimeDialogueNode
+                    {
+                        NodeID = "line", NovelCharacter = _character, Emotion = CharacterEmotion.Happy,
+                        DialogueText = "Ready.", ShowTextImmediately = true
+                    });
+
+                NovelSaveData snapshot = _manager.LatestCheckpoint;
+                Assert.That(snapshot.Characters.Count, Is.EqualTo(1));
+                CharacterInfo info = _manager.ShowCharacter(_character);
+                info.Position = new Vector2(-300f, -200f);
+                info.Scale = new Vector2(3f, 2f);
+                info.SetEmotion(CharacterEmotion.Angry);
+                info.gameObject.SetActive(false);
+
+                Assert.That(_manager.RestoreSnapshot(snapshot).Succeeded, Is.True);
+                Assert.That(info.gameObject.activeSelf, Is.True);
+                Assert.That(info.Position, Is.EqualTo(new Vector2(120f, 45f)));
+                Assert.That(info.Scale.x, Is.LessThan(0f));
+                Assert.That(info.Emotion, Is.EqualTo(CharacterEmotion.Happy));
+            }
+            finally { Object.DestroyImmediate(catalog); }
+        }
+
+        [UnityTest]
+        public IEnumerator SaveRequestedDuringWaitCompletesAtNextBoundary()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "NovelifyDeferred_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                _graph.GraphID = "deferred-story";
+                _graph.ContentVersion = "v1";
+                _manager.UseSaveStorage(new NovelSaveStorage(directory));
+                Play(
+                    new RuntimeWaitNode { NodeID = "wait", NextNodeID = "line", Duration = 0.05f },
+                    new RuntimeDialogueNode { NodeID = "line", ShowTextImmediately = true });
+                NovelPersistenceResult pending = _manager.SaveSlot("deferred");
+                Assert.That(pending.Status, Is.EqualTo(NovelPersistenceStatus.Pending));
+                Assert.That(_manager.IsSavePending, Is.True);
+                yield return new WaitForSecondsRealtime(0.12f);
+                Assert.That(_manager.IsSavePending, Is.False);
+                Assert.That(File.Exists(_manager.SaveStorage.GetSlotPath("deferred")), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            }
+        }
+
+        [Test]
+        public void AutosaveCheckpointWritesReservedSlotAtBoundary()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "NovelifyAutosave_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                _graph.GraphID = "autosave-story";
+                _graph.ContentVersion = "v1";
+                _manager.UseSaveStorage(new NovelSaveStorage(directory));
+                Play(
+                    new RuntimeCheckpointNode
+                    {
+                        NodeID = "checkpoint", NextNodeID = "line", CheckpointID = "chapter-start",
+                        SaveMode = NovelCheckpointSaveMode.Autosave, AutosaveSlotID = "autosave"
+                    },
+                    new RuntimeDialogueNode { NodeID = "line", ShowTextImmediately = true });
+
+                Assert.That(_manager.LatestCheckpoint, Is.Not.Null);
+                Assert.That(_manager.LatestCheckpoint.CheckpointID, Is.EqualTo("chapter-start"));
+                Assert.That(File.Exists(_manager.SaveStorage.GetSlotPath("autosave")), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            }
         }
     }
 }

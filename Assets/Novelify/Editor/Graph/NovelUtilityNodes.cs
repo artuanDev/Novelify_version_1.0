@@ -81,6 +81,7 @@ namespace Novelify.Editor
                 .WithTooltip("Unique destination name used by Jump nodes.")
                 .Build();
         }
+
     }
 
     [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
@@ -94,6 +95,7 @@ namespace Novelify.Editor
                 .WithTooltip("Name of the Label node where story flow should continue.")
                 .Build();
         }
+
     }
 
     [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
@@ -137,13 +139,46 @@ namespace Novelify.Editor
         }
     }
 
+    [Serializable, Node("Novelify/Flow", null, "Checkpoint"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public class CheckpointNode : ActionNode
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(this, "Safe resume point",
+                "Requests a snapshot at the next dialogue or choice boundary, after automatic work finishes.",
+                new Color32(96, 165, 250, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<string>("Checkpoint ID")
+                .WithDefaultValue(string.Empty)
+                .WithTooltip("Stable authored name used as a migration fallback if later content removes the saved line.")
+                .Build();
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            context.AddOption<NovelCheckpointSaveMode>("Save Mode")
+                .WithDefaultValue(NovelCheckpointSaveMode.SnapshotOnly)
+                .WithTooltip("Snapshot Only updates the in-memory recovery point. Autosave also writes it to the configured autosave slot at the safe boundary.")
+                .Build();
+            context.AddOption<string>("Autosave Slot")
+                .WithDefaultValue("autosave")
+                .WithTooltip("Used only in Autosave mode. Do not target player-owned manual slots from story content.")
+                .Build();
+        }
+    }
+
     [Serializable, Node("Novelify/Utilities"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DialogueEventNode : ActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             context.AddOption<string>("Event Name").WithDefaultValue(string.Empty)
-                .WithTooltip("Sent to NovelManager's On Dialogue Event listeners, then flow continues.").Build();
+                .WithTooltip("Sent to the runner's dialogue-event listeners, then flow continues.").Build();
         }
     }
 

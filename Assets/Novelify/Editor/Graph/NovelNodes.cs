@@ -377,9 +377,33 @@ namespace Novelify.Editor
             option.TryGetValue(out int portCount);
             for (int i = 0; i < portCount; i++)
             {
+                context.AddInputPort<string>($"Choice ID {i}")
+                    .WithDefaultValue(string.Empty)
+                    .WithTooltip("Optional stable ID. When empty, Novelify derives one from this node and choice slot.")
+                    .Build();
                 context.AddInputPort<string>($"Choice Text {i}").Build();
+                context.AddInputPort<bool>($"Condition {i}")
+                    .WithDefaultValue(true)
+                    .WithTooltip("The choice is available when this evaluates true.")
+                    .Build();
+                context.AddInputPort<NovelChoiceUnavailablePolicy>($"Unavailable Policy {i}")
+                    .WithDefaultValue(NovelChoiceUnavailablePolicy.Hide)
+                    .Build();
+                context.AddInputPort<string>($"Disabled Reason {i}")
+                    .WithDefaultValue(string.Empty)
+                    .Build();
+                context.AddInputPort<bool>($"Once Only {i}")
+                    .WithDefaultValue(false)
+                    .Build();
+                context.AddInputPort<NovelChoiceTransactionDefinition>($"Transaction {i}")
+                    .WithTooltip("Optional atomic costs and effects applied before routing.")
+                    .Build();
                 context.AddOutputPort($"Choice {i}").WithCapacity(PortCapacity.Single).Build();
             }
+            context.AddOutputPort("Fallback")
+                .WithCapacity(PortCapacity.Single)
+                .WithTooltip("Used when no choice is actionable.")
+                .Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)

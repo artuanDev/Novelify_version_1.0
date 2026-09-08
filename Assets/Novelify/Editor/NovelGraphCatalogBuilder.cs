@@ -63,7 +63,24 @@ namespace Novelify.Editor
                 entries.Add(new NovelGraphCatalog.Entry { GraphID = graph.GraphID, Graph = graph });
             }
 
+            var characters = AssetDatabase.FindAssets("t:NovelCharacter")
+                .Select(guid => new NovelGraphCatalog.CharacterEntry
+                {
+                    CharacterID = guid,
+                    Character = AssetDatabase.LoadAssetAtPath<NovelCharacter>(AssetDatabase.GUIDToAssetPath(guid))
+                })
+                .Where(entry => entry.Character != null)
+                .OrderBy(entry => entry.CharacterID, StringComparer.Ordinal)
+                .ToList();
+            var variables = AssetDatabase.FindAssets("t:NovelVariableDefinition")
+                .Select(guid => AssetDatabase.LoadAssetAtPath<NovelVariableDefinition>(AssetDatabase.GUIDToAssetPath(guid)))
+                .Where(variable => variable != null && !string.IsNullOrEmpty(variable.ID))
+                .OrderBy(variable => variable.ID, StringComparer.Ordinal)
+                .Select(variable => new NovelGraphCatalog.VariableEntry { VariableID = variable.ID, Variable = variable })
+                .ToList();
+
             catalog.ReplaceEntries(entries);
+            catalog.ReplaceAssetEntries(characters, variables);
             catalog.GeneratedAtUtc = DateTime.UtcNow.ToString("O");
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();

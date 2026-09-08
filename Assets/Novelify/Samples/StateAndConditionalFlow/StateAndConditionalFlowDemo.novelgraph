@@ -89,8 +89,8 @@ MonoBehaviour:
           serializedVersion: 2
           x: 0
           y: 0
-          width: 0
-          height: 0
+          width: 2791
+          height: 1321
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 3352634158768028182
@@ -2530,7 +2530,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.SpeakerPortraitOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Character: {fileID: 0}
+          Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
           Emotion: 0
     - rid: 8564938485965521014
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
@@ -2573,7 +2573,7 @@ MonoBehaviour:
     - rid: 8564938485965521022
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {fileID: 0}
+        m_Value: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938485965521023
       type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -2619,7 +2619,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.SpeakerPortraitOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Character: {fileID: 0}
+          Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
           Emotion: 0
     - rid: 8564938485965521032
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
@@ -2662,7 +2662,7 @@ MonoBehaviour:
     - rid: 8564938485965521040
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {fileID: 0}
+        m_Value: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
     - rid: 8564938485965521041
       type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:

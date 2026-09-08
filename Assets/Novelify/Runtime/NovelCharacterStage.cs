@@ -48,7 +48,7 @@ namespace Novelify
             }
             if (_root == null || _prefab == null)
             {
-                Debug.LogWarning("NovelManager needs a Portrait Prefab and a Character Container (or Canvas Dialogue) to create characters.");
+                Debug.LogWarning("NovelGraphRunner needs a Portrait Prefab and a Character Container (or Canvas Dialogue) to create characters.");
                 return null;
             }
             GameObject portrait = Object.Instantiate(_prefab, _root, false);

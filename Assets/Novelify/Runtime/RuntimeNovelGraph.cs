@@ -6,7 +6,7 @@ namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
@@ -49,6 +49,7 @@ namespace Novelify
     public enum CharacterPositionSpace { Canvas, Normalized }
     public enum CharacterFacing { Left, Right }
     public enum DialogueTimeMode { Unscaled, Scaled }
+    public enum NovelCheckpointSaveMode { SnapshotOnly, Autosave }
 
     [Serializable]
     public class RuntimeValue
@@ -247,6 +248,7 @@ namespace Novelify
     public class RuntimeChoiceNode : RuntimeDialogueNode
     {
         public List<ChoiceData> Choices = new List<ChoiceData>();
+        public string UnavailableDestinationNodeID;
     }
 
     [Serializable]
@@ -383,6 +385,14 @@ namespace Novelify
     }
 
     [Serializable]
+    public class RuntimeCheckpointNode : RuntimeNode
+    {
+        public string CheckpointID;
+        public NovelCheckpointSaveMode SaveMode;
+        public string AutosaveSlotID = "autosave";
+    }
+
+    [Serializable]
     public class RuntimeDialogueEventNode : RuntimeNode
     {
         public string EventName;
@@ -407,8 +417,23 @@ namespace Novelify
     [Serializable]
     public class ChoiceData
     {
+        public string ChoiceID;
         public string ChoiceText;
         [SerializeReference] public RuntimeValueExpression ChoiceTextValue;
+        [SerializeReference] public RuntimeValueExpression Condition;
+        public NovelChoiceUnavailablePolicy UnavailablePolicy;
+        public string DisabledReason;
+        [SerializeReference] public RuntimeValueExpression DisabledReasonValue;
+        public bool OnceOnly;
+        public List<RuntimeChoiceStateChange> StateChanges = new List<RuntimeChoiceStateChange>();
         public string DestinationNodeID;
+    }
+
+    [Serializable]
+    public sealed class RuntimeChoiceStateChange
+    {
+        public NovelVariableDefinition Variable;
+        public NovelChoiceStateOperation Operation;
+        [SerializeReference] public RuntimeValueExpression Value;
     }
 }

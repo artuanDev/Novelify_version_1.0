@@ -1,5 +1,5 @@
 {
   "name": "Novelify.Runtime.Tests",
-  "references": ["Novelify.Runtime", "UnityEngine.UI"],
+  "references": ["Novelify.Runtime", "UnityEngine.UI", "Unity.TextMeshPro"],
   "optionalUnityReferences": ["TestAssemblies"]
 }
