@@ -117,7 +117,11 @@ namespace Novelify.Editor
                 .WithDefaultValue(Vector2.one).ShowInInspectorOnly().Build();
             context.AddOption<float>("Margin").WithDisplayName("Legacy Margin")
                 .WithDefaultValue(0f).ShowInInspectorOnly().Build();
-            context.AddOption<bool>("Relative").WithTooltip("Add the normalized X/Y displacement to the current position. Rotation and scale remain absolute.").Build();
+            context.AddOption<CharacterPositionSpace>("Coordinate Space")
+                .WithDefaultValue(CharacterPositionSpace.Normalized)
+                .WithTooltip("Normalized maps the screen to -1..1. Canvas uses anchored canvas units for legacy layouts.")
+                .Build();
+            context.AddOption<bool>("Relative").WithTooltip("Add the X/Y displacement, in the selected coordinate space, to the current position. Rotation and scale remain absolute.").Build();
             context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
             context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
             context.AddOption<bool>("Ease In Out").WithTooltip("Accelerate and decelerate smoothly; disable for constant speed.").WithDefaultValue(true).Build();
@@ -153,8 +157,8 @@ namespace Novelify.Editor
             base.OnEnable();
             NovelNodePresentation.Apply(
                 this,
-                "Move character",
-                "Creates the selected character if needed, then moves that instance on the stage.",
+                "Toggle flip",
+                "Toggles the selected axes each time this node runs. Use Set Facing when repeated execution must be idempotent.",
                 new Color32(251, 191, 36, 255));
         }
 
@@ -168,6 +172,31 @@ namespace Novelify.Editor
             base.OnDefineOptions(context);
             context.AddOption<bool>("FlipX").WithTooltip("Flip in the X Axis.").WithDefaultValue(true).Build();
             context.AddOption<bool>("FlipY").WithTooltip("Flip in the Y Axis.").WithDefaultValue(false).Build();
+        }
+    }
+
+    [Serializable]
+    [Node("Novelify/Characters", null, "Set Facing")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public class SetCharacterFacingNode : CharacterActionNode
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Set facing",
+                "Sets horizontal facing deterministically; running it repeatedly keeps the same orientation.",
+                new Color32(251, 191, 36, 255));
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<CharacterFacing>("Facing")
+                .WithDefaultValue(CharacterFacing.Right)
+                .WithTooltip("Right uses a positive absolute X scale; Left uses a negative absolute X scale.")
+                .Build();
         }
     }
 
@@ -272,9 +301,15 @@ namespace Novelify.Editor
             context.AddInputPort<NovelCharacter>("Speaker")
                 .WithTooltip("Character whose name, portrait, voice, and timing are used.")
                 .Build();
+            context.AddInputPort<NovelCharacterReference>("Speaker Reference")
+                .WithTooltip("Optional speaker value containing both the character asset and instance ID.")
+                .Build();
 
             context.AddOutputPort<NovelCharacter>("Current Speaker")
                 .WithTooltip("Use this output to keep using the same speaker in the next node easily.")
+                .Build();
+            context.AddOutputPort<NovelCharacterReference>("Current Speaker Reference")
+                .WithTooltip("Pass this exact speaker instance to another node.")
                 .Build();
         }
 
@@ -328,6 +363,9 @@ namespace Novelify.Editor
 
             context.AddInputPort<NovelCharacter>("Speaker")
                 .WithTooltip("Character presenting this decision.")
+                .Build();
+            context.AddInputPort<NovelCharacterReference>("Speaker Reference")
+                .WithTooltip("Optional speaker value containing both the character asset and instance ID.")
                 .Build();
 
             context.AddInputPort<AudioClip>(SimpleDialogueNode.SoundPortName)

@@ -70,7 +70,6 @@ MonoBehaviour:
         - rid: 8564938451261063784
         m_GraphWireModels:
         - rid: 8564938451261063174
-        - rid: 8564938451261063190
         - rid: 8564938451261063214
         - rid: 8564938451261063215
         - rid: 8564938451261063233
@@ -92,7 +91,6 @@ MonoBehaviour:
         - rid: 8564938451261063443
         - rid: 8564938451261063444
         - rid: 8564938451261063445
-        - rid: 8564938451261063490
         - rid: 8564938451261063491
         - rid: 8564938451261063505
         - rid: 8564938451261063531
@@ -123,6 +121,8 @@ MonoBehaviour:
         - rid: 8564938451261063779
         - rid: 8564938451261063785
         - rid: 8564938451261063786
+        - rid: 8564938475435196452
+        - rid: 8564938475435196459
         m_GraphStickyNoteModels: []
         m_GraphPlacematModels: []
         m_GraphVariableModels:
@@ -135,10 +135,10 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: -1358
-          y: 71
-          width: 3254
-          height: 2940
+          x: -2070
+          y: 2
+          width: 4067
+          height: 3033
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 1405924534473296467
@@ -181,14 +181,6 @@ MonoBehaviour:
           m_Category: 0
           m_Index: 2
         - m_Guid:
-            m_Value0: 9766309012791877261
-            m_Value1: 5064172821155258573
-          m_HashGuid:
-            serializedVersion: 2
-            Hash: 8dde27924de68887cda02586598e4746
-          m_Category: 2
-          m_Index: 1
-        - m_Guid:
             m_Value0: 8952700964288047627
             m_Value1: 13968155939746428292
           m_HashGuid:
@@ -203,7 +195,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 7a414b032730b49feb1871e3e178b610
           m_Category: 2
-          m_Index: 2
+          m_Index: 1
         - m_Guid:
             m_Value0: 3633762366014999648
             m_Value1: 5834494380057664640
@@ -211,7 +203,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 60cc81909eb76d32809c59e7b949f850
           m_Category: 2
-          m_Index: 3
+          m_Index: 2
         - m_Guid:
             m_Value0: 13458599500177585348
             m_Value1: 16871299566178850796
@@ -243,7 +235,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 2666ef2a1e006261b81cbc85b044a1fe
           m_Category: 2
-          m_Index: 4
+          m_Index: 3
         - m_Guid:
             m_Value0: 721292207598294386
             m_Value1: 18103639554322107497
@@ -275,7 +267,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 52bed2aeb670bf520fd1e8b09baede4a
           m_Category: 2
-          m_Index: 5
+          m_Index: 4
         - m_Guid:
             m_Value0: 16565844936354684471
             m_Value1: 1333426898925713691
@@ -299,7 +291,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 9089eec51812428ee4388f1d359d9919
           m_Category: 2
-          m_Index: 6
+          m_Index: 5
         - m_Guid:
             m_Value0: 17442263393798462064
             m_Value1: 11622820954173581822
@@ -315,7 +307,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 2aec4e24420f920b66b86c6180346939
           m_Category: 2
-          m_Index: 7
+          m_Index: 6
         - m_Guid:
             m_Value0: 13859779921367971242
             m_Value1: 6008768417011526211
@@ -323,7 +315,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: aab53afe67d457c043ea8e190a6f6353
           m_Category: 2
-          m_Index: 8
+          m_Index: 7
         - m_Guid:
             m_Value0: 16396938433497952226
             m_Value1: 16869183366072894460
@@ -339,7 +331,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 46c96a9a95796ca7b96bf0372dc89cc8
           m_Category: 2
-          m_Index: 9
+          m_Index: 8
         - m_Guid:
             m_Value0: 3550041110259626280
             m_Value1: 14559337184599138627
@@ -347,7 +339,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 28f10eb39447443143e12add07280dca
           m_Category: 2
-          m_Index: 10
+          m_Index: 9
         - m_Guid:
             m_Value0: 1613171703763608675
             m_Value1: 10008100411278977359
@@ -363,7 +355,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 91194e75545dd9bd63d6e60240cce7ed
           m_Category: 2
-          m_Index: 11
+          m_Index: 10
         - m_Guid:
             m_Value0: 2198032218932751782
             m_Value1: 11776259301354275379
@@ -371,7 +363,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: a6ad594ea8fa801e33821cf870ad6da3
           m_Category: 2
-          m_Index: 12
+          m_Index: 11
         - m_Guid:
             m_Value0: 17591848415761967019
             m_Value1: 7534901846497301075
@@ -387,7 +379,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: a3fb0ca4805dcccc34c8e4f3c45ec5b4
           m_Category: 2
-          m_Index: 13
+          m_Index: 12
         - m_Guid:
             m_Value0: 17547154707591934616
             m_Value1: 14038177125683144256
@@ -395,7 +387,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 9832d7dc3c0484f340a65be6b79fd1c2
           m_Category: 2
-          m_Index: 14
+          m_Index: 13
         - m_Guid:
             m_Value0: 10145703758178892994
             m_Value1: 11997483319122398995
@@ -411,7 +403,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 98f18850e3baccfa32c16a98b5cf5e0f
           m_Category: 2
-          m_Index: 15
+          m_Index: 14
         - m_Guid:
             m_Value0: 3035244440798674214
             m_Value1: 9811300869323831233
@@ -419,7 +411,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 26bd48ccbc5a1f2ac137877c28be2888
           m_Category: 2
-          m_Index: 16
+          m_Index: 15
         - m_Guid:
             m_Value0: 3463189575246482791
             m_Value1: 2260686116937621253
@@ -459,7 +451,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: d772f77c87845f6452d7e9a025163efe
           m_Category: 2
-          m_Index: 17
+          m_Index: 16
         - m_Guid:
             m_Value0: 9975315198260920176
             m_Value1: 10256939226835639025
@@ -467,7 +459,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 70bfe54252706f8af1da4e1ae2f7578e
           m_Category: 2
-          m_Index: 18
+          m_Index: 17
         - m_Guid:
             m_Value0: 10694150593862206736
             m_Value1: 1304990727702512474
@@ -475,7 +467,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 1085b0194e4169945a03e31727421c12
           m_Category: 2
-          m_Index: 19
+          m_Index: 18
         - m_Guid:
             m_Value0: 4025196247563420791
             m_Value1: 6919118627548056953
@@ -483,7 +475,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 77c44027a95edc37794dca91bba50560
           m_Category: 2
-          m_Index: 20
+          m_Index: 19
         - m_Guid:
             m_Value0: 823194521416817142
             m_Value1: 3929162164513864483
@@ -491,7 +483,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: f6d918460e936c0b23fbc0c82b308736
           m_Category: 2
-          m_Index: 21
+          m_Index: 20
         - m_Guid:
             m_Value0: 9264744847954986869
             m_Value1: 18159597892517286881
@@ -499,15 +491,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 75c7fc3c5afc9280e1d36ccf11da03fc
           m_Category: 2
-          m_Index: 22
-        - m_Guid:
-            m_Value0: 9931996373883032157
-            m_Value1: 406298947891241333
-          m_HashGuid:
-            serializedVersion: 2
-            Hash: 5d12c47f148ad5897521ac8dbd76a305
-          m_Category: 2
-          m_Index: 23
+          m_Index: 21
         - m_Guid:
             m_Value0: 906299830015580338
             m_Value1: 16607348764696924693
@@ -515,7 +499,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: b25813c4e4d2930c1552c844b62779e6
           m_Category: 2
-          m_Index: 24
+          m_Index: 22
         - m_Guid:
             m_Value0: 7216342202568157157
             m_Value1: 10103063766089943369
@@ -539,7 +523,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 8a5971052ef218b4ad1ebc588ea5c398
           m_Category: 2
-          m_Index: 25
+          m_Index: 23
         - m_Guid:
             m_Value0: 16772309350101005040
             m_Value1: 5335943190705863992
@@ -563,7 +547,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 70d00a813c97f03476e9fa1b093dae97
           m_Category: 2
-          m_Index: 26
+          m_Index: 24
         - m_Guid:
             m_Value0: 17322277717893114210
             m_Value1: 11080269786535878347
@@ -571,7 +555,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 62e9ae9bce1765f0cbdef641aa06c599
           m_Category: 2
-          m_Index: 27
+          m_Index: 25
         - m_Guid:
             m_Value0: 17545343867466517185
             m_Value1: 3795313145453094482
@@ -587,7 +571,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 8fdaf8ae8840cfcb2ec1b811d8ad7e88
           m_Category: 2
-          m_Index: 28
+          m_Index: 26
         - m_Guid:
             m_Value0: 2869616340020437624
             m_Value1: 12463505366890996720
@@ -595,7 +579,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 7822937cdbecd227f063b6c11844f7ac
           m_Category: 2
-          m_Index: 29
+          m_Index: 27
         - m_Guid:
             m_Value0: 15080877421026264395
             m_Value1: 12181962761705994229
@@ -611,7 +595,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 43cbb3cb9292687cf0b5cee77ae74d06
           m_Category: 2
-          m_Index: 30
+          m_Index: 28
         - m_Guid:
             m_Value0: 12824133732618580205
             m_Value1: 17295891649444357229
@@ -619,7 +603,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: edb0d544af79f8b16da4c64ed15907f0
           m_Category: 2
-          m_Index: 31
+          m_Index: 29
         - m_Guid:
             m_Value0: 17907201338794390243
             m_Value1: 7980073287611443027
@@ -627,7 +611,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: e3323dc0bd2883f853e7a9f55feabe6e
           m_Category: 2
-          m_Index: 32
+          m_Index: 30
         - m_Guid:
             m_Value0: 14944305912369266979
             m_Value1: 13483606927728018850
@@ -651,7 +635,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: f986e283c4c85030e336937672719ed8
           m_Category: 2
-          m_Index: 33
+          m_Index: 31
         - m_Guid:
             m_Value0: 3423305670680233365
             m_Value1: 5601316870353519017
@@ -659,7 +643,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 95c579ba5e06822fa901d33b04e0bb4d
           m_Category: 2
-          m_Index: 34
+          m_Index: 32
         - m_Guid:
             m_Value0: 12257496212617460773
             m_Value1: 16699487436880892183
@@ -675,7 +659,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 5acddc879f4f0245b2f2d0e6f87d16b8
           m_Category: 2
-          m_Index: 35
+          m_Index: 33
         - m_Guid:
             m_Value0: 9248905402308585078
             m_Value1: 10976129328371331474
@@ -683,7 +667,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 7666cbe975b65a8092f1515a780b5398
           m_Category: 2
-          m_Index: 36
+          m_Index: 34
         - m_Guid:
             m_Value0: 12368231254792674855
             m_Value1: 13130829601736265805
@@ -699,7 +683,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: cac0f431774841b994f8f081de056c01
           m_Category: 2
-          m_Index: 37
+          m_Index: 35
         - m_Guid:
             m_Value0: 184219268833079337
             m_Value1: 6525911167895117622
@@ -715,7 +699,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: c2e7398710b065b3887a3718ed008c4c
           m_Category: 2
-          m_Index: 38
+          m_Index: 36
         - m_Guid:
             m_Value0: 13847089646929605538
             m_Value1: 9081789970704383904
@@ -731,7 +715,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 3a932f55cac6897a317f073df5616739
           m_Category: 2
-          m_Index: 39
+          m_Index: 37
         - m_Guid:
             m_Value0: 2342892382804365512
             m_Value1: 4179017184872927461
@@ -747,7 +731,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 1e385303fb1b8dad24cf6a670f974dc0
           m_Category: 2
-          m_Index: 40
+          m_Index: 38
         - m_Guid:
             m_Value0: 4213250626715555513
             m_Value1: 3341391677671156862
@@ -755,7 +739,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: b996124b1f79783a7e2c090307025f2e
           m_Category: 2
-          m_Index: 41
+          m_Index: 39
         - m_Guid:
             m_Value0: 591730328787893547
             m_Value1: 10126517563413323660
@@ -771,7 +755,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 25aed7170b953d10452dcfec2d2223f0
           m_Category: 2
-          m_Index: 42
+          m_Index: 40
         - m_Guid:
             m_Value0: 3011864030553824127
             m_Value1: 17033875606122979995
@@ -787,7 +771,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 29c9d4f501f5794e41671b9a1093f8fc
           m_Category: 2
-          m_Index: 43
+          m_Index: 41
         - m_Guid:
             m_Value0: 17189212071277741339
             m_Value1: 13460972975926589576
@@ -795,7 +779,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 1bc55d754e598cee88b83c319afbceba
           m_Category: 2
-          m_Index: 44
+          m_Index: 42
         - m_Guid:
             m_Value0: 4025210161201733192
             m_Value1: 12038804778110224041
@@ -803,7 +787,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 48deb8ac506bdc37a906894f296d12a7
           m_Category: 2
-          m_Index: 45
+          m_Index: 43
         - m_Guid:
             m_Value0: 3433570633695182457
             m_Value1: 18414978155520133650
@@ -819,7 +803,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 2c4799907e8b745b45a4687efd78154e
           m_Category: 2
-          m_Index: 46
+          m_Index: 44
         - m_Guid:
             m_Value0: 14090893587586320165
             m_Value1: 4377383872766615599
@@ -827,7 +811,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 2587e9a70fe98cc32f20c79d7097bf3c
           m_Category: 2
-          m_Index: 47
+          m_Index: 45
         - m_Guid:
             m_Value0: 1709448619281552805
             m_Value1: 17471471335120034899
@@ -835,7 +819,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: a5150f52762eb91753dc3f899c2277f2
           m_Category: 2
-          m_Index: 48
+          m_Index: 46
         - m_Guid:
             m_Value0: 8199451294521282127
             m_Value1: 2185366924328169667
@@ -851,7 +835,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: d5765dd592c576f754450545677abdb9
           m_Category: 2
-          m_Index: 49
+          m_Index: 47
         - m_Guid:
             m_Value0: 15062668576806005197
             m_Value1: 13197411414583099932
@@ -859,7 +843,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: cde9f5e1435909d11c42e938c29f26b7
           m_Category: 2
-          m_Index: 50
+          m_Index: 48
         - m_Guid:
             m_Value0: 14569467293153310946
             m_Value1: 10950305388903362833
@@ -875,7 +859,7 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: aa4f44cfedea9b2da1c94d8e4d1c9bf7
           m_Category: 2
-          m_Index: 51
+          m_Index: 49
         - m_Guid:
             m_Value0: 6605310751369314911
             m_Value1: 12844417916034922236
@@ -891,13 +875,29 @@ MonoBehaviour:
             serializedVersion: 2
             Hash: 00118c14a7d4611b3a76ad361ad6e270
           m_Category: 2
-          m_Index: 52
+          m_Index: 50
         - m_Guid:
             m_Value0: 14709040944191459192
             m_Value1: 2925851234157729612
           m_HashGuid:
             serializedVersion: 2
             Hash: 784f3591ce0221cc4c179c1532b69a28
+          m_Category: 2
+          m_Index: 51
+        - m_Guid:
+            m_Value0: 88390074990020227
+            m_Value1: 8064207979497477206
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 8346730d4e063a015654d16c6ed2e96f
+          m_Category: 2
+          m_Index: 52
+        - m_Guid:
+            m_Value0: 12868526023428362629
+            m_Value1: 13539378884525190687
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 855151e93c3096b21f6e8c5b5c89e5bb
           m_Category: 2
           m_Index: 53
         m_EntryPoint:
@@ -932,7 +932,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 538a494aead88213b3c26d6104778cd0
         m_Version: 2
-        m_Position: {x: -1357.8049, y: 465.17505}
+        m_Position: {x: -2069.5742, y: 462.1333}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -969,7 +969,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 9e5e657fb17260a1b416878d06763ff8
         m_Version: 2
-        m_Position: {x: -1009.2505, y: 104.114044}
+        m_Position: {x: -1319.085, y: 161.13101}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -987,6 +987,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063175
           - rid: 8564938451261063176
@@ -998,6 +999,7 @@ MonoBehaviour:
           - rid: 8564938451261063182
           - rid: 8564938451261063183
           - rid: 8564938451261063184
+          - rid: 8564938475435196422
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1132,7 +1134,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: decdde8475096b5b4d04412555a1155c
         m_Version: 2
-        m_Position: {x: -1230.9332, y: 629.46326}
+        m_Position: {x: -1849.9293, y: 738.96625}
         m_Title: templatecharacter
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1159,38 +1161,6 @@ MonoBehaviour:
         m_DeclarationModelHashGuid:
           serializedVersion: 2
           Hash: f41880f1c33e52980d75c5281a5c1095
-    - rid: 8564938451261063190
-      type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Guid:
-          m_Value0: 9766309012791877261
-          m_Value1: 5064172821155258573
-        m_HashGuid:
-          serializedVersion: 2
-          Hash: 8dde27924de68887cda02586598e4746
-        m_Version: 2
-        m_FromPortReference:
-          m_NodeModelGuid:
-            m_Value0: 6587369280304500190
-            m_Value1: 6635387013069603917
-          m_NodeModelHashGuid:
-            serializedVersion: 2
-            Hash: decdde8475096b5b4d04412555a1155c
-          m_UniqueId: MainPortName
-          m_PortDirection: 2
-          m_PortOrientation: 0
-          m_Title: MainPortName
-        m_ToPortReference:
-          m_NodeModelGuid:
-            m_Value0: 11628420344542748318
-            m_Value1: 17888146015455221428
-          m_NodeModelHashGuid:
-            serializedVersion: 2
-            Hash: 9e5e657fb17260a1b416878d06763ff8
-          m_UniqueId: Speaker
-          m_PortDirection: 1
-          m_PortOrientation: 0
-          m_Title: Speaker
     - rid: 8564938451261063202
       type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1201,7 +1171,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 0baaaff417623e7c8435d91bd2dbd8c1
         m_Version: 2
-        m_Position: {x: -549.2736, y: 101.04588}
+        m_Position: {x: -735.47504, y: 93.06583}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1219,6 +1189,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063203
           - rid: 8564938451261063204
@@ -1230,6 +1201,7 @@ MonoBehaviour:
           - rid: 8564938451261063210
           - rid: 8564938451261063211
           - rid: 8564938451261063212
+          - rid: 8564938475435196423
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1388,6 +1360,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063218
           - rid: 8564938451261063219
@@ -1399,6 +1372,7 @@ MonoBehaviour:
           - rid: 8564938451261063225
           - rid: 8564938451261063226
           - rid: 8564938451261063227
+          - rid: 8564938475435196424
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1651,6 +1625,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063240
           - rid: 8564938451261063241
@@ -1662,6 +1637,7 @@ MonoBehaviour:
           - rid: 8564938451261063247
           - rid: 8564938451261063248
           - rid: 8564938451261063249
+          - rid: 8564938475435196425
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1788,6 +1764,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063264
           - rid: 8564938451261063265
@@ -1799,6 +1776,7 @@ MonoBehaviour:
           - rid: 8564938451261063271
           - rid: 8564938451261063272
           - rid: 8564938451261063273
+          - rid: 8564938475435196426
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1962,6 +1940,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063280
           - rid: 8564938451261063281
@@ -1973,6 +1952,7 @@ MonoBehaviour:
           - rid: 8564938451261063287
           - rid: 8564938451261063288
           - rid: 8564938451261063289
+          - rid: 8564938475435196427
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2131,6 +2111,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063304
           - rid: 8564938451261063305
@@ -2142,6 +2123,7 @@ MonoBehaviour:
           - rid: 8564938451261063311
           - rid: 8564938451261063312
           - rid: 8564938451261063313
+          - rid: 8564938475435196428
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2300,6 +2282,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063329
           - rid: 8564938451261063330
@@ -2311,6 +2294,7 @@ MonoBehaviour:
           - rid: 8564938451261063336
           - rid: 8564938451261063337
           - rid: 8564938451261063338
+          - rid: 8564938475435196429
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2469,6 +2453,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063354
           - rid: 8564938451261063355
@@ -2480,6 +2465,7 @@ MonoBehaviour:
           - rid: 8564938451261063361
           - rid: 8564938451261063362
           - rid: 8564938451261063363
+          - rid: 8564938475435196430
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2638,6 +2624,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063379
           - rid: 8564938451261063380
@@ -2649,6 +2636,7 @@ MonoBehaviour:
           - rid: 8564938451261063386
           - rid: 8564938451261063387
           - rid: 8564938451261063388
+          - rid: 8564938475435196431
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2789,7 +2777,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 670d67e691b80f30055fb9b40b925f1f
         m_Version: 2
-        m_Position: {x: -99.57312, y: 1310.4475}
+        m_Position: {x: -214.22049, y: 1338.6066}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -2807,6 +2795,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063446
           - rid: 8564938451261063447
@@ -2818,6 +2807,7 @@ MonoBehaviour:
           - rid: 8564938451261063453
           - rid: 8564938451261063454
           - rid: 8564938451261063455
+          - rid: 8564938475435196432
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2861,6 +2851,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063457
           - rid: 8564938451261063458
@@ -2872,6 +2863,7 @@ MonoBehaviour:
           - rid: 8564938451261063464
           - rid: 8564938451261063465
           - rid: 8564938451261063466
+          - rid: 8564938475435196433
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2915,6 +2907,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063468
           - rid: 8564938451261063469
@@ -2926,6 +2919,7 @@ MonoBehaviour:
           - rid: 8564938451261063475
           - rid: 8564938451261063476
           - rid: 8564938451261063477
+          - rid: 8564938475435196434
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2969,6 +2963,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063479
           - rid: 8564938451261063480
@@ -2980,6 +2975,7 @@ MonoBehaviour:
           - rid: 8564938451261063486
           - rid: 8564938451261063487
           - rid: 8564938451261063488
+          - rid: 8564938475435196435
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -3391,38 +3387,6 @@ MonoBehaviour:
     - rid: 8564938451261063489
       type: {class: DialogueNode, ns: Novelify.Editor, asm: Novelify.Editor}
       data: 
-    - rid: 8564938451261063490
-      type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Guid:
-          m_Value0: 9931996373883032157
-          m_Value1: 406298947891241333
-        m_HashGuid:
-          serializedVersion: 2
-          Hash: 5d12c47f148ad5897521ac8dbd76a305
-        m_Version: 2
-        m_FromPortReference:
-          m_NodeModelGuid:
-            m_Value0: 10145703758178892994
-            m_Value1: 11997483319122398995
-          m_NodeModelHashGuid:
-            serializedVersion: 2
-            Hash: c23c9956d0c7cc8c130ff76a839f7fa6
-          m_UniqueId: Current Speaker
-          m_PortDirection: 2
-          m_PortOrientation: 0
-          m_Title: Current Speaker
-        m_ToPortReference:
-          m_NodeModelGuid:
-            m_Value0: 3463189575246482791
-            m_Value1: 2260686116937621253
-          m_NodeModelHashGuid:
-            serializedVersion: 2
-            Hash: 670d67e691b80f30055fb9b40b925f1f
-          m_UniqueId: Speaker
-          m_PortDirection: 1
-          m_PortOrientation: 0
-          m_Title: Speaker
     - rid: 8564938451261063491
       type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -3520,6 +3484,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063506
           - rid: 8564938451261063507
@@ -3531,6 +3496,7 @@ MonoBehaviour:
           - rid: 8564938451261063513
           - rid: 8564938451261063514
           - rid: 8564938451261063515
+          - rid: 8564938475435196436
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -3694,6 +3660,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063532
           - rid: 8564938451261063533
@@ -3705,6 +3672,7 @@ MonoBehaviour:
           - rid: 8564938451261063539
           - rid: 8564938451261063540
           - rid: 8564938451261063541
+          - rid: 8564938475435196437
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -3855,9 +3823,11 @@ MonoBehaviour:
           m_KeyList:
           - __option_Instance ID
           - Character
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063588
           - rid: 8564938451261063589
+          - rid: 8564938475435196438
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -3976,6 +3946,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063594
           - rid: 8564938451261063595
@@ -3987,6 +3958,7 @@ MonoBehaviour:
           - rid: 8564938451261063601
           - rid: 8564938451261063602
           - rid: 8564938451261063603
+          - rid: 8564938475435196439
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -4214,6 +4186,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063621
           - rid: 8564938451261063622
@@ -4225,6 +4198,7 @@ MonoBehaviour:
           - rid: 8564938451261063628
           - rid: 8564938451261063629
           - rid: 8564938451261063630
+          - rid: 8564938475435196440
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -4375,9 +4349,11 @@ MonoBehaviour:
           m_KeyList:
           - __option_Instance ID
           - Character
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063637
           - rid: 8564938451261063638
+          - rid: 8564938475435196441
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -4571,6 +4547,7 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938451261063658
           - rid: 8564938451261063659
@@ -4582,6 +4559,7 @@ MonoBehaviour:
           - rid: 8564938451261063665
           - rid: 8564938451261063666
           - rid: 8564938451261063667
+          - rid: 8564938475435196442
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -4759,7 +4737,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: c8d0058035a08320e5909afefcd9fe39
         m_Version: 2
-        m_Position: {x: 1148, y: 2837}
+        m_Position: {x: 1243.8151, y: 2808.1035}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -4769,9 +4747,11 @@ MonoBehaviour:
           m_KeyList:
           - __option_Instance ID
           - Character
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063674
           - rid: 8564938451261063675
+          - rid: 8564938475435196443
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -4872,7 +4852,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 2b3d3a52993f36088c5f0143129e888c
         m_Version: 2
-        m_Position: {x: 1410, y: 2851}
+        m_Position: {x: 1663.9861, y: 2761.2683}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -4941,7 +4921,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 7fdbefd4604acc299be2264b9d7b64ec
         m_Version: 2
-        m_Position: {x: -153.2225, y: 241.15092}
+        m_Position: {x: -203.47751, y: 1.7784424}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -4965,6 +4945,8 @@ MonoBehaviour:
           - Rotation
           - Scale
           - Margin
+          - __option_Coordinate Space
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063683
           - rid: 8564938451261063684
@@ -4982,6 +4964,8 @@ MonoBehaviour:
           - rid: 8564938451261063696
           - rid: 8564938451261063697
           - rid: 8564938451261063698
+          - rid: 8564938475435196444
+          - rid: 8564938475435196445
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -5194,6 +5178,8 @@ MonoBehaviour:
           - Rotation
           - Scale
           - Margin
+          - __option_Coordinate Space
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063720
           - rid: 8564938451261063721
@@ -5211,6 +5197,8 @@ MonoBehaviour:
           - rid: 8564938451261063733
           - rid: 8564938451261063734
           - rid: 8564938451261063735
+          - rid: 8564938475435196446
+          - rid: 8564938475435196447
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -5423,6 +5411,8 @@ MonoBehaviour:
           - Rotation
           - Scale
           - Margin
+          - __option_Coordinate Space
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063758
           - rid: 8564938451261063759
@@ -5440,6 +5430,8 @@ MonoBehaviour:
           - rid: 8564938451261063771
           - rid: 8564938451261063772
           - rid: 8564938451261063773
+          - rid: 8564938475435196448
+          - rid: 8564938475435196449
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -5607,10 +5599,12 @@ MonoBehaviour:
           - __option_Instance ID
           - __option_Emotion
           - Character
+          - Character Reference
           m_ValueList:
           - rid: 8564938451261063780
           - rid: 8564938451261063781
           - rid: 8564938451261063782
+          - rid: 8564938475435196450
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -5779,3 +5773,250 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: Enter
+    - rid: 8564938475435196422
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196423
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196424
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196425
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196426
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196427
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196428
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196429
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196430
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196431
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196432
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196433
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196434
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196435
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196436
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196437
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196438
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196439
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196440
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196441
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196442
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196443
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196444
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 1
+        m_EnumType:
+          m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938475435196445
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196446
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 1
+        m_EnumType:
+          m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938475435196447
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196448
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 1
+        m_EnumType:
+          m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938475435196449
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196450
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938475435196452
+      type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 88390074990020227
+          m_Value1: 8064207979497477206
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 8346730d4e063a015654d16c6ed2e96f
+        m_Version: 2
+        m_FromPortReference:
+          m_NodeModelGuid:
+            m_Value0: 10145703758178892994
+            m_Value1: 11997483319122398995
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: c23c9956d0c7cc8c130ff76a839f7fa6
+          m_UniqueId: Current Speaker
+          m_PortDirection: 2
+          m_PortOrientation: 0
+          m_Title: Current Speaker
+        m_ToPortReference:
+          m_NodeModelGuid:
+            m_Value0: 3463189575246482791
+            m_Value1: 2260686116937621253
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: 670d67e691b80f30055fb9b40b925f1f
+          m_UniqueId: Speaker
+          m_PortDirection: 1
+          m_PortOrientation: 0
+          m_Title: Speaker
+    - rid: 8564938475435196459
+      type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 12868526023428362629
+          m_Value1: 13539378884525190687
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 855151e93c3096b21f6e8c5b5c89e5bb
+        m_Version: 2
+        m_FromPortReference:
+          m_NodeModelGuid:
+            m_Value0: 6587369280304500190
+            m_Value1: 6635387013069603917
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: decdde8475096b5b4d04412555a1155c
+          m_UniqueId: MainPortName
+          m_PortDirection: 2
+          m_PortOrientation: 0
+          m_Title: MainPortName
+        m_ToPortReference:
+          m_NodeModelGuid:
+            m_Value0: 11628420344542748318
+            m_Value1: 17888146015455221428
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: 9e5e657fb17260a1b416878d06763ff8
+          m_UniqueId: Speaker
+          m_PortDirection: 1
+          m_PortOrientation: 0
+          m_Title: Speaker

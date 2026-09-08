@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -8,7 +9,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(8, NovelGraph.AssetExtension)]
+    [ScriptedImporter(9, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -36,12 +37,20 @@ namespace Novelify.Editor
 
             _editorGraph = editorGraph;
 
+            runtimeGraph.GraphID = AssetDatabase.AssetPathToGUID(ctx.assetPath);
+            runtimeGraph.SchemaVersion = RuntimeNovelGraph.CurrentSchemaVersion;
+            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? string.Empty;
+            string sourcePath = Path.Combine(projectRoot, ctx.assetPath);
+            runtimeGraph.ContentVersion = File.Exists(sourcePath)
+                ? Hash128.Compute(File.ReadAllText(sourcePath)).ToString()
+                : string.Empty;
+
             var nodeIDMap = new Dictionary<INode, string>();
             _nodeIDMap = nodeIDMap;
 
             foreach (INode node in editorGraph.GetNodes())
             {
-                nodeIDMap[node] = Guid.NewGuid().ToString();
+                nodeIDMap[node] = node.ID.ToString();
             }
 
             if (runtimeGraph is RuntimeNovelFunction function)
@@ -191,6 +200,15 @@ namespace Novelify.Editor
 
                     runtimeNode = runtimeFlipCharacterNode;
                 }
+                else if (editorNode is SetCharacterFacingNode setFacingNode)
+                {
+                    var runtimeSetFacingNode = new RuntimeSetCharacterFacingNode
+                    {
+                        NodeID = nodeIDMap[editorNode]
+                    };
+                    ProcessSetCharacterFacingNode(setFacingNode, runtimeSetFacingNode, nodeIDMap);
+                    runtimeNode = runtimeSetFacingNode;
+                }
                 else
                 {
                     runtimeNode = CreateUtilityNode(editorNode);
@@ -338,9 +356,14 @@ namespace Novelify.Editor
             RuntimeTransformSpeakerPortraitNode runtimeNode,
             Dictionary<INode, string> nodeIDMap)
         {
-            runtimeNode.PositionIsNormalized = node is TransformSpeakerPortraitNode;
+            CharacterPositionSpace positionSpace = node is TransformSpeakerPortraitNode
+                ? GetOptionValue(node.GetNodeOptionByName("Coordinate Space"), CharacterPositionSpace.Normalized)
+                : CharacterPositionSpace.Canvas;
+            runtimeNode.PositionSpace = positionSpace;
+            runtimeNode.PositionIsNormalized = positionSpace == CharacterPositionSpace.Normalized;
             runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
             runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Character"));
+            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference"));
             runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
 
             if (node is TransformSpeakerPortraitNode)
@@ -395,8 +418,9 @@ namespace Novelify.Editor
             runtimeNode.EaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
 
-            if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue))
-                _context?.LogImportWarning("Transform Speaker Portrait needs a Character input. Assign a character asset or connect a Current Speaker output.");
+            if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
+                IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
+                _context?.LogImportWarning("Transform Speaker Portrait needs a Character or Character Reference input.");
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);
@@ -409,6 +433,7 @@ namespace Novelify.Editor
         {
             runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
             runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Character"));
+            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference"));
 
             runtimeNode.FlipX = GetOptionValue(node.GetNodeOptionByName("FlipX"),true);
             runtimeNode.FlipY = GetOptionValue(node.GetNodeOptionByName("FlipY"),false);
@@ -418,9 +443,26 @@ namespace Novelify.Editor
                     node.GetNodeOptionByName("Instance ID"),
                     string.Empty);
 
-            if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue))
+            if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
+                IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
                 _context?.LogImportWarning(
-                    "Flip Character needs a Character input.");
+                    "Flip Character needs a Character or Character Reference input.");
+            runtimeNode.NextNodeID = GetNextNodeID(node, nodeIDMap);
+        }
+
+        private void ProcessSetCharacterFacingNode(
+            SetCharacterFacingNode node,
+            RuntimeSetCharacterFacingNode runtimeNode,
+            Dictionary<INode, string> nodeIDMap)
+        {
+            runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
+            runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Character"));
+            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference"));
+            runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
+            runtimeNode.Facing = GetOptionValue(node.GetNodeOptionByName("Facing"), CharacterFacing.Right);
+            if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
+                IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
+                _context?.LogImportWarning("Set Facing needs a Character or Character Reference input.");
             runtimeNode.NextNodeID = GetNextNodeID(node, nodeIDMap);
         }
 
@@ -457,14 +499,18 @@ namespace Novelify.Editor
                 case ShowCharacterNode _:
                     return new RuntimeShowCharacterNode { Character = character, InstanceID = instanceID, Emotion = emotion,
                         CharacterValue = BuildExpression(node.GetInputPortByName("Character")),
-                        Position = GetOptionValue(node.GetNodeOptionByName("Position"), Vector2.zero) };
+                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")),
+                        Position = GetOptionValue(node.GetNodeOptionByName("Position"), Vector2.zero),
+                        PositionSpace = GetOptionValue(node.GetNodeOptionByName("Coordinate Space"), CharacterPositionSpace.Canvas) };
                 case HideCharacterNode _:
                     return new RuntimeHideCharacterNode { Character = character, InstanceID = instanceID,
-                        CharacterValue = BuildExpression(node.GetInputPortByName("Character")) };
+                        CharacterValue = BuildExpression(node.GetInputPortByName("Character")),
+                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")) };
                 case HideAllCharactersNode _: return new RuntimeHideAllCharactersNode();
                 case SetCharacterEmotionNode _:
                     return new RuntimeSetCharacterEmotionNode { Character = character, InstanceID = instanceID, Emotion = emotion,
-                        CharacterValue = BuildExpression(node.GetInputPortByName("Character")) };
+                        CharacterValue = BuildExpression(node.GetInputPortByName("Character")),
+                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")) };
                 case WaitNode _:
                     return new RuntimeWaitNode { Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 1f)) };
                 case DialogueEventNode _:
@@ -547,26 +593,54 @@ namespace Novelify.Editor
         }
 
         private static bool IsValueNode(INode node) =>
-            node is FloatBinaryNode || node is Vector2BinaryNode || node is SplitNovelCharacterNode;
+            node is FloatBinaryNode || node is Vector2BinaryNode || node is SplitNovelCharacterNode ||
+            node is MakeNovelCharacterReferenceNode || node is SplitNovelCharacterReferenceNode;
 
         private static bool IsMissingConstant(RuntimeValueExpression expression) =>
             expression is RuntimeConstantExpression constant &&
             (constant.Value == null || constant.Value.Kind == RuntimeValueKind.None || constant.Value.ObjectValue == null);
 
+        private static bool IsMissingCharacterReference(RuntimeValueExpression expression) =>
+            expression is RuntimeConstantExpression constant &&
+            (constant.Value == null || constant.Value.Kind == RuntimeValueKind.None ||
+             (constant.Value.Kind == RuntimeValueKind.CharacterReference &&
+              constant.Value.CharacterReferenceValue.Character == null));
+
         private RuntimeValueExpression BuildExpression(IPort input) =>
             BuildExpression(input, new HashSet<IPort>());
 
-        private RuntimeValueExpression BuildExpression(IPort port, HashSet<IPort> visited)
+        private RuntimeValueExpression BuildExpression(IPort port, HashSet<IPort> activePath)
         {
-            if (port == null || !visited.Add(port))
+            if (port == null)
                 return new RuntimeConstantExpression { Value = RuntimeValue.None() };
+
+            if (!activePath.Add(port))
+            {
+                INode cycleNode = port.GetNode();
+                _context?.LogImportError(
+                    $"Cyclic value expression detected at '{cycleNode?.Title ?? cycleNode?.GetType().Name ?? "unknown node"}' port '{port.Name}'.");
+                return new RuntimeConstantExpression { Value = RuntimeValue.None() };
+            }
+
+            try
+            {
+                return BuildExpressionOnActivePath(port, activePath);
+            }
+            finally
+            {
+                activePath.Remove(port);
+            }
+        }
+
+        private RuntimeValueExpression BuildExpressionOnActivePath(IPort port, HashSet<IPort> activePath)
+        {
 
             if (port.Direction == PortDirection.Input)
             {
                 var connected = new List<IPort>();
                 port.GetConnectedPorts(connected);
                 if (connected.Count > 0)
-                    return BuildExpression(connected[0], visited);
+                    return BuildExpression(connected[0], activePath);
                 return ConstantFromPort(port);
             }
 
@@ -584,8 +658,8 @@ namespace Novelify.Editor
                 {
                     Operation = GetArithmeticOperation(node),
                     ValueKind = node is FloatBinaryNode ? RuntimeValueKind.Float : RuntimeValueKind.Vector2,
-                    A = BuildExpression(node.GetInputPortByName("A"), visited),
-                    B = BuildExpression(node.GetInputPortByName("B"), visited)
+                    A = BuildExpression(node.GetInputPortByName("A"), activePath),
+                    B = BuildExpression(node.GetInputPortByName("B"), activePath)
                 };
             }
 
@@ -594,8 +668,28 @@ namespace Novelify.Editor
                 return new RuntimeCharacterComponentExpression
                 {
                     Component = GetCharacterComponent(port.Name),
-                    Character = BuildExpression(split.GetInputPortByName("Character"), visited),
-                    InstanceID = BuildExpression(split.GetInputPortByName("Instance ID"), visited)
+                    Character = BuildExpression(split.GetInputPortByName("Character"), activePath),
+                    InstanceID = BuildExpression(split.GetInputPortByName("Instance ID"), activePath)
+                };
+            }
+
+            if (node is MakeNovelCharacterReferenceNode makeReference)
+            {
+                return new RuntimeMakeCharacterReferenceExpression
+                {
+                    Character = BuildExpression(makeReference.GetInputPortByName("Character"), activePath),
+                    InstanceID = BuildExpression(makeReference.GetInputPortByName("Instance ID"), activePath)
+                };
+            }
+
+            if (node is SplitNovelCharacterReferenceNode splitReference)
+            {
+                return new RuntimeCharacterReferenceComponentExpression
+                {
+                    Component = port.Name == "Instance ID"
+                        ? RuntimeCharacterReferenceComponent.InstanceID
+                        : RuntimeCharacterReferenceComponent.Character,
+                    Reference = BuildExpression(splitReference.GetInputPortByName("Character Reference"), activePath)
                 };
             }
 
@@ -613,11 +707,47 @@ namespace Novelify.Editor
                 };
             }
 
+            if (node is DialogueNode && port.Name == "Current Speaker Reference")
+                return BuildEffectiveCharacterReference(node, "Speaker", "Speaker Reference", activePath);
+            if (node is CharacterActionNode && port.Name == "Character Reference")
+                return BuildEffectiveCharacterReference(node, "Character", "Character Reference", activePath);
+
+            if (node is DialogueNode && port.Name == "Current Speaker" &&
+                node.GetInputPortByName("Speaker Reference")?.IsConnected == true)
+                return CharacterFromReference(node.GetInputPortByName("Speaker Reference"), activePath);
+            if (node is CharacterActionNode && port.Name == "Character" &&
+                node.GetInputPortByName("Character Reference")?.IsConnected == true)
+                return CharacterFromReference(node.GetInputPortByName("Character Reference"), activePath);
+
             string passThrough = node is DialogueNode && port.Name == "Current Speaker" ? "Speaker" :
                 node is CharacterActionNode && port.Name == "Character" ? "Character" : null;
             return passThrough != null
-                ? BuildExpression(node.GetInputPortByName(passThrough), visited)
+                ? BuildExpression(node.GetInputPortByName(passThrough), activePath)
                 : new RuntimeConstantExpression { Value = RuntimeValue.None() };
+        }
+
+        private RuntimeValueExpression CharacterFromReference(IPort referencePort, HashSet<IPort> activePath) =>
+            new RuntimeCharacterReferenceComponentExpression
+            {
+                Component = RuntimeCharacterReferenceComponent.Character,
+                Reference = BuildExpression(referencePort, activePath)
+            };
+
+        private RuntimeValueExpression BuildEffectiveCharacterReference(
+            INode node,
+            string characterPortName,
+            string referencePortName,
+            HashSet<IPort> activePath)
+        {
+            IPort referencePort = node.GetInputPortByName(referencePortName);
+            if (referencePort?.IsConnected == true)
+                return BuildExpression(referencePort, activePath);
+
+            return new RuntimeMakeCharacterReferenceExpression
+            {
+                Character = BuildExpression(node.GetInputPortByName(characterPortName), activePath),
+                InstanceID = Constant(GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty))
+            };
         }
 
         private static IPort GetSubgraphPort(INode node, IVariable variable, PortDirection direction)
@@ -675,6 +805,7 @@ namespace Novelify.Editor
             if (port.DataType == typeof(bool) && port.TryGetValue(out bool boolean)) return Constant(boolean);
             if (port.DataType == typeof(string) && port.TryGetValue(out string text)) return Constant(text);
             if (port.DataType == typeof(Vector2) && port.TryGetValue(out Vector2 vector)) return Constant(vector);
+            if (port.DataType == typeof(NovelCharacterReference) && port.TryGetValue(out NovelCharacterReference reference)) return Constant(reference);
             if (port.DataType == typeof(NovelCharacter) && port.TryGetValue(out NovelCharacter character)) return Constant(character);
             if (port.DataType == typeof(Sprite) && port.TryGetValue(out Sprite sprite)) return Constant(sprite);
             if (port.DataType == typeof(AudioClip) && port.TryGetValue(out AudioClip audio)) return Constant(audio);
@@ -688,6 +819,7 @@ namespace Novelify.Editor
             if (variable.DataType == typeof(bool) && variable.TryGetDefaultValue(out bool boolean)) return Constant(boolean);
             if (variable.DataType == typeof(string) && variable.TryGetDefaultValue(out string text)) return Constant(text);
             if (variable.DataType == typeof(Vector2) && variable.TryGetDefaultValue(out Vector2 vector)) return Constant(vector);
+            if (variable.DataType == typeof(NovelCharacterReference) && variable.TryGetDefaultValue(out NovelCharacterReference reference)) return Constant(reference);
             if (variable.DataType == typeof(NovelCharacter) && variable.TryGetDefaultValue(out NovelCharacter character)) return Constant(character);
             if (variable.DataType == typeof(Sprite) && variable.TryGetDefaultValue(out Sprite sprite)) return Constant(sprite);
             if (variable.DataType == typeof(AudioClip) && variable.TryGetDefaultValue(out AudioClip audio)) return Constant(audio);
@@ -699,6 +831,7 @@ namespace Novelify.Editor
         private static RuntimeConstantExpression Constant(bool value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
         private static RuntimeConstantExpression Constant(string value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
         private static RuntimeConstantExpression Constant(Vector2 value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
+        private static RuntimeConstantExpression Constant(NovelCharacterReference value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
         private static RuntimeConstantExpression Constant(UnityEngine.Object value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
 
         private T GetFirstPortValue<T>(
@@ -759,6 +892,7 @@ namespace Novelify.Editor
 
             runtimeNode.NovelCharacter = character;
             runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Speaker"));
+            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Speaker Reference"));
             runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
 
             runtimeNode.SpeakerName =
@@ -922,7 +1056,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(3, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(4, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

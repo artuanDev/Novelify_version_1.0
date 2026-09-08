@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Novelify.Tests
 {
@@ -110,6 +111,95 @@ namespace Novelify.Tests
             Assert.That(result.Margin, Is.EqualTo(120f));
             Assert.That(result.SmoothMovement, Is.True);
             Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
+        }
+
+        [Test]
+        public void AuthoredGraphAndNodeIdsRemainStableAcrossReimport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            EndNode end = Add<EndNode>();
+            Connect(start, dialogue);
+            Connect(dialogue, end);
+
+            RuntimeNovelGraph firstImport = Import();
+            string graphID = firstImport.GraphID;
+            string[] nodeIDs = firstImport.AllNodes.Select(node => node.NodeID).OrderBy(id => id).ToArray();
+            string entryID = firstImport.EntryNodeID;
+
+            AssetDatabase.ImportAsset(_folder + "/Story.novelgraph", ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph secondImport = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(_folder + "/Story.novelgraph");
+
+            Assert.That(graphID, Is.Not.Null.And.Not.Empty);
+            Assert.That(secondImport.GraphID, Is.EqualTo(graphID));
+            Assert.That(secondImport.EntryNodeID, Is.EqualTo(entryID));
+            CollectionAssert.AreEqual(nodeIDs, secondImport.AllNodes.Select(node => node.NodeID).OrderBy(id => id).ToArray());
+            Assert.That(secondImport.SchemaVersion, Is.EqualTo(RuntimeNovelGraph.CurrentSchemaVersion));
+            Assert.That(secondImport.ContentVersion, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void SharedValueOutputCanFeedBothArithmeticOperands()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            AddFloatNode add = Add<AddFloatNode>();
+            EndNode end = Add<EndNode>();
+            IVariable amount = _graph.CreateVariable("Amount", typeof(float), 12f, VariableKind.Local);
+            IVariableNode amountNode = _graph.AddVariableNode(amount, Vector2.zero);
+
+            IPort amountOutput = amountNode.GetOutputPorts().Single();
+            Assert.That(_graph.Connect(amountOutput, add.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(amountOutput, add.GetInputPortByName("B")), Is.True);
+            Assert.That(_graph.Connect(add.GetOutputPortByName("Result"), transform.GetInputPortByName("Rotation")), Is.True);
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            var expression = result.RotationValue as RuntimeArithmeticExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(((RuntimeConstantExpression)expression.A).Value.FloatValue, Is.EqualTo(12f));
+            Assert.That(((RuntimeConstantExpression)expression.B).Value.FloatValue, Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void CyclicExpressionProducesAClearImportDiagnostic()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            AddFloatNode first = Add<AddFloatNode>();
+            AddFloatNode second = Add<AddFloatNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Assert.That(_graph.Connect(first.GetOutputPortByName("Result"), second.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(second.GetOutputPortByName("Result"), first.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(first.GetOutputPortByName("Result"), transform.GetInputPortByName("Rotation")), Is.True);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Cyclic value expression detected"));
+            Import();
+        }
+
+        [Test]
+        public void CharacterReferenceAndCoordinateSpaceCompileExplicitly()
+        {
+            StartNode start = Add<StartNode>();
+            MakeNovelCharacterReferenceNode make = Add<MakeNovelCharacterReferenceNode>();
+            ShowCharacterNode show = Add<ShowCharacterNode>();
+            EndNode end = Add<EndNode>();
+            make.GetInputPortByName("Character").TrySetValue(_character);
+            make.GetInputPortByName("Instance ID").TrySetValue("second");
+            show.GetNodeOptionByName("Coordinate Space").TrySetValue(CharacterPositionSpace.Normalized);
+            Assert.That(_graph.Connect(make.GetOutputPortByName("Character Reference"),
+                show.GetInputPortByName("Character Reference")), Is.True);
+            Connect(start, show);
+            Connect(show, end);
+
+            RuntimeShowCharacterNode result = Import().AllNodes.OfType<RuntimeShowCharacterNode>().Single();
+            Assert.That(result.PositionSpace, Is.EqualTo(CharacterPositionSpace.Normalized));
+            Assert.That(result.CharacterReferenceValue, Is.TypeOf<RuntimeMakeCharacterReferenceExpression>());
         }
 
         [Test]

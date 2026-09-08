@@ -16,8 +16,12 @@ namespace Novelify
             }
         }
 
-        public CharacterInfo ShowCharacter(NovelCharacter character, string instanceID = "") =>
-            Stage.Show(character, instanceID);
+        public CharacterInfo ShowCharacter(NovelCharacter character, string instanceID = "")
+        {
+            CharacterInfo info = Stage.Show(character, instanceID);
+            if (info != null) info.TimeMode = TimeMode;
+            return info;
+        }
 
         public bool SearchAlreadyCreatedCharacter(NovelCharacter character, string instanceID = "") =>
             Stage.TryGet(character, instanceID, out _);

@@ -52,9 +52,13 @@ namespace Novelify.Editor
         {
             base.OnDefinePorts(context);
             context.AddInputPort<NovelCharacter>("Character")
-                .WithTooltip("Character asset to act on. Accepts a character variable or Current Speaker output.").Build();
+                .WithTooltip("Legacy target asset. Use Character Reference when a specific instance must travel through a graph.").Build();
+            context.AddInputPort<NovelCharacterReference>("Character Reference")
+                .WithTooltip("Optional target containing both the character asset and its instance ID.").Build();
             context.AddOutputPort<NovelCharacter>("Character")
                 .WithTooltip("Pass this character to another character node or a dialogue Speaker input.").Build();
+            context.AddOutputPort<NovelCharacterReference>("Character Reference")
+                .WithTooltip("Pass the character and instance ID together to another node.").Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context) => DefineInstanceOption(context);
@@ -98,7 +102,11 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
-            context.AddOption<Vector2>("Position").WithTooltip("Position in canvas units relative to the portrait's anchors.").Build();
+            context.AddOption<Vector2>("Position").WithTooltip("Initial position interpreted in the selected coordinate space.").Build();
+            context.AddOption<CharacterPositionSpace>("Coordinate Space")
+                .WithDefaultValue(CharacterPositionSpace.Canvas)
+                .WithTooltip("Canvas preserves legacy anchored-position behavior. Normalized maps (-1,-1) to bottom-left and (1,1) to top-right.")
+                .Build();
             context.AddOption<CharacterEmotion>("Emotion").WithDefaultValue(CharacterEmotion.Neutral).Build();
         }
     }
@@ -215,6 +223,29 @@ namespace Novelify.Editor
                 .WithTooltip("Current live RectTransform anchored position in canvas units.").Build();
             context.AddOutputPort<float>("Rotation").Build();
             context.AddOutputPort<Vector2>("Scale").Build();
+        }
+    }
+
+    [Serializable, Node("Novelify/Characters", null, "Make Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public class MakeNovelCharacterReferenceNode : Node
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort<NovelCharacter>("Character").Build();
+            context.AddInputPort<string>("Instance ID").WithDefaultValue(string.Empty).Build();
+            context.AddOutputPort<NovelCharacterReference>("Character Reference")
+                .WithTooltip("Carries the character asset and instance ID as one value.").Build();
+        }
+    }
+
+    [Serializable, Node("Novelify/Characters", null, "Split Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public class SplitNovelCharacterReferenceNode : Node
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort<NovelCharacterReference>("Character Reference").Build();
+            context.AddOutputPort<NovelCharacter>("Character").Build();
+            context.AddOutputPort<string>("Instance ID").Build();
         }
     }
 }

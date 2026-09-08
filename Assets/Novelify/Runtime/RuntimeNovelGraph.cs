@@ -6,6 +6,13 @@ namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
+        public const int CurrentSchemaVersion = 1;
+
+        [Tooltip("Persistent identity of the authored graph asset.")]
+        public string GraphID;
+        [Tooltip("Hash of the authored graph content at import time.")]
+        public string ContentVersion;
+        public int SchemaVersion = CurrentSchemaVersion;
         public string EntryNodeID;
 
         // Required so Unity preserves RuntimeDialogueNode,
@@ -22,8 +29,26 @@ namespace Novelify
         Boolean,
         String,
         Vector2,
-        Object
+        Object,
+        CharacterReference
     }
+
+    [Serializable]
+    public struct NovelCharacterReference
+    {
+        public NovelCharacter Character;
+        public string InstanceID;
+
+        public NovelCharacterReference(NovelCharacter character, string instanceID = "")
+        {
+            Character = character;
+            InstanceID = instanceID ?? string.Empty;
+        }
+    }
+
+    public enum CharacterPositionSpace { Canvas, Normalized }
+    public enum CharacterFacing { Left, Right }
+    public enum DialogueTimeMode { Unscaled, Scaled }
 
     [Serializable]
     public class RuntimeValue
@@ -35,6 +60,7 @@ namespace Novelify
         public string StringValue;
         public Vector2 Vector2Value;
         public UnityEngine.Object ObjectValue;
+        public NovelCharacterReference CharacterReferenceValue;
 
         public static RuntimeValue None() => new RuntimeValue();
         public static RuntimeValue From(float value) => new RuntimeValue { Kind = RuntimeValueKind.Float, FloatValue = value };
@@ -43,6 +69,8 @@ namespace Novelify
         public static RuntimeValue From(string value) => new RuntimeValue { Kind = RuntimeValueKind.String, StringValue = value ?? string.Empty };
         public static RuntimeValue From(Vector2 value) => new RuntimeValue { Kind = RuntimeValueKind.Vector2, Vector2Value = value };
         public static RuntimeValue From(UnityEngine.Object value) => new RuntimeValue { Kind = RuntimeValueKind.Object, ObjectValue = value };
+        public static RuntimeValue From(NovelCharacterReference value) => new RuntimeValue
+            { Kind = RuntimeValueKind.CharacterReference, CharacterReferenceValue = value };
     }
 
     [Serializable]
@@ -103,6 +131,22 @@ namespace Novelify
     }
 
     [Serializable]
+    public class RuntimeMakeCharacterReferenceExpression : RuntimeValueExpression
+    {
+        [SerializeReference] public RuntimeValueExpression Character;
+        [SerializeReference] public RuntimeValueExpression InstanceID;
+    }
+
+    public enum RuntimeCharacterReferenceComponent { Character, InstanceID }
+
+    [Serializable]
+    public class RuntimeCharacterReferenceComponentExpression : RuntimeValueExpression
+    {
+        public RuntimeCharacterReferenceComponent Component;
+        [SerializeReference] public RuntimeValueExpression Reference;
+    }
+
+    [Serializable]
     public class RuntimeFunctionInput
     {
         public string Name;
@@ -135,6 +179,7 @@ namespace Novelify
     {
         public NovelCharacter NovelCharacter;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
         public string InstanceID;
         public string SpeakerName;
 
@@ -201,6 +246,7 @@ namespace Novelify
         public Vector2 Scale = Vector2.one;
         public float Margin;
         public bool PositionIsNormalized = true;
+        public CharacterPositionSpace PositionSpace = CharacterPositionSpace.Normalized;
         public bool SmoothMovement;
         public float Duration = 0.5f;
         public bool WaitForCompletion = true;
@@ -208,6 +254,7 @@ namespace Novelify
         public bool Relative;
 
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
         [SerializeReference] public RuntimeValueExpression PositionValue;
         [SerializeReference] public RuntimeValueExpression RotationValue;
         [SerializeReference] public RuntimeValueExpression ScaleValue;
@@ -217,7 +264,11 @@ namespace Novelify
     [Serializable]
     public class RuntimeTranslateSpeakerPortraitNode : RuntimeTransformSpeakerPortraitNode
     {
-        public RuntimeTranslateSpeakerPortraitNode() => PositionIsNormalized = false;
+        public RuntimeTranslateSpeakerPortraitNode()
+        {
+            PositionIsNormalized = false;
+            PositionSpace = CharacterPositionSpace.Canvas;
+        }
     }
 
     [Serializable]
@@ -228,6 +279,17 @@ namespace Novelify
         public bool FlipX;
         public bool FlipY;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
+    }
+
+    [Serializable]
+    public class RuntimeSetCharacterFacingNode : RuntimeNode
+    {
+        public string InstanceID;
+        public NovelCharacter Character;
+        public CharacterFacing Facing = CharacterFacing.Right;
+        [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
     }
 
     [Serializable]
@@ -236,8 +298,10 @@ namespace Novelify
         public NovelCharacter Character;
         public string InstanceID;
         public Vector2 Position;
+        public CharacterPositionSpace PositionSpace = CharacterPositionSpace.Canvas;
         public CharacterEmotion Emotion;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
         [SerializeReference] public RuntimeValueExpression PositionValue;
     }
 
@@ -247,6 +311,7 @@ namespace Novelify
         public NovelCharacter Character;
         public string InstanceID;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
     }
 
     [Serializable]
@@ -259,6 +324,7 @@ namespace Novelify
         public string InstanceID;
         public CharacterEmotion Emotion;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
+        [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
     }
 
     [Serializable]

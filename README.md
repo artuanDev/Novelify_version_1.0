@@ -171,11 +171,12 @@ For a complete reference, inspect or duplicate `Assets/Novelify/Samples/Characte
 
 Assign **Portrait Prefab** on `NovelManager`. Its `CharacterInfo` component exposes Body, Eyes, Details and Mouth image references. The supplied prefab's named layers are detected automatically. Empty sprite layers are hidden and portrait images do not intercept clicks.
 
-Characters have no fixed slot limit. Each character asset gets its own default instance, even when two assets share a speaker name. To show additional copies of one asset, use different **Instance ID** values. Use the same character asset and ID in Dialogue, Choice and character utility nodes to address the same copy; a blank ID always means the default copy. Character output wires pass the asset, so set the matching Instance ID on each node when targeting a named copy.
+Characters have no fixed slot limit. Each character asset gets its own default instance, even when two assets share a speaker name. To show additional copies of one asset, use different **Instance ID** values. Use the same character asset and ID in Dialogue, Choice and character utility nodes to address the same copy; a blank ID always means the default copy. Legacy Character wires pass only the asset. Use **Make Novel Character Reference** and the **Character Reference** ports to carry the asset and instance ID together; **Split Novel Character Reference** separates them again when needed.
 
 Use **Show Character** to place a character before their first line, or connect a character to **Transform Speaker Portrait > Character**. Transform creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
 
-- **Position input:** normalized Vector2 target, where `(-1,-1)` is bottom-left and `(1,1)` is top-right across the current character stage or game-screen bounds.
+- **Coordinate Space:** choose normalized (`(-1,-1)` bottom-left to `(1,1)` top-right) or canvas anchored units. Show Character defaults to legacy canvas units; Transform Speaker Portrait defaults to normalized.
+- **Position input:** a Vector2 interpreted in the selected coordinate space.
 - **Margin input:** expands each bound in canvas units. Use at least half the portrait's relevant dimension to move it completely beyond that edge.
 - **Rotation input:** absolute target Z rotation in degrees.
 - **Scale input:** absolute target local X/Y scale.
@@ -185,7 +186,9 @@ Use **Show Character** to place a character before their first line, or connect 
 - **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
 - **Wait For Completion:** pause story flow until the transform finishes. Disable to continue to dialogue or animate multiple characters in parallel.
 
-For example: `Start → Transform Speaker Portrait (Hoki, Position=(-0.65, 0)) → Dialogue → End`. A new transform on the same instance replaces its previous animation from the current position, rotation and scale. Legacy Translate nodes remain readable and retain their original canvas-unit positioning, but new nodes use normalized coordinates.
+For example: `Start → Transform Speaker Portrait (Hoki, Position=(-0.65, 0)) → Dialogue → End`. A new transform on the same instance replaces its previous animation from the current position, rotation and scale. Legacy Translate nodes remain readable and retain their original canvas-unit positioning. New Transform nodes default to normalized coordinates but expose the choice explicitly.
+
+Use **Set Facing** for deterministic left/right orientation; it applies the requested sign to the absolute X scale, so executing it repeatedly does not toggle the portrait. **Flip Character** remains an explicit axis toggle for graphs that need that behavior.
 
 Use **Split Novel Character** when a graph needs the selected character's data. It returns the character asset, speaker name, current portrait sprites, live normalized position, live canvas position, rotation and scale. Supply the same **Instance ID** used by the character nodes when reading a non-default copy. The normalized position connects directly to Transform Speaker Portrait and Vector2 math nodes.
 
@@ -201,7 +204,8 @@ Math nodes are non-flow expressions and do not execute on their own. Float and V
 | Hide Character | Hides one instance without deleting it; showing it again reuses it. |
 | Hide All Characters | Hides the entire stage. |
 | Set Character Emotion | Applies the selected expression, creating the character if needed. |
-| Wait | Pauses flow for real-time seconds; dialogue clicks cannot skip it. |
+| Wait | Pauses flow for dialogue-clock seconds; dialogue clicks cannot skip it. |
+| Set Facing | Sets left/right orientation idempotently. |
 | Dialogue Event | Sends Event Name to `NovelManager.OnDialogueEvent`, then continues. Connect listeners in the manager inspector. |
 | Stop Sound | Stops the audio channel used by Play Sound nodes. |
 | Label | Declares a unique named flow destination and continues through its output. |
@@ -212,6 +216,10 @@ Connect the **Enter/Continue** flow ports to execute these nodes. Character data
 Each Continue output has one story destination: connect `Dialogue → Translate → Dialogue` in sequence. Turn off Translate's **Wait For Completion** to keep moving during the following line. Use Choice outputs for alternative story paths.
 
 The dialogue panel is hidden with a CanvasGroup, keeping its GameObject active. This allows the manager and audio sources to live inside the panel without being disabled between nodes. Play Sound continues across dialogue, waits and movement until Stop Sound or the story ends.
+
+`NovelManager.TimeMode` defines the dialogue clock. **Unscaled** is the default and keeps text reveal, waits, portrait transitions, blinking and mouth animation running while gameplay is paused. Choose **Scaled** when pausing gameplay should also pause the conversation.
+
+Imported runtime graphs contain a stable graph ID, stable authored node IDs, a content hash and a schema version. Player builds automatically bake `Resources/NovelGraphCatalog.asset`, which resolves graph IDs without editor-only asset lookup. Double-click the catalogue asset (or use **Window > Novelify > Graph Catalogue**) for searchable graph previews, flow diagnostics and source navigation. Refresh it with **Tools > Novelify > Rebuild Runtime Graph Catalog**; builds also refresh it automatically.
 
 ## Rich Text and Text Effects
 

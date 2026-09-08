@@ -12,7 +12,8 @@ namespace Novelify
             AudioClip talkSound, AudioSource talkSoundSource,
             float minPitchVariation = 0, float maxPitchVariation = 0,
             float charactersPerSecond = 30f,
-            Action<char> onCharacterShown = null)
+            Action<char> onCharacterShown = null,
+            DialogueTimeMode timeMode = DialogueTimeMode.Unscaled)
         {
             text ??= string.Empty;
             textDisplay.richText = true;
@@ -55,7 +56,14 @@ namespace Novelify
 
                 float delayMultiplier = GetDelayMultiplier(letter);
                 float delay = characterDelay * delayMultiplier;
-                yield return new WaitForSeconds(delay);
+                float remaining = delay;
+                while (remaining > 0f)
+                {
+                    yield return null;
+                    remaining -= timeMode == DialogueTimeMode.Unscaled
+                        ? Time.unscaledDeltaTime
+                        : Time.deltaTime;
+                }
                 talkSoundCooldown -= delay;
             }
 

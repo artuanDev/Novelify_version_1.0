@@ -13,6 +13,10 @@ namespace Novelify
     {
         public RuntimeNovelGraph RuntimeGraph;
 
+        [Header("Dialogue Timing")]
+        [Tooltip("Unscaled keeps conversations, waits, reveals, and character transitions running while gameplay is paused. Scaled pauses them with Time.timeScale.")]
+        public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
+
         private readonly Stack<GraphCallFrame> _graphCalls = new Stack<GraphCallFrame>();
         private RuntimeValueScope _valueScope = new RuntimeValueScope();
 
@@ -197,8 +201,9 @@ namespace Novelify
                 switch (node)
                 {
                     case RuntimeTransformSpeakerPortraitNode move:
-                        NovelCharacter movingCharacter = AsObject(Evaluate(move.CharacterValue), move.Character);
-                        CharacterInfo moving = ShowCharacter(movingCharacter, move.InstanceID);
+                        NovelCharacterReference movingTarget = ResolveCharacterReference(
+                            move.CharacterReferenceValue, move.CharacterValue, move.Character, move.InstanceID);
+                        CharacterInfo moving = ShowCharacter(movingTarget.Character, movingTarget.InstanceID);
                         if (moving != null)
                         {
                             Vector2 offset = move.PositionValue != null
@@ -207,13 +212,14 @@ namespace Novelify
                             float margin = Mathf.Max(0f, AsFloat(Evaluate(move.MarginValue), move.Margin));
                             float rotation = AsFloat(Evaluate(move.RotationValue), move.Rotation);
                             Vector2 scale = AsVector2(Evaluate(move.ScaleValue), move.Scale);
-                            Vector2 target = move.PositionIsNormalized
+                            bool normalizedPosition = move.PositionSpace == CharacterPositionSpace.Normalized;
+                            Vector2 target = normalizedPosition
                                 ? moving.NormalizedToAnchoredPosition(offset, margin)
                                 : offset;
                             if (move.Relative) target += moving.Position;
-                            if (move.PositionIsNormalized)
+                            if (normalizedPosition)
                                 target = moving.ClampToStageBounds(target, margin);
-                            if (move.PositionIsNormalized)
+                            if (move is not RuntimeTranslateSpeakerPortraitNode)
                             {
                                 moving.TransformTo(
                                     target,
@@ -240,7 +246,9 @@ namespace Novelify
                         }
                         break;
                     case RuntimeFlipCharacterNode flip:
-                        CharacterInfo flipping = ShowCharacter(AsObject(Evaluate(flip.CharacterValue), flip.Character), flip.InstanceID);
+                        NovelCharacterReference flipTarget = ResolveCharacterReference(
+                            flip.CharacterReferenceValue, flip.CharacterValue, flip.Character, flip.InstanceID);
+                        CharacterInfo flipping = ShowCharacter(flipTarget.Character, flipTarget.InstanceID);
                         if (flipping != null)
                             flipping.gameObject.transform.localScale =
                             new Vector3(
@@ -252,20 +260,41 @@ namespace Novelify
                                 );
 
                         break;
+                    case RuntimeSetCharacterFacingNode facing:
+                        NovelCharacterReference facingTarget = ResolveCharacterReference(
+                            facing.CharacterReferenceValue, facing.CharacterValue, facing.Character, facing.InstanceID);
+                        CharacterInfo facingCharacter = ShowCharacter(facingTarget.Character, facingTarget.InstanceID);
+                        if (facingCharacter != null)
+                        {
+                            Vector3 currentScale = facingCharacter.transform.localScale;
+                            float sign = facing.Facing == CharacterFacing.Left ? -1f : 1f;
+                            currentScale.x = Mathf.Abs(currentScale.x) * sign;
+                            facingCharacter.transform.localScale = currentScale;
+                        }
+                        break;
                     case RuntimeShowCharacterNode show:
-                        CharacterInfo shown = ShowCharacter(AsObject(Evaluate(show.CharacterValue), show.Character), show.InstanceID);
+                        NovelCharacterReference showTarget = ResolveCharacterReference(
+                            show.CharacterReferenceValue, show.CharacterValue, show.Character, show.InstanceID);
+                        CharacterInfo shown = ShowCharacter(showTarget.Character, showTarget.InstanceID);
                         if (shown != null)
                         {
-                            shown.MoveTo(AsVector2(Evaluate(show.PositionValue), show.Position), false, 0f);
+                            Vector2 showPosition = AsVector2(Evaluate(show.PositionValue), show.Position);
+                            if (show.PositionSpace == CharacterPositionSpace.Normalized)
+                                showPosition = shown.ClampToStageBounds(shown.NormalizedToAnchoredPosition(showPosition, 0f), 0f);
+                            shown.MoveTo(showPosition, false, 0f);
                             shown.SetEmotion(show.Emotion);
                         }
                         break;
                     case RuntimeHideCharacterNode hide:
-                        Stage.Hide(AsObject(Evaluate(hide.CharacterValue), hide.Character), hide.InstanceID);
+                        NovelCharacterReference hideTarget = ResolveCharacterReference(
+                            hide.CharacterReferenceValue, hide.CharacterValue, hide.Character, hide.InstanceID);
+                        Stage.Hide(hideTarget.Character, hideTarget.InstanceID);
                         break;
                     case RuntimeHideAllCharactersNode _: Stage.HideAll(); break;
                     case RuntimeSetCharacterEmotionNode emotion:
-                        ShowCharacter(AsObject(Evaluate(emotion.CharacterValue), emotion.Character), emotion.InstanceID)?.SetEmotion(emotion.Emotion);
+                        NovelCharacterReference emotionTarget = ResolveCharacterReference(
+                            emotion.CharacterReferenceValue, emotion.CharacterValue, emotion.Character, emotion.InstanceID);
+                        ShowCharacter(emotionTarget.Character, emotionTarget.InstanceID)?.SetEmotion(emotion.Emotion);
                         break;
                     case RuntimeWaitNode wait:
                         if (wait.Duration > 0f && !float.IsInfinity(wait.Duration))
@@ -374,6 +403,15 @@ namespace Novelify
                     return EvaluateArithmetic(arithmetic);
                 case RuntimeCharacterComponentExpression character:
                     return EvaluateCharacterComponent(character);
+                case RuntimeMakeCharacterReferenceExpression makeReference:
+                    return RuntimeValue.From(new NovelCharacterReference(
+                        AsObject<NovelCharacter>(Evaluate(makeReference.Character), null),
+                        AsString(Evaluate(makeReference.InstanceID), string.Empty)));
+                case RuntimeCharacterReferenceComponentExpression referenceComponent:
+                    NovelCharacterReference reference = AsCharacterReference(Evaluate(referenceComponent.Reference));
+                    return referenceComponent.Component == RuntimeCharacterReferenceComponent.InstanceID
+                        ? RuntimeValue.From(reference.InstanceID)
+                        : RuntimeValue.From(reference.Character);
                 default:
                     return RuntimeValue.None();
             }
@@ -454,13 +492,34 @@ namespace Novelify
         private static T AsObject<T>(RuntimeValue value, T fallback) where T : UnityEngine.Object =>
             value?.Kind == RuntimeValueKind.Object && value.ObjectValue is T typed ? typed : fallback;
 
+        private static NovelCharacterReference AsCharacterReference(RuntimeValue value) =>
+            value?.Kind == RuntimeValueKind.CharacterReference
+                ? value.CharacterReferenceValue
+                : new NovelCharacterReference(null);
+
+        private NovelCharacterReference ResolveCharacterReference(
+            RuntimeValueExpression referenceExpression,
+            RuntimeValueExpression characterExpression,
+            NovelCharacter fallbackCharacter,
+            string fallbackInstanceID)
+        {
+            NovelCharacterReference reference = AsCharacterReference(Evaluate(referenceExpression));
+            if (reference.Character != null) return reference;
+            return new NovelCharacterReference(
+                AsObject(Evaluate(characterExpression), fallbackCharacter),
+                fallbackInstanceID);
+        }
+
+        private float DialogueDeltaTime =>
+            TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;
+
         private IEnumerator WaitThenContinue(RuntimeNode node, int version, float seconds, CharacterInfo moving = null)
         {
             // Yield before continuing so the coroutine handle is assigned before completion.
             do
             {
                 yield return null;
-                seconds -= Time.unscaledDeltaTime;
+                seconds -= DialogueDeltaTime;
             } while (seconds > 0f || (moving != null && moving.IsMoving));
             _waitCoroutine = null;
             _isWaiting = false;
@@ -471,7 +530,9 @@ namespace Novelify
         {
             _nodeEnteredFrame = Time.frameCount;
             SetPanelVisible(DialoguePanel, true);
-            NovelCharacter speakingCharacter = AsObject(Evaluate(node.CharacterValue), node.NovelCharacter);
+            NovelCharacterReference speakerReference = ResolveCharacterReference(
+                node.CharacterReferenceValue, node.CharacterValue, node.NovelCharacter, node.InstanceID);
+            NovelCharacter speakingCharacter = speakerReference.Character;
             string speakerName = speakingCharacter != null ? speakingCharacter.SpeakerName : node.SpeakerName ?? string.Empty;
             if (SpeakerNameText != null) SpeakerNameText.SetText(speakerName);
             if (NameBackground != null) NameBackground.SetActive(!string.IsNullOrEmpty(speakerName));
@@ -483,7 +544,7 @@ namespace Novelify
                 NodeSoundSource.clip = nodeClip;
                 NodeSoundSource.Play();
             }
-            _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, node.InstanceID) : null;
+            _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
             if (DialogueText != null)
@@ -510,7 +571,8 @@ namespace Novelify
                 character != null ? character.PitchMinVariation : node.PitchMinVariation,
                 character != null ? character.PitchMaxVariation : node.PitchMaxVariation,
                 node.CharactersPerSecond,
-                letter => _speaker?.RevealLetter(letter));
+                letter => _speaker?.RevealLetter(letter),
+                TimeMode);
             if (_currentNode != node) yield break;
             _textRevealCoroutine = null;
             _isTextRevealing = false;

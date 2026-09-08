@@ -5,6 +5,7 @@ namespace Novelify
 {
     public class CharacterInfo : MonoBehaviour
     {
+        [System.NonSerialized] public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
         public NovelCharacter character;
         [Tooltip("Leave empty for the default instance; use a unique ID for additional copies of this character.")]
         public string InstanceID;
@@ -194,7 +195,7 @@ namespace Novelify
         {
             if (IsMoving)
             {
-                _moveElapsed += Time.unscaledDeltaTime;
+                _moveElapsed += TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;
                 float t = Mathf.Clamp01(_moveElapsed / _moveDuration);
                 float easedT = _easeMovement ? t * t * (3f - 2f * t) : t;
                 Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, easedT);
@@ -210,7 +211,7 @@ namespace Novelify
             }
 
             if (character == null) return;
-            float now = Time.unscaledTime;
+            float now = TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledTime : Time.time;
             if (_animateBlinking && Portrait.EyesClosed != null && now >= _nextBlink)
             {
                 _eyesClosed = !_eyesClosed;
@@ -233,7 +234,8 @@ namespace Novelify
         {
             float min = Mathf.Max(0.1f, Mathf.Min(character.BlinkIntervalMin, character.BlinkIntervalMax));
             float max = Mathf.Max(min, Mathf.Max(character.BlinkIntervalMin, character.BlinkIntervalMax));
-            _nextBlink = Time.unscaledTime + Random.Range(min, max);
+            float now = TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledTime : Time.time;
+            _nextBlink = now + Random.Range(min, max);
         }
 
         private void OnDisable()

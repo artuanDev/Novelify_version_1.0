@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c2c8213e7ef47c18c24b65fa5822cb1, type: 3}
+  m_Name: NovelGraphCatalog
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelGraphCatalog
+  Graphs:
+  - GraphID: eaba161d2b48e494e932da88627b1e04
+    Graph: {fileID: 3965311268370046156, guid: eaba161d2b48e494e932da88627b1e04, type: 3}
+  - GraphID: 58ecfcf76453a8d4d98cdd0db324176e
+    Graph: {fileID: 3965311268370046156, guid: 58ecfcf76453a8d4d98cdd0db324176e, type: 3}
+  - GraphID: 713b5d2852334c3418af6d7261da4285
+    Graph: {fileID: 3965311268370046156, guid: 713b5d2852334c3418af6d7261da4285, type: 3}
+  GeneratedAtUtc: 2026-09-08T00:02:36.8213613Z

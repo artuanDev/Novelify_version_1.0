@@ -1037,6 +1037,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelManager
   RuntimeGraph: {fileID: 3965311268370046156, guid: 713b5d2852334c3418af6d7261da4285, type: 3}
+  TimeMode: 0
   TalkSource: {fileID: 1649602343}
   NodeSoundSource: {fileID: 1639377565}
   PlaySoundSource: {fileID: 40008851}

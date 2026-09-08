@@ -48,6 +48,33 @@ namespace Novelify.Tests
             _manager.PlayGraph(_graph);
         }
 
+        [Test]
+        public void GraphCatalogResolvesIdsAndInvalidatesItsLookupWhenRebuilt()
+        {
+            NovelGraphCatalog catalog = ScriptableObject.CreateInstance<NovelGraphCatalog>();
+            RuntimeNovelGraph replacement = ScriptableObject.CreateInstance<RuntimeNovelGraph>();
+            try
+            {
+                catalog.ReplaceEntries(new[]
+                {
+                    new NovelGraphCatalog.Entry { GraphID = "story", Graph = _graph }
+                });
+                Assert.That(catalog.GetGraph("story"), Is.SameAs(_graph));
+
+                catalog.ReplaceEntries(new[]
+                {
+                    new NovelGraphCatalog.Entry { GraphID = "replacement", Graph = replacement }
+                });
+                Assert.That(catalog.GetGraph("story"), Is.Null);
+                Assert.That(catalog.GetGraph("replacement"), Is.SameAs(replacement));
+            }
+            finally
+            {
+                Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(replacement);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TranslateCreatesItsTargetMovesAcrossFramesAndBlocksClicksUntilFinished()
         {
@@ -89,6 +116,58 @@ namespace Novelify.Tests
             // RectTransform recalculates anchored/local positions with floating-point rounding.
             Assert.That(left.Position.x, Is.EqualTo(-250).Within(0.001f));
             Assert.That(right.Position.x, Is.EqualTo(250).Within(0.001f));
+        }
+
+        [UnityTest]
+        public IEnumerator ScaledDialogueClockDeliberatelyPausesTransitions()
+        {
+            _manager.TimeMode = DialogueTimeMode.Scaled;
+            Time.timeScale = 0;
+            Play(new RuntimeTranslateSpeakerPortraitNode
+                {
+                    NodeID = "move", NextNodeID = "line", Character = _character,
+                    OffsetX = 200f, SmoothMovement = true, Duration = 0.15f
+                },
+                new RuntimeDialogueNode { NodeID = "line" });
+            CharacterInfo info = _manager.ShowCharacter(_character);
+
+            yield return new WaitForSecondsRealtime(0.2f);
+            Assert.That(info.Position.x, Is.Zero.Within(0.001f));
+            Assert.That(_manager.IsWaiting, Is.True);
+
+            Time.timeScale = 1;
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.That(info.Position.x, Is.EqualTo(200f).Within(0.001f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+        }
+
+        [Test]
+        public void CharacterReferenceTargetsInstanceAndSetFacingIsIdempotent()
+        {
+            RuntimeValueExpression target = new RuntimeConstantExpression
+            {
+                Value = RuntimeValue.From(new NovelCharacterReference(_character, "second"))
+            };
+            Play(new RuntimeShowCharacterNode
+                {
+                    NodeID = "show", NextNodeID = "face-one", CharacterReferenceValue = target
+                },
+                new RuntimeSetCharacterFacingNode
+                {
+                    NodeID = "face-one", NextNodeID = "face-two", CharacterReferenceValue = target,
+                    Facing = CharacterFacing.Left
+                },
+                new RuntimeSetCharacterFacingNode
+                {
+                    NodeID = "face-two", NextNodeID = "line", CharacterReferenceValue = target,
+                    Facing = CharacterFacing.Left
+                },
+                new RuntimeDialogueNode { NodeID = "line" });
+
+            Assert.That(_manager.SearchAlreadyCreatedCharacter(_character, "second"), Is.True);
+            CharacterInfo info = _manager.ShowCharacter(_character, "second");
+            Assert.That(info.transform.localScale.x, Is.LessThan(0f));
+            Assert.That(_manager.AllCharacters.Count, Is.EqualTo(1));
         }
 
         [UnityTest]
