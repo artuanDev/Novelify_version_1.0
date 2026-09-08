@@ -1036,9 +1036,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9d3176f53feed943afb61808f3bdbb7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelManager
-  AssetCatalog: {fileID: 11400000, guid: 8f9141c4afd7d894299e67b119b160fe, type: 2}
-  BacklogLimit: 100
-  RuntimeGraph: {fileID: 3965311268370046156, guid: 713b5d2852334c3418af6d7261da4285, type: 3}
+  RuntimeGraph: {fileID: 3965311268370046156, guid: e7a34679c901f0a4daa7e270b01a37ff, type: 3}
   TimeMode: 0
   TalkSource: {fileID: 1649602343}
   NodeSoundSource: {fileID: 1639377565}
@@ -1058,6 +1056,9 @@ MonoBehaviour:
   OnDialogueEvent:
     m_PersistentCalls:
       m_Calls: []
+  presentationBehaviour: {fileID: 0}
+  AssetCatalog: {fileID: 11400000, guid: 8f9141c4afd7d894299e67b119b160fe, type: 2}
+  BacklogLimit: 100
 --- !u!1 &1639377564
 GameObject:
   m_ObjectHideFlags: 0
