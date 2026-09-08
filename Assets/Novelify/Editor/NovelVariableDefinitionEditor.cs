@@ -108,15 +108,19 @@ namespace Novelify.Editor
             {
                 NovelVariableDefinition definition = AssetDatabase.LoadAssetAtPath<NovelVariableDefinition>(path);
                 if (definition == null) continue;
-                definition.EnsureID();
+                bool changed = definition.EnsureID();
                 if (!ids.Add(definition.ID))
                 {
                     definition.RegenerateID();
                     ids.Add(definition.ID);
+                    changed = true;
                     Debug.LogWarning($"Novelify assigned a new stable ID to duplicated variable definition '{path}'.", definition);
                 }
-                EditorUtility.SetDirty(definition);
-                AssetDatabase.SaveAssetIfDirty(definition);
+                if (changed)
+                {
+                    EditorUtility.SetDirty(definition);
+                    AssetDatabase.SaveAssetIfDirty(definition);
+                }
             }
         }
     }

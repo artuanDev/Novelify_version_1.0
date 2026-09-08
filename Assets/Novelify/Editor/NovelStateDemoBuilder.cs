@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -17,7 +18,7 @@ namespace Novelify.Editor
         [MenuItem("Tools/Novelify/Samples/Create State & Conditional Flow Demo")]
         private static void CreateFromMenu()
         {
-            EnsureSample();
+            BuildSample();
             UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(GraphPath);
             if (asset != null)
             {
@@ -33,6 +34,12 @@ namespace Novelify.Editor
                 EditorApplication.delayCall += EnsureSample;
                 return;
             }
+            BuildSample();
+        }
+
+        // Public so CI or a batch-mode Unity editor can materialize the sample.
+        public static void BuildSample()
+        {
             if (AssetDatabase.LoadMainAssetAtPath(GraphPath) != null) return;
 
             EnsureFolder(SampleFolder + "/Variables");
@@ -125,6 +132,23 @@ namespace Novelify.Editor
             AssetDatabase.ImportAsset(GraphPath, ImportAssetOptions.ForceUpdate);
             AssetDatabase.SaveAssets();
             Debug.Log($"Novelify created the state and conditional-flow demo at {GraphPath}");
+        }
+
+        public static void ValidateSampleForAutomation()
+        {
+            BuildSample();
+            AssetDatabase.ImportAsset(GraphPath, ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(GraphPath);
+            if (runtime == null) throw new InvalidOperationException("The state demo did not import as a RuntimeNovelGraph.");
+            if (runtime.AllNodes.Count(node => node is RuntimeSetVariableNode) != 4)
+                throw new InvalidOperationException("The state demo must contain four Set Variable nodes.");
+            if (runtime.AllNodes.Count(node => node is RuntimeModifyVariableNode) != 3)
+                throw new InvalidOperationException("The state demo must contain three Modify Variable nodes.");
+            RuntimeBranchNode branch = runtime.AllNodes.OfType<RuntimeBranchNode>().SingleOrDefault();
+            if (branch?.Condition is not RuntimeBooleanExpression ||
+                string.IsNullOrEmpty(branch.TrueNodeID) || string.IsNullOrEmpty(branch.FalseNodeID))
+                throw new InvalidOperationException("The state demo branch or its compiled Boolean expression is incomplete.");
+            Debug.Log($"Novelify validated the state and conditional-flow demo ({runtime.AllNodes.Count} runtime nodes).");
         }
 
         private static T Add<T>(NovelGraph graph, float x, float y) where T : Node, new()

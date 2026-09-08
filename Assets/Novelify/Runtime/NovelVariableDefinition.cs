@@ -39,9 +39,11 @@ namespace Novelify
             _ => RuntimeValue.None()
         };
 
-        public void EnsureID()
+        public bool EnsureID()
         {
-            if (string.IsNullOrEmpty(_id)) _id = Guid.NewGuid().ToString("N");
+            if (!string.IsNullOrEmpty(_id)) return false;
+            _id = Guid.NewGuid().ToString("N");
+            return true;
         }
 
         public void RegenerateID() => _id = Guid.NewGuid().ToString("N");
