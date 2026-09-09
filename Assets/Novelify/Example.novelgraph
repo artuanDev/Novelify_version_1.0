@@ -1195,7 +1195,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: ff09fc908d371f9194227bcee4ad03b7
         m_Version: 2
-        m_Position: {x: -517.50165, y: 848.8636}
+        m_Position: {x: -515.7526, y: 983.53705}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1314,7 +1314,7 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: 38ac37f7bae6db3419f9a71e5655d98e, type: 2}
-          Emotion: 0
+          Emotion: 8
     - rid: 8564938495289196643
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1326,7 +1326,7 @@ MonoBehaviour:
         m_Value:
           m_EnumType:
             m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-          m_Value: 0
+          m_Value: 8
         m_EnumType:
           m_Identification: Novelify.CharacterEmotion, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     - rid: 8564938495289196645
@@ -1782,7 +1782,7 @@ MonoBehaviour:
     - rid: 8564938495289196718
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 0
+        m_Value: 1
     - rid: 8564938495289196719
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1812,7 +1812,7 @@ MonoBehaviour:
     - rid: 8564938495289196725
       type: {class: 'Constant`1[[UnityEngine.Vector2, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {x: 0.51481247, y: -0.41349882}
+        m_Value: {x: -0.5239819, y: 0.008200484}
     - rid: 8564938495289196726
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1820,7 +1820,7 @@ MonoBehaviour:
     - rid: 8564938495289196727
       type: {class: 'Constant`1[[UnityEngine.Vector2, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {x: 1.7809381, y: 1.7809385}
+        m_Value: {x: 1.0011108, y: 1.0011109}
     - rid: 8564938495289196728
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1907,7 +1907,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 6e3f70a44029ed12419535c2e0647c8d
         m_Version: 2
-        m_Position: {x: 1745.4749, y: 1404.8563}
+        m_Position: {x: 1729.7338, y: 1578.0079}
         m_Title: Daisy
         m_Tooltip: 
         m_NodePreviewModel:
