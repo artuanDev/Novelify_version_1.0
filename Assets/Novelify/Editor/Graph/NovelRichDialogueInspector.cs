@@ -20,6 +20,56 @@ namespace Novelify.Editor
     }
 
     /// <summary>
+    /// Read-only copy of a node's dialogue used to render the same rich-text
+    /// preview directly on the graph card. The authored value remains
+    /// <see cref="RichDialogueText"/> in the graph inspector.
+    /// </summary>
+    [Serializable]
+    public struct DialoguePreviewOption
+    {
+        public string Text;
+
+        public DialoguePreviewOption(string text)
+        {
+            Text = text;
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(DialoguePreviewOption))]
+    internal sealed class DialoguePreviewOptionDrawer : PropertyDrawer
+    {
+        private const float NodePreviewHeight = 68f;
+
+        public override VisualElement CreatePropertyGUI(SerializedProperty property)
+        {
+            SerializedProperty textProperty = property.FindPropertyRelative(
+                nameof(DialoguePreviewOption.Text));
+
+            var root = new VisualElement
+            {
+                name = "dialogue-node-preview"
+            };
+            root.style.width = Length.Percent(100f);
+            root.style.flexGrow = 1f;
+            root.style.alignSelf = Align.Stretch;
+            root.style.marginTop = 0f;
+            root.style.marginBottom = 7f;
+
+            if (textProperty == null)
+            {
+                root.Add(new Label("Unable to load dialogue preview."));
+                return root;
+            }
+
+            root.Add(NovelRichDialogueInspector.CreatePreviewSurface(
+                textProperty,
+                NodePreviewHeight,
+                "No dialogue text."));
+            return root;
+        }
+    }
+
+    /// <summary>
     /// Draws Novelify dialogue as a full-width rich-text authoring surface in
     /// both UI Toolkit and IMGUI inspectors.
     /// </summary>
@@ -255,107 +305,15 @@ namespace Novelify.Editor
             previewTitle.style.marginBottom = 2f;
             root.Add(previewTitle);
 
-            var preview = new VisualElement();
-            preview.style.height = PreviewHeight;
-            preview.style.flexDirection = FlexDirection.Row;
-            preview.style.flexWrap = Wrap.Wrap;
-            preview.style.alignContent = Align.FlexStart;
-            preview.style.overflow = Overflow.Hidden;
-            preview.style.paddingLeft = 7f;
-            preview.style.paddingRight = 7f;
-            preview.style.paddingTop = 5f;
-            preview.style.paddingBottom = 5f;
-            preview.style.backgroundColor = (Color)new Color32(7, 12, 22, 255);
-            root.Add(preview);
-
-            var previewGlyphs = new List<AnimatedPreviewGlyph>();
-
-            void RefreshPreview(string markup)
-            {
-                DialogueDocument document = ParseDocument(markup);
-                int visibleCharacters = document.Characters.Count;
-                characterCount.text = visibleCharacters == 1
+            VisualElement preview = CreatePreviewSurface(
+                textProperty,
+                PreviewHeight,
+                "Write dialogue above to see how it will look in the game.",
+                count => characterCount.text = count == 1
                     ? "1 character"
-                    : $"{visibleCharacters} characters";
-
-                preview.Clear();
-                previewGlyphs.Clear();
-                if (visibleCharacters == 0)
-                {
-                    var placeholder = new Label(
-                        "Write dialogue above to see how it will look in the game.");
-                    placeholder.style.fontSize = 10f;
-                    placeholder.style.color = (Color)new Color32(100, 116, 139, 255);
-                    placeholder.style.unityFontStyleAndWeight = FontStyle.Italic;
-                    preview.Add(placeholder);
-                    return;
-                }
-
-                for (int index = 0; index < document.Characters.Count; index++)
-                {
-                    StyledCharacter character = document.Characters[index];
-                    if (character.Character == '\n')
-                    {
-                        var lineBreak = new VisualElement();
-                        lineBreak.style.width = Length.Percent(100f);
-                        lineBreak.style.height = 1f;
-                        lineBreak.pickingMode = PickingMode.Ignore;
-                        preview.Add(lineBreak);
-                        continue;
-                    }
-
-                    var glyph = new Label(BuildPreviewGlyphText(character))
-                    {
-                        enableRichText = true,
-                        pickingMode = PickingMode.Ignore
-                    };
-                    glyph.style.flexShrink = 0f;
-                    glyph.style.marginLeft = 0f;
-                    glyph.style.marginRight = 0f;
-                    glyph.style.marginTop = 0f;
-                    glyph.style.marginBottom = 0f;
-                    glyph.style.paddingLeft = 0f;
-                    glyph.style.paddingRight = 0f;
-                    glyph.style.paddingTop = 0f;
-                    glyph.style.paddingBottom = 0f;
-                    glyph.style.whiteSpace = WhiteSpace.NoWrap;
-                    preview.Add(glyph);
-
-                    if (!string.IsNullOrEmpty(character.Style.Effect))
-                    {
-                        previewGlyphs.Add(new AnimatedPreviewGlyph
-                        {
-                            Element = glyph,
-                            Effect = character.Style.Effect,
-                            CharacterIndex = index
-                        });
-                    }
-                }
-            }
-
-            preview.schedule.Execute(() =>
-            {
-                float time = (float)EditorApplication.timeSinceStartup;
-                float shakeFrame = Mathf.Floor(time * 24f);
-                foreach (AnimatedPreviewGlyph glyph in previewGlyphs)
-                {
-                    float x = 0f;
-                    float y = 0f;
-                    if (glyph.Effect == "novelify-wave")
-                    {
-                        y = Mathf.Sin(time * 7f + glyph.CharacterIndex * 0.65f) * 2.5f;
-                    }
-                    else if (glyph.Effect == "novelify-shake")
-                    {
-                        x = (PreviewHash(
-                            shakeFrame + glyph.CharacterIndex * 17.17f) * 2f - 1f) * 1.5f;
-                        y = (PreviewHash(
-                            shakeFrame * 1.37f + glyph.CharacterIndex * 41.73f) * 2f - 1f) * 1.5f;
-                    }
-
-                    glyph.Element.style.translate = new Translate(x, y);
-                }
-            }).Every(33);
+                    : $"{count} characters",
+                out Action<string> RefreshPreview);
+            root.Add(preview);
 
             int savedSelectionStart = 0;
             int savedSelectionEnd = 0;
@@ -663,6 +621,149 @@ namespace Novelify.Editor
             });
 
             return root;
+        }
+
+        internal static VisualElement CreatePreviewSurface(
+            SerializedProperty textProperty,
+            float height,
+            string placeholderText)
+        {
+            return CreatePreviewSurface(
+                textProperty,
+                height,
+                placeholderText,
+                null,
+                out _);
+        }
+
+        private static VisualElement CreatePreviewSurface(
+            SerializedProperty textProperty,
+            float height,
+            string placeholderText,
+            Action<int> characterCountChanged,
+            out Action<string> refreshPreview)
+        {
+            var preview = new VisualElement
+            {
+                name = "rich-dialogue-preview",
+                pickingMode = PickingMode.Ignore
+            };
+            preview.style.width = Length.Percent(100f);
+            preview.style.height = height;
+            preview.style.flexGrow = 1f;
+            preview.style.alignSelf = Align.Stretch;
+            preview.style.flexDirection = FlexDirection.Row;
+            preview.style.flexWrap = Wrap.Wrap;
+            preview.style.alignContent = Align.FlexStart;
+            preview.style.overflow = Overflow.Hidden;
+            preview.style.paddingLeft = 7f;
+            preview.style.paddingRight = 7f;
+            preview.style.paddingTop = 5f;
+            preview.style.paddingBottom = 5f;
+            preview.style.backgroundColor = (Color)new Color32(7, 12, 22, 255);
+
+            var previewGlyphs = new List<AnimatedPreviewGlyph>();
+
+            void Refresh(string markup)
+            {
+                DialogueDocument document = ParseDocument(markup);
+                int visibleCharacters = document.Characters.Count;
+                characterCountChanged?.Invoke(visibleCharacters);
+
+                preview.Clear();
+                previewGlyphs.Clear();
+                if (visibleCharacters == 0)
+                {
+                    var placeholder = new Label(placeholderText);
+                    placeholder.style.fontSize = 10f;
+                    placeholder.style.color = (Color)new Color32(100, 116, 139, 255);
+                    placeholder.style.unityFontStyleAndWeight = FontStyle.Italic;
+                    placeholder.style.whiteSpace = WhiteSpace.Normal;
+                    placeholder.pickingMode = PickingMode.Ignore;
+                    preview.Add(placeholder);
+                    return;
+                }
+
+                for (int index = 0; index < document.Characters.Count; index++)
+                {
+                    StyledCharacter character = document.Characters[index];
+                    if (character.Character == '\n')
+                    {
+                        var lineBreak = new VisualElement();
+                        lineBreak.style.width = Length.Percent(100f);
+                        lineBreak.style.height = 1f;
+                        lineBreak.pickingMode = PickingMode.Ignore;
+                        preview.Add(lineBreak);
+                        continue;
+                    }
+
+                    var glyph = new Label(BuildPreviewGlyphText(character))
+                    {
+                        enableRichText = true,
+                        pickingMode = PickingMode.Ignore
+                    };
+                    glyph.style.flexShrink = 0f;
+                    glyph.style.marginLeft = 0f;
+                    glyph.style.marginRight = 0f;
+                    glyph.style.marginTop = 0f;
+                    glyph.style.marginBottom = 0f;
+                    glyph.style.paddingLeft = 0f;
+                    glyph.style.paddingRight = 0f;
+                    glyph.style.paddingTop = 0f;
+                    glyph.style.paddingBottom = 0f;
+                    glyph.style.whiteSpace = WhiteSpace.NoWrap;
+                    preview.Add(glyph);
+
+                    if (!string.IsNullOrEmpty(character.Style.Effect))
+                    {
+                        previewGlyphs.Add(new AnimatedPreviewGlyph
+                        {
+                            Element = glyph,
+                            Effect = character.Style.Effect,
+                            CharacterIndex = index
+                        });
+                    }
+                }
+            }
+
+            preview.schedule.Execute(() =>
+            {
+                float time = (float)EditorApplication.timeSinceStartup;
+                float shakeFrame = Mathf.Floor(time * 24f);
+                foreach (AnimatedPreviewGlyph glyph in previewGlyphs)
+                {
+                    float x = 0f;
+                    float y = 0f;
+                    if (glyph.Effect == "novelify-wave")
+                    {
+                        y = Mathf.Sin(time * 7f + glyph.CharacterIndex * 0.65f) * 2.5f;
+                    }
+                    else if (glyph.Effect == "novelify-shake")
+                    {
+                        x = (PreviewHash(
+                            shakeFrame + glyph.CharacterIndex * 17.17f) * 2f - 1f) * 1.5f;
+                        y = (PreviewHash(
+                            shakeFrame * 1.37f + glyph.CharacterIndex * 41.73f) * 2f - 1f) * 1.5f;
+                    }
+
+                    glyph.Element.style.translate = new Translate(x, y);
+                }
+            }).Every(33);
+
+            if (textProperty != null)
+            {
+                preview.TrackPropertyValue(
+                    textProperty,
+                    changedProperty => Refresh(changedProperty.stringValue));
+                Refresh(textProperty.stringValue);
+            }
+            else
+            {
+                Refresh(string.Empty);
+            }
+
+            refreshPreview = Refresh;
+            return preview;
         }
 
         private static VisualElement CreateToolbarRow()

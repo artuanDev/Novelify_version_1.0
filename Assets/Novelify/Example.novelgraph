@@ -88,7 +88,7 @@ MonoBehaviour:
           x: -1174
           y: -32
           width: 3982
-          height: 1942
+          height: 2017
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 13473657899483121740
@@ -537,6 +537,7 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196563
           - rid: 8564938495289196564
@@ -549,6 +550,7 @@ MonoBehaviour:
           - rid: 8564938495289196571
           - rid: 8564938495289196572
           - rid: 8564938495289196573
+          - rid: 8564938518505980365
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -606,7 +608,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
-          Text: Hola, me gusta la...<b><size=160%><color=#FFAB00><link="novelify-shake"> pasta con bechamel.</link></color></size></b>
+          Text: Hola, me gusta la...<b><size=160%><color=#FFAB00><link="novelify-shake"> </link></color></size></b><b><size=160%><color=#FFAB00><link="novelify-shake">pasta con bechamel.</link></color></size></b>
     - rid: 8564938495289196565
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -777,6 +779,7 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196607
           - rid: 8564938495289196608
@@ -789,6 +792,7 @@ MonoBehaviour:
           - rid: 8564938495289196615
           - rid: 8564938495289196616
           - rid: 8564938495289196617
+          - rid: 8564938518505980366
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1230,6 +1234,7 @@ MonoBehaviour:
           - Once Only 1
           - Transaction 1
           - __option_Choices
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196641
           - rid: 8564938495289196642
@@ -1258,6 +1263,7 @@ MonoBehaviour:
           - rid: 8564938495289196665
           - rid: 8564938495289196666
           - rid: 8564938498176712783
+          - rid: 8564938518505980367
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1530,6 +1536,7 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196694
           - rid: 8564938495289196695
@@ -1542,6 +1549,7 @@ MonoBehaviour:
           - rid: 8564938495289196702
           - rid: 8564938495289196703
           - rid: 8564938495289196704
+          - rid: 8564938518505980368
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1790,7 +1798,7 @@ MonoBehaviour:
     - rid: 8564938495289196720
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 0.5
+        m_Value: 1
     - rid: 8564938495289196721
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1963,6 +1971,7 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196737
           - rid: 8564938495289196738
@@ -1975,6 +1984,7 @@ MonoBehaviour:
           - rid: 8564938495289196745
           - rid: 8564938495289196746
           - rid: 8564938495289196747
+          - rid: 8564938518505980369
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2151,6 +2161,7 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Dialogue Preview
           m_ValueList:
           - rid: 8564938495289196775
           - rid: 8564938495289196776
@@ -2163,6 +2174,7 @@ MonoBehaviour:
           - rid: 8564938495289196783
           - rid: 8564938495289196784
           - rid: 8564938495289196785
+          - rid: 8564938518505980370
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2864,7 +2876,7 @@ MonoBehaviour:
         m_Value:
           m_EnumType:
             m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-          m_Value: 3
+          m_Value: 6
         m_EnumType:
           m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     - rid: 8564938510498267590
@@ -2930,3 +2942,33 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 8564938518505980365
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: Hola, me gusta la...<b><size=160%><color=#FFAB00><link="novelify-shake"> </link></color></size></b><b><size=160%><color=#FFAB00><link="novelify-shake">pasta con bechamel.</link></color></size></b>
+    - rid: 8564938518505980366
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: "No s\xE9 que hacer en verdad..."
+    - rid: 8564938518505980367
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: "\xBFQu\xE9 deber\xEDamos hacer?"
+    - rid: 8564938518505980368
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: HELADO!
+    - rid: 8564938518505980369
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: "<b><size=160%><link=\"novelify-shake\">YO TAMBI\xC9N QUIERO!</link></size></b>"
+    - rid: 8564938518505980370
+      type: {class: 'Constant`1[[Novelify.Editor.DialoguePreviewOption, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Text: <size=75%><link="novelify-shake">Me encantan los videojuegos</link></size>

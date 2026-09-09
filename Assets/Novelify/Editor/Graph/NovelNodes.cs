@@ -324,6 +324,9 @@ namespace Novelify.Editor
             context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
                 .WithDefaultValue(new SpeakerPortraitOption())
                 .Build();
+            context.AddOption("Dialogue Preview", typeof(DialoguePreviewOption))
+                .WithDefaultValue(new DialoguePreviewOption(string.Empty))
+                .Build();
             base.OnDefineOptions(context);
 
             context.AddOption("Emotion", typeof(CharacterEmotion))
@@ -425,6 +428,9 @@ namespace Novelify.Editor
             CharacterActionNode.DefineInstanceOption(context);
             context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
                 .WithDefaultValue(new SpeakerPortraitOption())
+                .Build();
+            context.AddOption("Dialogue Preview", typeof(DialoguePreviewOption))
+                .WithDefaultValue(new DialoguePreviewOption(string.Empty))
                 .Build();
 
             context.AddOption("Dialogue", typeof(RichDialogueText))

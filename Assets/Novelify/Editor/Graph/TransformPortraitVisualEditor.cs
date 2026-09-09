@@ -264,6 +264,8 @@ namespace Novelify.Editor
         private VisualElement _safeArea;
         private VisualElement _ghost;
         private VisualElement _targetPortrait;
+        private Label _startTag;
+        private Label _targetTag;
         private VisualElement _uiPreviewOverlay;
         private VisualElement _transformFrame;
         private Label _resolutionLabel;
@@ -317,6 +319,7 @@ namespace Novelify.Editor
         private bool _playingPreview;
         private bool _previewPaused;
         private bool _previewCompleted;
+        private bool _previewAwaitingFirstTick;
         private double _previewStartTime;
         private float _previewStartProgress;
         private readonly List<HistoryEntry> _undoHistory = new List<HistoryEntry>();
@@ -1544,8 +1547,9 @@ namespace Novelify.Editor
 
             Label label = Badge(tag, accent);
             label.style.position = UnityEngine.UIElements.Position.Absolute;
-            label.style.left = 4f;
-            label.style.top = 4f;
+            if (tag == "START") _startTag = label;
+            else if (tag == "TARGET") _targetTag = label;
+            AnchorPortraitTag(label);
             label.pickingMode = PickingMode.Ignore;
             group.Add(label);
 
@@ -1561,6 +1565,19 @@ namespace Novelify.Editor
                 group.Add(missing);
             }
             return group;
+        }
+
+        private void AnchorPortraitTag(Label label)
+        {
+            if (label == null) return;
+            label.style.left = Length.Percent(_portraitContentRect.xMin * 100f);
+            label.style.top = Length.Percent(_portraitContentRect.yMin * 100f);
+        }
+
+        private void RefreshPortraitTagAnchors()
+        {
+            AnchorPortraitTag(_startTag);
+            AnchorPortraitTag(_targetTag);
         }
 
         private VisualElement CreateTransformFrame()
@@ -2317,11 +2334,13 @@ namespace Novelify.Editor
             _portraitCanvasSize = new Vector2(100f, 160f);
             _portraitSizeSource = "fallback size (no portrait layout found)";
             _portraitContentRect = new Rect(0f, 0f, 1f, 1f);
+            RefreshPortraitTagAnchors();
         }
 
         private void ResolvePortraitContentRect()
         {
             _portraitContentRect = new Rect(0f, 0f, 1f, 1f);
+            RefreshPortraitTagAnchors();
             if (_character == null || !IsUsableSize(_portraitCanvasSize)) return;
             CharacterPortrait portrait = _character.GetPortrait(CharacterEmotion.Neutral);
             Sprite[] sprites = { portrait.Body, portrait.Eyes, portrait.Details, portrait.Mouth };
@@ -2366,6 +2385,7 @@ namespace Novelify.Editor
             float yMax = Mathf.Clamp01(combined.yMax + handlePadding);
             if (xMax > xMin && yMax > yMin)
                 _portraitContentRect = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+            RefreshPortraitTagAnchors();
         }
 
         private static bool TryReadSpriteAlphaBounds(Sprite sprite, out Rect bounds)
@@ -2373,6 +2393,17 @@ namespace Novelify.Editor
             bounds = new Rect(0f, 0f, 1f, 1f);
             if (sprite == null || sprite.texture == null) return false;
             if (SpriteAlphaBoundsCache.TryGetValue(sprite, out bounds)) return true;
+
+            // A Tight sprite mesh is generated from the visible alpha outline and is
+            // considerably more dependable than sampling an imported/compressed GPU
+            // texture. In particular, Graphics.Blit can report transparent RGB
+            // padding as opaque on some importer/platform combinations.
+            if (TryReadSpriteMeshBounds(sprite, out bounds))
+            {
+                SpriteAlphaBoundsCache[sprite] = bounds;
+                return true;
+            }
+
             if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None) return false;
 
             RenderTexture temporary = null;
@@ -2409,7 +2440,9 @@ namespace Novelify.Editor
                     int row = y * width;
                     for (int x = 0; x < width; x++)
                     {
-                        if (pixels[row + x].a <= 3) continue;
+                        // Ignore filtering/compression residue that is technically
+                        // non-zero but visually transparent.
+                        if (pixels[row + x].a < 16) continue;
                         minX = Mathf.Min(minX, x);
                         minY = Mathf.Min(minY, y);
                         maxX = Mathf.Max(maxX, x);
@@ -2436,6 +2469,44 @@ namespace Novelify.Editor
                 if (readback != null) DestroyImmediate(readback);
                 if (temporary != null) RenderTexture.ReleaseTemporary(temporary);
             }
+        }
+
+        private static bool TryReadSpriteMeshBounds(Sprite sprite, out Rect bounds)
+        {
+            bounds = new Rect(0f, 0f, 1f, 1f);
+            Vector2[] vertices = sprite.vertices;
+            Vector2 spriteSize = sprite.rect.size;
+            float pixelsPerUnit = sprite.pixelsPerUnit;
+            if (vertices == null || vertices.Length < 3 ||
+                !IsUsableSize(spriteSize) || pixelsPerUnit <= Mathf.Epsilon)
+                return false;
+
+            Vector2 minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int index = 0; index < vertices.Length; index++)
+            {
+                // Sprite vertices are expressed relative to the pivot in world units.
+                // Convert them back into the sprite rect's bottom-left pixel space.
+                Vector2 pixel = vertices[index] * pixelsPerUnit + sprite.pivot;
+                minimum = Vector2.Min(minimum, pixel);
+                maximum = Vector2.Max(maximum, pixel);
+            }
+
+            float xMin = Mathf.Clamp01(minimum.x / spriteSize.x);
+            float yMin = Mathf.Clamp01(minimum.y / spriteSize.y);
+            float xMax = Mathf.Clamp01(maximum.x / spriteSize.x);
+            float yMax = Mathf.Clamp01(maximum.y / spriteSize.y);
+            if (xMax <= xMin || yMax <= yMin) return false;
+
+            // Four corner vertices spanning the entire sprite are a Full Rect mesh,
+            // not evidence of visible content. Let the alpha sampler handle it.
+            const float fullRectTolerance = 0.002f;
+            bool spansFullRect = xMin <= fullRectTolerance && yMin <= fullRectTolerance &&
+                                 xMax >= 1f - fullRectTolerance && yMax >= 1f - fullRectTolerance;
+            if (vertices.Length <= 4 && spansFullRect) return false;
+
+            bounds = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+            return true;
         }
 
         private static bool TryGetPortraitLayoutSize(CharacterInfo info, out Vector2 size)
@@ -3014,37 +3085,49 @@ namespace Novelify.Editor
 
         private void TogglePreview()
         {
+            if (_timeline == null) return;
             float duration = Mathf.Max(0f, _durationField?.value ?? 0f);
             if (_playingPreview)
             {
                 _playingPreview = false;
                 _previewPaused = true;
+                _previewAwaitingFirstTick = false;
                 RefreshGhostVisibility();
                 RefreshPreviewControls();
                 return;
             }
 
-            bool timelineEnded = _timeline.value >= 0.999f;
-            float progress = _previewPaused && !timelineEnded ? _timeline.value : 0f;
+            bool timelineEnded = _previewCompleted || _timeline.value >= 0.999f;
+            bool resumePausedPreview = _previewPaused && !timelineEnded;
+            float progress = resumePausedPreview ? Mathf.Clamp01(_timeline.value) : 0f;
+
+            _playingPreview = duration > 0f;
+            _previewPaused = false;
+            _previewCompleted = false;
+            _previewAwaitingFirstTick = _playingPreview;
+            _previewStartProgress = progress;
+            _previewStartTime = EditorApplication.timeSinceStartup;
             _updatingFields = true;
             _timeline.SetValueWithoutNotify(progress);
             _updatingFields = false;
-            if (timelineEnded) RefreshPreviewPose(0f);
+            RefreshPreviewPose(progress);
             if (duration <= 0f)
             {
                 _timeline.SetValueWithoutNotify(1f);
                 RefreshPreviewPose(1f);
+                _previewCompleted = true;
+                RefreshPreviewControls();
                 SetStatus("Zero-duration tween: target applies instantly.", false);
                 return;
             }
 
-            _previewStartProgress = progress;
-            _previewStartTime = EditorApplication.timeSinceStartup;
-            _playingPreview = true;
-            _previewPaused = false;
-            _previewCompleted = false;
-            RefreshPreviewPose(progress);
+            // Reassert the callback in case a domain reload happened while this
+            // utility window stayed open. The remove/add pair cannot duplicate it.
+            EditorApplication.update -= TickPreview;
+            EditorApplication.update += TickPreview;
+            EditorApplication.QueuePlayerLoopUpdate();
             RefreshPreviewControls();
+            Repaint();
         }
 
         private void StopPreview()
@@ -3052,6 +3135,7 @@ namespace Novelify.Editor
             _playingPreview = false;
             _previewPaused = false;
             _previewCompleted = false;
+            _previewAwaitingFirstTick = false;
             _updatingFields = true;
             _timeline?.SetValueWithoutNotify(0f);
             _updatingFields = false;
@@ -3063,6 +3147,20 @@ namespace Novelify.Editor
         {
             RefreshAutomaticResolution(false);
             if (!_playingPreview || _timeline == null) return;
+            if (_previewAwaitingFirstTick)
+            {
+                // Render the rewound pose once before advancing time. A busy editor
+                // could otherwise consume a short tween before its first repaint,
+                // making Replay at the timeline end appear to do nothing.
+                _previewAwaitingFirstTick = false;
+                _previewStartTime = EditorApplication.timeSinceStartup;
+                _updatingFields = true;
+                _timeline.SetValueWithoutNotify(_previewStartProgress);
+                _updatingFields = false;
+                RefreshPreviewPose(_previewStartProgress);
+                Repaint();
+                return;
+            }
             float duration = Mathf.Max(0.0001f, _durationField?.value ?? 0.5f);
             float elapsed = (float)(EditorApplication.timeSinceStartup - _previewStartTime);
             float progress = _previewStartProgress + elapsed / duration;
@@ -3075,6 +3173,7 @@ namespace Novelify.Editor
             _playingPreview = false;
             _previewPaused = false;
             _previewCompleted = true;
+            _previewAwaitingFirstTick = false;
             RefreshGhostVisibility();
             RefreshTransformFrame(1f);
             RefreshPreviewControls();
