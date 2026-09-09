@@ -3,6 +3,51 @@ using UnityEngine.UI;
 
 namespace Novelify
 {
+    public static class PortraitTweenEasingUtility
+    {
+        public static float Evaluate(PortraitTweenEasing easing, AnimationCurve customCurve, float progress)
+        {
+            float t = Mathf.Clamp01(progress);
+            switch (easing)
+            {
+                case PortraitTweenEasing.EaseIn: return t * t * t;
+                case PortraitTweenEasing.EaseOut: return 1f - Mathf.Pow(1f - t, 3f);
+                case PortraitTweenEasing.EaseInOut: return t * t * (3f - 2f * t);
+                case PortraitTweenEasing.Anticipation: return t * t * (2.70158f * t - 1.70158f);
+                case PortraitTweenEasing.Overshoot:
+                {
+                    float shifted = t - 1f;
+                    return 1f + 2.70158f * shifted * shifted * shifted + 1.70158f * shifted * shifted;
+                }
+                case PortraitTweenEasing.Bounce: return BounceOut(t);
+                case PortraitTweenEasing.Custom:
+                    return customCurve != null && customCurve.length > 0
+                        ? Mathf.Clamp01(customCurve.Evaluate(t))
+                        : t;
+                default: return t;
+            }
+        }
+
+        private static float BounceOut(float t)
+        {
+            const float scale = 7.5625f;
+            const float divisor = 2.75f;
+            if (t < 1f / divisor) return scale * t * t;
+            if (t < 2f / divisor)
+            {
+                t -= 1.5f / divisor;
+                return scale * t * t + 0.75f;
+            }
+            if (t < 2.5f / divisor)
+            {
+                t -= 2.25f / divisor;
+                return scale * t * t + 0.9375f;
+            }
+            t -= 2.625f / divisor;
+            return scale * t * t + 0.984375f;
+        }
+    }
+
     public class CharacterInfo : MonoBehaviour
     {
         [System.NonSerialized] public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
@@ -22,7 +67,8 @@ namespace Novelify
         private Vector2 _scaleStart, _scaleTarget;
         private float _rotationStart, _rotationTarget;
         private float _moveElapsed, _moveDuration;
-        private bool _easeMovement;
+        private PortraitTweenEasing _moveEasing;
+        private AnimationCurve _moveCustomCurve;
         private bool _speaking, _animateMouth, _animateBlinking = true, _speechPause;
         private bool _eyesClosed;
         private float _nextMouthFrame, _nextBlink;
@@ -168,6 +214,25 @@ namespace Novelify
             float duration,
             bool easeInOut = true)
         {
+            TransformTo(
+                targetPosition,
+                targetRotation,
+                targetScale,
+                smooth,
+                duration,
+                easeInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None,
+                null);
+        }
+
+        public void TransformTo(
+            Vector2 targetPosition,
+            float targetRotation,
+            Vector2 targetScale,
+            bool smooth,
+            float duration,
+            PortraitTweenEasing easing,
+            AnimationCurve customCurve)
+        {
             _moveStart = Position;
             _moveTarget = targetPosition;
             _rotationStart = Rotation;
@@ -176,7 +241,8 @@ namespace Novelify
             _scaleTarget = targetScale;
             _moveElapsed = 0f;
             _moveDuration = duration;
-            _easeMovement = easeInOut;
+            _moveEasing = easing;
+            _moveCustomCurve = customCurve;
             bool hasChanged = _moveStart != targetPosition ||
                               !Mathf.Approximately(Mathf.DeltaAngle(_rotationStart, targetRotation), 0f) ||
                               _scaleStart != targetScale;
@@ -197,9 +263,9 @@ namespace Novelify
             {
                 _moveElapsed += TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;
                 float t = Mathf.Clamp01(_moveElapsed / _moveDuration);
-                float easedT = _easeMovement ? t * t * (3f - 2f * t) : t;
+                float easedT = PortraitTweenEasingUtility.Evaluate(_moveEasing, _moveCustomCurve, t);
                 Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, easedT);
-                Rotation = Mathf.LerpAngle(_rotationStart, _rotationTarget, easedT);
+                Rotation = _rotationStart + Mathf.DeltaAngle(_rotationStart, _rotationTarget) * easedT;
                 Scale = Vector2.LerpUnclamped(_scaleStart, _scaleTarget, easedT);
                 if (t >= 1f)
                 {

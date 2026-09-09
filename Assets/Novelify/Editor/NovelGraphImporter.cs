@@ -514,7 +514,18 @@ namespace Novelify.Editor
                 : GetOptionValue(node.GetNodeOptionByName("Animate Transform"), false);
             runtimeNode.Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.5f));
             runtimeNode.WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true);
-            runtimeNode.EaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
+            bool legacyEaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
+            PortraitTweenEasing easing = node is TransformSpeakerPortraitNode
+                ? GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseInOut)
+                : legacyEaseInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None;
+            if (node is TransformSpeakerPortraitNode && easing == PortraitTweenEasing.EaseInOut && !legacyEaseInOut)
+                easing = PortraitTweenEasing.None;
+            runtimeNode.UseEasingPreset = node is TransformSpeakerPortraitNode;
+            runtimeNode.Easing = easing;
+            runtimeNode.CustomEasingCurve = CloneCurve(GetOptionValue(
+                node.GetNodeOptionByName("Custom Easing Curve"),
+                AnimationCurve.Linear(0f, 0f, 1f, 1f)));
+            runtimeNode.EaseInOut = easing != PortraitTweenEasing.None;
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
 
             if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
@@ -1287,6 +1298,19 @@ namespace Novelify.Editor
                 if (!string.IsNullOrEmpty(path)) _context?.DependsOnSourceAsset(path);
             }
             return value;
+        }
+
+        private static AnimationCurve CloneCurve(AnimationCurve source)
+        {
+            AnimationCurve clone = source != null
+                ? new AnimationCurve(source.keys)
+                : AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            if (source != null)
+            {
+                clone.preWrapMode = source.preWrapMode;
+                clone.postWrapMode = source.postWrapMode;
+            }
+            return clone;
         }
 
         private T GetOptionValue<T>(

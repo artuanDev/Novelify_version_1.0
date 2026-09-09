@@ -126,7 +126,10 @@ namespace Novelify.Editor
             context.AddOption<bool>("Relative").WithTooltip("Add the X/Y displacement, in the selected coordinate space, to the current position. Rotation and scale remain absolute.").Build();
             context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
             context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
-            context.AddOption<bool>("Ease In Out").WithTooltip("Accelerate and decelerate smoothly; disable for constant speed.").WithDefaultValue(true).Build();
+            context.AddOption<PortraitTweenEasing>("Easing").WithTooltip("Timing preset for the portrait tween. None uses constant linear timing; Custom uses the editable curve.").WithDefaultValue(PortraitTweenEasing.EaseInOut).Build();
+            context.AddOption<AnimationCurve>("Custom Easing Curve").WithTooltip("Custom tween progress from time 0 to 1. Used only when Easing is Custom.").WithDefaultValue(AnimationCurve.Linear(0f, 0f, 1f, 1f)).ShowInInspectorOnly().Build();
+            // Retained for existing serialized graphs. New authoring uses Easing.
+            context.AddOption<bool>("Ease In Out").WithTooltip("Legacy timing setting retained for older graphs.").WithDefaultValue(true).ShowInInspectorOnly().Build();
             context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for the transform before continuing. Disable to animate during following dialogue.").WithDefaultValue(true).Build();
         }
     }

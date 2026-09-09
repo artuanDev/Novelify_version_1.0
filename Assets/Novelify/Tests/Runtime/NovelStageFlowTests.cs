@@ -35,6 +35,21 @@ namespace Novelify.Tests
             _manager.RuntimeGraph = _graph;
         }
 
+        [Test]
+        public void PortraitTweenTimingSupportsLinearPresetsAndCustomCurves()
+        {
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.None, null, 0.25f),
+                Is.EqualTo(0.25f).Within(0.0001f));
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.EaseIn, null, 0.5f),
+                Is.EqualTo(0.125f).Within(0.0001f));
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.EaseOut, null, 0.5f),
+                Is.EqualTo(0.875f).Within(0.0001f));
+
+            AnimationCurve custom = AnimationCurve.Linear(0f, 0f, 1f, 0.5f);
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.Custom, custom, 1f),
+                Is.EqualTo(0.5f).Within(0.0001f));
+        }
+
         [TearDown]
         public void TearDown()
         {

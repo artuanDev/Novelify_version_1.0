@@ -166,10 +166,20 @@ namespace Novelify.Editor
         private struct EditorSnapshot
         {
             public PortraitState Target;
+            public bool TargetSeededFromStart;
             public float Duration;
-            public bool Ease;
+            public PortraitTweenEasing Easing;
+            public AnimationCurve CustomCurve;
             public bool Wait;
             public bool Clamp;
+            public CharacterPositionSpace PositionSpace;
+            public bool Relative;
+            public bool AnimateTransform;
+            public float Margin;
+            public float MarginOpacity;
+            public string InstanceID;
+            public GameObject UIPreviewSource;
+            public bool UIPreviewVisible;
         }
 
         private readonly struct HistoryEntry
@@ -200,7 +210,7 @@ namespace Novelify.Editor
             public static PortraitState Lerp(PortraitState from, PortraitState to, float t) =>
                 new PortraitState(
                     Vector2.LerpUnclamped(from.Position, to.Position, t),
-                    Mathf.LerpAngle(from.Rotation, to.Rotation, t),
+                    from.Rotation + Mathf.DeltaAngle(from.Rotation, to.Rotation) * t,
                     Vector2.LerpUnclamped(from.Scale, to.Scale, t));
         }
 
@@ -213,8 +223,17 @@ namespace Novelify.Editor
         private static readonly Color Accent = new Color32(56, 189, 248, 255);
         private static readonly Color StartAccent = new Color32(167, 139, 250, 255);
         private static readonly Color SafeAccent = new Color32(52, 211, 153, 190);
+        private const string UIPreviewSourcePrefsPrefix =
+            "Novelify.TransformPortraitVisualEditor.GlobalUIPreviewSource.";
+        private const string UIPreviewVisiblePrefsPrefix =
+            "Novelify.TransformPortraitVisualEditor.GlobalUIPreviewVisible.";
+        private const string MarginOpacityPrefsPrefix =
+            "Novelify.TransformPortraitVisualEditor.MarginOpacity.";
+        private const string ViewportZoomPrefsPrefix =
+            "Novelify.TransformPortraitVisualEditor.ViewportZoom.";
         private static Delegate _globalUndoHandler;
         private static bool _globalUndoInstalled;
+        private static readonly Dictionary<Sprite, Rect> SpriteAlphaBoundsCache = new Dictionary<Sprite, Rect>();
 
         private TransformSpeakerPortraitNode _node;
         private Graph _graph;
@@ -222,18 +241,34 @@ namespace Novelify.Editor
         private string _instanceID;
         private PortraitState _start;
         private PortraitState _target;
+        private Vector2 _authoredPosition;
         private string _startSource;
         private Vector2Int _resolution;
         private bool _targetSeededFromStart;
+        private PortraitTweenEasing _easing;
+        private AnimationCurve _customCurve;
+        private CharacterPositionSpace _positionSpace;
+        private bool _relative;
+        private bool _animateTransform;
+        private float _margin;
+        [SerializeField] private float _marginOpacity = 0.35f;
+        [SerializeField] private float _viewportZoom = 1f;
+        private Vector2 _portraitCanvasSize;
+        private Vector2 _stageCanvasSize;
+        private string _portraitSizeSource;
+        private Rect _portraitContentRect = new Rect(0f, 0f, 1f, 1f);
 
         private VisualElement _previewHost;
         private VisualElement _screen;
+        private VisualElement _gameViewport;
         private VisualElement _safeArea;
         private VisualElement _ghost;
         private VisualElement _targetPortrait;
+        private VisualElement _uiPreviewOverlay;
         private VisualElement _transformFrame;
         private Label _resolutionLabel;
         private Label _coordinateLabel;
+        private Label _marginGuideLabel;
         private Label _startSourceLabel;
         private Label _previewTimeLabel;
         private Label _statusLabel;
@@ -242,8 +277,23 @@ namespace Novelify.Editor
         private FloatField _rotationField;
         private Vector2Field _scaleField;
         private FloatField _durationField;
-        private Toggle _easeToggle;
+        private ObjectField _UIPreview;
+        [SerializeField] private GameObject _uiPreviewSource;
+        private Toggle _uiPreviewVisibleToggle;
+        [SerializeField] private bool _uiPreviewVisible = true;
+        [SerializeField] private bool _usesStandardWindowChrome;
+        private DropdownField _easingDropdown;
+        private CurveField _customCurveField;
+        private VisualElement _customCurveContainer;
         private Toggle _waitToggle;
+        private DropdownField _positionSpaceDropdown;
+        private Toggle _relativeToggle;
+        private Toggle _animateTransformToggle;
+        private FloatField _marginField;
+        private Slider _marginOpacitySlider;
+        private Slider _viewportZoomSlider;
+        private TextField _instanceIDField;
+        private Label _portraitSizeLabel;
         private Toggle _safeAreaToggle;
         private Toggle _clampToggle;
         private DropdownField _resolutionDropdown;
@@ -326,8 +376,33 @@ namespace Novelify.Editor
         public static void Open(TransformSpeakerPortraitNode node)
         {
             if (node == null) return;
-            TransformPortraitVisualEditor window = GetWindow<TransformPortraitVisualEditor>(true, "Portrait Tween", true);
-            window.minSize = new Vector2(980f, 650f);
+            GameObject rememberedUIPreview = null;
+            bool rememberedUIPreviewVisible = true;
+            bool foundExistingWindow = false;
+            TransformPortraitVisualEditor window = null;
+            foreach (TransformPortraitVisualEditor existing in
+                     Resources.FindObjectsOfTypeAll<TransformPortraitVisualEditor>())
+            {
+                foundExistingWindow = true;
+                if (existing._uiPreviewSource != null)
+                    rememberedUIPreview = existing._uiPreviewSource;
+                rememberedUIPreviewVisible = existing._uiPreviewVisible;
+                if (existing._usesStandardWindowChrome && window == null)
+                    window = existing;
+                else
+                    existing.Close();
+            }
+            if (rememberedUIPreview != null)
+                SaveUIPreviewSource(rememberedUIPreview);
+            if (foundExistingWindow)
+                EditorPrefs.SetBool(GetUIPreviewVisiblePrefsKey(), rememberedUIPreviewVisible);
+
+            if (window == null)
+            {
+                window = CreateWindow<TransformPortraitVisualEditor>();
+                window._usesStandardWindowChrome = true;
+            }
+            window.minSize = new Vector2(720f, 480f);
             window._node = node;
             window._graph = node.Graph;
             window._followGameViewResolution = true;
@@ -341,10 +416,36 @@ namespace Novelify.Editor
         {
             EditorApplication.update -= TickPreview;
             EditorApplication.update += TickPreview;
-            if (_node != null) Rebuild();
+            EditorApplication.delayCall -= RebuildAfterDomainReload;
+            if (_node != null) EditorApplication.delayCall += RebuildAfterDomainReload;
         }
 
-        private void OnDisable() => EditorApplication.update -= TickPreview;
+        private void OnDisable()
+        {
+            EditorApplication.update -= TickPreview;
+            EditorApplication.delayCall -= RebuildAfterDomainReload;
+        }
+
+        private void RebuildAfterDomainReload()
+        {
+            if (this == null || _node == null) return;
+            try
+            {
+                Rebuild();
+            }
+            catch (NullReferenceException)
+            {
+                rootVisualElement.Clear();
+                rootVisualElement.style.backgroundColor = Background;
+                HelpBox staleNode = new HelpBox(
+                    "The graph was reloaded while this composer was open. Double-click the Transform Speaker Portrait node again to reconnect it.",
+                    HelpBoxMessageType.Warning);
+                staleNode.style.marginLeft = 16f;
+                staleNode.style.marginRight = 16f;
+                staleNode.style.marginTop = 16f;
+                rootVisualElement.Add(staleNode);
+            }
+        }
 
         private void OnFocus() => RefreshAutomaticResolution(true);
 
@@ -359,7 +460,28 @@ namespace Novelify.Editor
                 _resolution = new Vector2Int(1920, 1080);
             ResolveStartState();
             _targetSeededFromStart = untouchedDefaultTarget;
-            if (_targetSeededFromStart) _target = _start;
+            _target = new PortraitState(
+                _targetSeededFromStart
+                    ? _start.Position
+                    : AuthoredToVisualPosition(_authoredPosition),
+                _target.Rotation,
+                _target.Scale);
+            ResolvePortraitCanvasSize();
+            _marginOpacity = EditorPrefs.GetFloat(GetMarginOpacityPrefsKey(), _marginOpacity);
+            _viewportZoom = Mathf.Clamp(
+                EditorPrefs.GetFloat(GetViewportZoomPrefsKey(), _viewportZoom),
+                0.15f,
+                2.5f);
+            GameObject savedUIPreview = LoadUIPreviewSource();
+            if (savedUIPreview != null)
+                _uiPreviewSource = savedUIPreview;
+            else if (_uiPreviewSource != null)
+                SaveUIPreviewSource(_uiPreviewSource);
+            string visibilityKey = GetUIPreviewVisiblePrefsKey();
+            if (EditorPrefs.HasKey(visibilityKey))
+                _uiPreviewVisible = LoadUIPreviewVisibility();
+            else
+                EditorPrefs.SetBool(visibilityKey, _uiPreviewVisible);
 
             rootVisualElement.Clear();
             rootVisualElement.style.backgroundColor = Background;
@@ -423,21 +545,22 @@ namespace Novelify.Editor
         {
             _previewHost = new VisualElement();
             _previewHost.style.flexGrow = 1f;
-            _previewHost.style.minWidth = 480f;
+            _previewHost.style.minWidth = 280f;
             _previewHost.style.alignItems = Align.Center;
             _previewHost.style.justifyContent = Justify.Center;
             _previewHost.style.paddingLeft = 24f;
             _previewHost.style.paddingRight = 24f;
             _previewHost.style.paddingTop = 24f;
             _previewHost.style.paddingBottom = 24f;
+            _previewHost.style.overflow = Overflow.Hidden;
             _previewHost.RegisterCallback<GeometryChangedEvent>(_ => FitScreen());
+            _previewHost.RegisterCallback<WheelEvent>(OnViewportWheel, TrickleDown.TrickleDown);
             parent.Add(_previewHost);
 
             _screen = new VisualElement();
             _screen.style.position = UnityEngine.UIElements.Position.Relative;
-            _screen.style.overflow = Overflow.Hidden;
-            _screen.style.backgroundColor = (Color)new Color32(5, 13, 27, 255);
-            SetBorder(_screen, Accent, 1f);
+            _screen.style.overflow = Overflow.Visible;
+            SetBorder(_screen, Border, 1f);
             _screen.focusable = true;
             _screen.tooltip = "Drag the portrait to move it. Pull corners to scale and drag a side to rotate.";
             _screen.RegisterCallback<PointerDownEvent>(OnStagePointerDown);
@@ -448,9 +571,25 @@ namespace Novelify.Editor
             _screen.RegisterCallback<GeometryChangedEvent>(evt =>
             {
                 if (evt.newRect.width > 0f && evt.newRect.height > 0f)
+                {
+                    ApplyViewportLayout(evt.newRect.width, evt.newRect.height);
+                    if (_uiPreviewSource != null)
+                        SetUIPreviewSource(_uiPreviewSource, false);
+
                     RefreshPortraits();
+                }
             });
             _previewHost.Add(_screen);
+
+            _gameViewport = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            _gameViewport.style.position = UnityEngine.UIElements.Position.Absolute;
+            _gameViewport.style.overflow = Overflow.Hidden;
+            _gameViewport.style.backgroundColor = (Color)new Color32(5, 13, 27, 255);
+            SetBorder(_gameViewport, Accent, 1f);
+            _screen.Add(_gameViewport);
 
             AddGridLine(true, 0.25f, 0.25f);
             AddGridLine(true, 0.5f, 0.55f);
@@ -463,6 +602,14 @@ namespace Novelify.Editor
             AddEdgeLabel("(-1, -1)", 7f, 20f, true, true);
             AddEdgeLabel("(+1, -1)", 7f, 20f, false, true);
 
+            _marginGuideLabel = Badge(string.Empty, Muted);
+            _marginGuideLabel.style.position = UnityEngine.UIElements.Position.Absolute;
+            _marginGuideLabel.style.left = Length.Percent(50f);
+            _marginGuideLabel.style.translate = new Translate(Length.Percent(-50f), 0f);
+            _marginGuideLabel.style.top = 5f;
+            _marginGuideLabel.pickingMode = PickingMode.Ignore;
+            _screen.Add(_marginGuideLabel);
+
             _safeArea = new VisualElement();
             _safeArea.style.position = UnityEngine.UIElements.Position.Absolute;
             _safeArea.style.borderLeftWidth = 1f;
@@ -474,7 +621,7 @@ namespace Novelify.Editor
             _safeArea.style.borderTopColor = SafeAccent;
             _safeArea.style.borderBottomColor = SafeAccent;
             _safeArea.pickingMode = PickingMode.Ignore;
-            _screen.Add(_safeArea);
+            _gameViewport.Add(_safeArea);
 
             _ghost = CreatePortraitGroup(0.24f, StartAccent, "START");
             _ghost.pickingMode = PickingMode.Ignore;
@@ -482,6 +629,11 @@ namespace Novelify.Editor
             _targetPortrait = CreatePortraitGroup(1f, Accent, "TARGET");
             _targetPortrait.pickingMode = PickingMode.Ignore;
             _screen.Add(_targetPortrait);
+
+            // Additive preview: this displays the selected scene UI on top of
+            // the existing portrait preview without modifying it.
+            _uiPreviewOverlay = CreateUIPreviewOverlay();
+            _screen.Add(_uiPreviewOverlay);
 
             _transformFrame = CreateTransformFrame();
             _screen.Add(_transformFrame);
@@ -531,8 +683,20 @@ namespace Novelify.Editor
             _scaleField.RegisterValueChangedCallback(evt => SetTarget(new PortraitState(_target.Position, _target.Rotation, evt.newValue)));
             inspector.Add(_scaleField);
 
+            _marginField = new FloatField("Off-screen margin") { value = _margin };
+            _marginField.tooltip = "Extra canvas units beyond every game-screen edge. The shaded bands in the stage show this reachable margin.";
+            _marginField.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.Margin = Mathf.Max(0f, evt.previousValue);
+                RecordLocalUndo(before, "Change off-screen margin");
+                SetMargin(evt.newValue);
+            });
+            inspector.Add(_marginField);
+
             _clampToggle = new Toggle("Keep target center on screen") { value = true };
-            _clampToggle.tooltip = "Constrains normalized target coordinates to the visible -1..+1 screen frame.";
+            _clampToggle.tooltip = "Constrains the target center to the screen plus the authored off-screen margin.";
             _clampToggle.RegisterValueChangedCallback(evt =>
             {
                 if (_updatingFields) return;
@@ -541,6 +705,55 @@ namespace Novelify.Editor
                 RecordLocalUndo(before, "Change screen clamp");
             });
             inspector.Add(_clampToggle);
+
+            AddSectionTitle(inspector, "NODE SETTINGS");
+            _positionSpaceDropdown = new DropdownField(
+                "Coordinate space",
+                new List<string> { "Normalized", "Canvas" },
+                _positionSpace == CharacterPositionSpace.Canvas ? 1 : 0);
+            _positionSpaceDropdown.tooltip = "Controls how the visual target is written back to the node. The stage remains a visual, resolution-independent preview.";
+            _positionSpaceDropdown.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                RecordLocalUndo("Change coordinate space");
+                _positionSpace = evt.newValue == "Canvas"
+                    ? CharacterPositionSpace.Canvas
+                    : CharacterPositionSpace.Normalized;
+                RefreshPositionFieldLabel();
+            });
+            inspector.Add(_positionSpaceDropdown);
+
+            _relativeToggle = new Toggle("Relative to incoming position") { value = _relative };
+            _relativeToggle.tooltip = "When enabled, Confirm Tween stores the displacement from START instead of an absolute position.";
+            _relativeToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.Relative = evt.previousValue;
+                RecordLocalUndo(before, "Change relative positioning");
+                _relative = evt.newValue;
+                RefreshPositionFieldLabel();
+            });
+            inspector.Add(_relativeToggle);
+
+            _instanceIDField = new TextField("Instance ID") { value = _instanceID ?? string.Empty };
+            _instanceIDField.tooltip = "Targets an additional instance of this character. A connected Character Reference supplies its own instance ID.";
+            bool referenceConnected = _node.GetInputPortByName("Character Reference")?.IsConnected == true;
+            _instanceIDField.SetEnabled(!referenceConnected);
+            _instanceIDField.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.InstanceID = evt.previousValue;
+                RecordLocalUndo(before, "Change instance ID");
+                _instanceID = evt.newValue ?? string.Empty;
+                ResolveStartState();
+                if (_targetSeededFromStart)
+                    _target = new PortraitState(_start.Position, _target.Rotation, _target.Scale);
+                ResolvePortraitCanvasSize();
+                RefreshAll();
+            });
+            inspector.Add(_instanceIDField);
 
             AddSectionTitle(inspector, "QUICK PLACEMENT");
             DropdownField preset = new DropdownField("Preset", new List<string>
@@ -566,13 +779,85 @@ namespace Novelify.Editor
             Button resetStart = new Button(() => SetTarget(_start, true, "Set target to start")) { text = "Target = Start" };
             resetStart.style.flexGrow = 1f;
             Button resetTransform = new Button(() => SetTarget(
-                new PortraitState(Vector2.zero, 0f, Vector2.one), true, "Reset transform")) { text = "Reset" };
+                new PortraitState(Vector2.zero, 0f, Vector2.one), true, "Reset transform"))
+            { text = "Reset" };
             resetTransform.style.flexGrow = 1f;
             resetRow.Add(resetStart);
             resetRow.Add(resetTransform);
             inspector.Add(resetRow);
 
+            AddSectionTitle(inspector, "UI PREVIEW");
+
+            _UIPreview = new ObjectField("UI to preview (global)")
+            {
+                objectType = typeof(GameObject),
+                value = _uiPreviewSource,
+                allowSceneObjects = true
+            };
+            _UIPreview.tooltip =
+                "Assign any active scene UI GameObject below a Canvas. This project-wide selection is reused by every portrait tween node.";
+
+            _UIPreview.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                GameObject selectedObject = evt.newValue as GameObject;
+
+                if (selectedObject != null)
+                {
+                    bool isValid =
+                        selectedObject.GetComponent<RectTransform>() != null &&
+                        selectedObject.GetComponentInParent<Canvas>(true) != null &&
+                        !EditorUtility.IsPersistent(selectedObject) &&
+                        selectedObject.scene.IsValid();
+
+                    if (!isValid)
+                    {
+                        _UIPreview.SetValueWithoutNotify(_uiPreviewSource);
+                        Debug.LogWarning(
+                            "Please assign a UI GameObject from the current scene.");
+                        return;
+                    }
+                }
+
+                RecordLocalUndo("Change global UI preview");
+                SetUIPreviewSource(selectedObject);
+            });
+
+            inspector.Add(_UIPreview);
+            _uiPreviewVisibleToggle = new Toggle("Show UI preview")
+            {
+                value = _uiPreviewVisible
+            };
+            _uiPreviewVisibleToggle.tooltip =
+                "Show or hide the selected scene UI in the preview.";
+            _uiPreviewVisibleToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                RecordLocalUndo("Toggle global UI preview");
+                SetUIPreviewVisibility(evt.newValue);
+            });
+            inspector.Add(_uiPreviewVisibleToggle);
+            HelpBox uiPreviewHelp = new HelpBox(
+                "The selected UI object and visibility are shared by every Transform Speaker Portrait node in this Unity project.",
+                HelpBoxMessageType.Info);
+            uiPreviewHelp.style.marginTop = 5f;
+            inspector.Add(uiPreviewHelp);
+            SetUIPreviewSource(_uiPreviewSource, false);
+
             AddSectionTitle(inspector, "ANIMATION");
+            _animateTransformToggle = new Toggle("Animate transform") { value = _animateTransform };
+            _animateTransformToggle.tooltip = "Disable to apply the transform immediately at runtime. The composer preview remains available for positioning.";
+            _animateTransformToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.AnimateTransform = evt.previousValue;
+                RecordLocalUndo(before, "Change animation mode");
+                _animateTransform = evt.newValue;
+                RefreshAnimationControls();
+            });
+            inspector.Add(_animateTransformToggle);
+
             _durationField = new FloatField("Duration (seconds)") { value = GetOption("Duration", 0.5f) };
             _durationField.RegisterValueChangedCallback(evt =>
             {
@@ -583,15 +868,48 @@ namespace Novelify.Editor
                 _durationField.SetValueWithoutNotify(Mathf.Clamp(evt.newValue, 0f, 60f));
             });
             inspector.Add(_durationField);
-            _easeToggle = new Toggle("Ease in / out") { value = GetOption("Ease In Out", true) };
-            _waitToggle = new Toggle("Wait for completion") { value = GetOption("Wait For Completion", true) };
-            _easeToggle.RegisterValueChangedCallback(evt =>
+
+            _easingDropdown = new DropdownField("Timing", EasingNames(), EasingToIndex(_easing));
+            _easingDropdown.tooltip = "None is linear. Presets change timing only; Custom exposes an editable 0-to-1 curve.";
+            _easingDropdown.RegisterValueChangedCallback(evt =>
             {
                 if (_updatingFields) return;
                 EditorSnapshot before = CaptureSnapshot();
-                before.Ease = evt.previousValue;
-                RecordLocalUndo(before, "Change easing");
+                before.Easing = EasingFromName(evt.previousValue);
+                RecordLocalUndo(before, "Change timing preset");
+                _easing = EasingFromName(evt.newValue);
+                RefreshEasingControls();
+                RestartPreviewAtCurrentPosition();
             });
+            inspector.Add(_easingDropdown);
+
+            _customCurveContainer = new VisualElement();
+            _customCurveContainer.style.marginTop = 5f;
+            _customCurveField = new CurveField("Custom curve")
+            {
+                value = CloneCurve(_customCurve),
+                ranges = new Rect(0f, 0f, 1f, 1f)
+            };
+            _customCurveField.tooltip = "Double-click the curve to add points. The endpoints remain fixed at (0,0) and (1,1).";
+            _customCurveField.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.CustomCurve = CloneCurve(evt.previousValue);
+                RecordLocalUndo(before, "Edit custom timing curve");
+                _customCurve = SanitizeCustomCurve(evt.newValue);
+                _customCurveField.SetValueWithoutNotify(CloneCurve(_customCurve));
+                RestartPreviewAtCurrentPosition();
+            });
+            _customCurveContainer.Add(_customCurveField);
+            Label curveHint = new Label("Time runs left to right; transform progress runs bottom to top. Double-click to add keys.");
+            curveHint.style.whiteSpace = WhiteSpace.Normal;
+            curveHint.style.fontSize = 10f;
+            curveHint.style.color = Muted;
+            _customCurveContainer.Add(curveHint);
+            inspector.Add(_customCurveContainer);
+
+            _waitToggle = new Toggle("Wait for completion") { value = GetOption("Wait For Completion", true) };
             _waitToggle.RegisterValueChangedCallback(evt =>
             {
                 if (_updatingFields) return;
@@ -599,7 +917,6 @@ namespace Novelify.Editor
                 before.Wait = evt.previousValue;
                 RecordLocalUndo(before, "Change wait behavior");
             });
-            inspector.Add(_easeToggle);
             inspector.Add(_waitToggle);
 
             AddSectionTitle(inspector, "VIEW GUIDES");
@@ -607,9 +924,46 @@ namespace Novelify.Editor
             _resolutionDropdown.tooltip = "Game View (Auto) follows the currently selected Game View resolution live.";
             _resolutionDropdown.RegisterValueChangedCallback(evt => SetResolution(evt.newValue));
             inspector.Add(_resolutionDropdown);
+            _viewportZoomSlider = new Slider("Viewport zoom", 0.15f, 2.5f)
+            {
+                value = _viewportZoom,
+                showInputField = true
+            };
+            _viewportZoomSlider.tooltip = "Zooms the editor camera without changing the node. Use the mouse wheel over the viewport or reset to 100%.";
+            _viewportZoomSlider.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                SetViewportZoom(evt.newValue);
+            });
+            inspector.Add(_viewportZoomSlider);
+            Button resetZoom = new Button(() => SetViewportZoom(1f)) { text = "Reset viewport zoom (100%)" };
+            resetZoom.tooltip = "Fits the game viewport at its normal editor scale.";
+            inspector.Add(resetZoom);
             _safeAreaToggle = new Toggle("Show safe-area guide") { value = true };
             _safeAreaToggle.RegisterValueChangedCallback(_ => RefreshSafeArea());
             inspector.Add(_safeAreaToggle);
+            _marginOpacitySlider = new Slider("Margin opacity", 0f, 1f)
+            {
+                value = _marginOpacity,
+                showInputField = true
+            };
+            _marginOpacitySlider.tooltip = "0 is fully transparent; 1 is fully opaque. This only changes the composer guide, never the game.";
+            _marginOpacitySlider.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.MarginOpacity = evt.previousValue;
+                RecordLocalUndo(before, "Change margin opacity");
+                _marginOpacity = Mathf.Clamp01(evt.newValue);
+                EditorPrefs.SetFloat(GetMarginOpacityPrefsKey(), _marginOpacity);
+                RefreshMarginArea();
+            });
+            inspector.Add(_marginOpacitySlider);
+            _portraitSizeLabel = new Label();
+            _portraitSizeLabel.style.whiteSpace = WhiteSpace.Normal;
+            _portraitSizeLabel.style.color = Muted;
+            _portraitSizeLabel.style.marginTop = 5f;
+            inspector.Add(_portraitSizeLabel);
             _startSourceLabel = new Label();
             _startSourceLabel.style.whiteSpace = WhiteSpace.Normal;
             _startSourceLabel.style.color = Muted;
@@ -630,7 +984,7 @@ namespace Novelify.Editor
             inspector.Add(_connectedHelp);
 
             HelpBox controls = new HelpBox(
-                "Move: drag the portrait (Shift locks the dominant axis). Scale: pull a corner (Shift scales from center, Ctrl keeps it uniform). Rotate: drag any side (Ctrl snaps to 10 degrees). Space previews the tween. Ctrl+Z/Ctrl+Y use this window's local history only while the mouse is over it.",
+                "Move: drag the portrait (Shift locks the dominant axis). Scale: pull a corner (Shift scales from center, Ctrl keeps it uniform). Rotate: drag any side (Ctrl snaps to 10 degrees). The inner cyan rectangle is the game viewport; shaded outer bands are the node's off-screen margin. Space previews the tween. Ctrl+Z/Ctrl+Y use this window's local history only while the mouse is over it.",
                 HelpBoxMessageType.Info);
             controls.style.marginTop = 10f;
             inspector.Add(controls);
@@ -703,8 +1057,18 @@ namespace Novelify.Editor
         {
             _character = ResolveCharacter(_node);
             _instanceID = ResolveInstanceID(_node);
+            _positionSpace = GetOption(_node, "Coordinate Space", CharacterPositionSpace.Normalized);
+            _relative = GetOption(_node, "Relative", false);
+            _animateTransform = GetOption(_node, "Animate Transform", false);
+            _margin = Mathf.Max(0f, ResolveMargin(_node));
+            _easing = ResolveEasing(_node);
+            _customCurve = SanitizeCustomCurve(GetOption(
+                _node,
+                "Custom Easing Curve",
+                AnimationCurve.Linear(0f, 0f, 1f, 1f)));
+            _authoredPosition = ResolvePosition(_node);
             _target = new PortraitState(
-                ResolvePosition(_node),
+                _authoredPosition,
                 ResolveRotation(_node),
                 ResolveScale(_node));
         }
@@ -717,11 +1081,11 @@ namespace Novelify.Editor
             if (position?.IsConnected == true || rotation?.IsConnected == true || scale?.IsConnected == true)
                 return false;
 
-            return _target.Position == Vector2.zero &&
+            return _authoredPosition == Vector2.zero &&
                    Mathf.Approximately(_target.Rotation, 0f) &&
                    _target.Scale == Vector2.one &&
-                   !GetOption("Relative", false) &&
-                   !GetOption("Animate Transform", false);
+                   !_relative &&
+                   !_animateTransform;
         }
 
         private void ResolveStartState()
@@ -732,7 +1096,7 @@ namespace Novelify.Editor
                 {
                     if (info == null || !info.gameObject.scene.IsValid() || info.character != _character ||
                         !string.Equals(info.InstanceID ?? string.Empty, _instanceID, StringComparison.Ordinal)) continue;
-                    _start = new PortraitState(info.AnchoredToNormalizedPosition(info.Position), info.Rotation, info.Scale);
+                    _start = new PortraitState(CanvasToNormalized(info.Position), info.Rotation, info.Scale);
                     _startSource = "Live character in Play Mode";
                     return;
                 }
@@ -775,7 +1139,10 @@ namespace Novelify.Editor
                 {
                     Vector2 position = ResolvePosition(transform);
                     CharacterPositionSpace space = GetOption(transform, "Coordinate Space", CharacterPositionSpace.Normalized);
-                    if (space == CharacterPositionSpace.Canvas) position = CanvasToNormalized(position);
+                    float sourceMargin = Mathf.Max(0f, ResolveMargin(transform));
+                    position = space == CharacterPositionSpace.Canvas
+                        ? CanvasToNormalized(position)
+                        : SourceNormalizedToVisual(position, sourceMargin);
                     bool relative = GetOption(transform, "Relative", false);
                     string previousSource = null;
                     if (relative)
@@ -802,7 +1169,9 @@ namespace Novelify.Editor
                 {
                     Vector2 position = GetOption(show, "Position", Vector2.zero);
                     CharacterPositionSpace space = GetOption(show, "Coordinate Space", CharacterPositionSpace.Canvas);
-                    if (space == CharacterPositionSpace.Canvas) position = CanvasToNormalized(position);
+                    position = space == CharacterPositionSpace.Canvas
+                        ? CanvasToNormalized(position)
+                        : SourceNormalizedToVisual(position, 0f);
                     state = new PortraitState(position, 0f, Vector2.one);
                     source = "Previous Show Character node";
                     return true;
@@ -878,22 +1247,55 @@ namespace Novelify.Editor
             return !port.IsConnected && value == Vector2.one && legacy != Vector2.one ? legacy : value;
         }
 
+        private float ResolveMargin(TransformSpeakerPortraitNode node)
+        {
+            IPort port = node.GetInputPortByName("Margin");
+            float legacy = GetOption(node, "Margin", 0f);
+            if (port == null) return legacy;
+            float value = NovelGraphValues.Resolve<float>(_graph, port);
+            return !port.IsConnected && Mathf.Approximately(value, 0f) && !Mathf.Approximately(legacy, 0f)
+                ? legacy
+                : value;
+        }
+
         private void RefreshAll()
         {
             _updatingFields = true;
             _positionField?.SetValueWithoutNotify(_target.Position);
             _rotationField?.SetValueWithoutNotify(_target.Rotation);
             _scaleField?.SetValueWithoutNotify(_target.Scale);
+            _marginField?.SetValueWithoutNotify(_margin);
+            _positionSpaceDropdown?.SetValueWithoutNotify(
+                _positionSpace == CharacterPositionSpace.Canvas ? "Canvas" : "Normalized");
+            _relativeToggle?.SetValueWithoutNotify(_relative);
+            _animateTransformToggle?.SetValueWithoutNotify(_animateTransform);
+            _instanceIDField?.SetValueWithoutNotify(_instanceID ?? string.Empty);
+            _marginOpacitySlider?.SetValueWithoutNotify(_marginOpacity);
+            _viewportZoomSlider?.SetValueWithoutNotify(_viewportZoom);
+            _easingDropdown?.SetValueWithoutNotify(EasingName(_easing));
+            _customCurveField?.SetValueWithoutNotify(CloneCurve(_customCurve));
+            _UIPreview?.SetValueWithoutNotify(_uiPreviewSource);
+            _uiPreviewVisibleToggle?.SetValueWithoutNotify(_uiPreviewVisible);
             _timeline?.SetValueWithoutNotify(1f);
             _updatingFields = false;
 
             _previewCompleted = false;
 
             RefreshResolutionLabel();
+            RefreshPositionFieldLabel();
+            RefreshEasingControls();
+            RefreshAnimationControls();
+            RefreshPortraitSizeLabel();
             if (_startSourceLabel != null)
                 _startSourceLabel.text = $"Ghost start: {_startSource}";
             RefreshConnectedHelp();
             FitScreen();
+
+            // Rebuild after FitScreen so text sizes use the actual displayed
+            // Game View scale rather than the raw Canvas pixel size.
+            if (_uiPreviewSource != null)
+                SetUIPreviewSource(_uiPreviewSource, false);
+
             RefreshSafeArea();
             RefreshPreviewPose(1f);
             RefreshPreviewControls();
@@ -910,6 +1312,9 @@ namespace Novelify.Editor
             if (_node.GetInputPortByName("Position")?.IsConnected == true) connected.Add("Position");
             if (_node.GetInputPortByName("Rotation")?.IsConnected == true) connected.Add("Rotation");
             if (_node.GetInputPortByName("Scale")?.IsConnected == true) connected.Add("Scale");
+            if (_node.GetInputPortByName("Margin")?.IsConnected == true) connected.Add("Margin");
+            if (_node.GetInputPortByName("Margin")?.IsConnected == true) connected.Add("Margin");
+            if (_node.GetInputPortByName("Character Reference")?.IsConnected == true) connected.Add("Character Reference / Instance ID");
             bool visible = connected.Count > 0;
             _connectedHelp.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (visible)
@@ -922,13 +1327,60 @@ namespace Novelify.Editor
             Rect available = _previewHost.contentRect;
             float maxWidth = Mathf.Max(100f, available.width - 48f);
             float maxHeight = Mathf.Max(100f, available.height - 48f);
-            float aspect = _resolution.x / (float)_resolution.y;
-            float width = Mathf.Min(maxWidth, maxHeight * aspect);
+            float outerWidth = Mathf.Max(1f, _resolution.x + _margin * 2f);
+            float outerHeight = Mathf.Max(1f, _resolution.y + _margin * 2f);
+            float aspect = outerWidth / outerHeight;
+            float width = Mathf.Min(maxWidth, maxHeight * aspect) * _viewportZoom;
             float height = width / aspect;
             _screen.style.width = width;
             _screen.style.height = height;
+            ApplyViewportLayout(width, height);
+            RefreshMarginArea();
             RefreshSafeArea();
             RefreshPortraits();
+            if (_uiPreviewSource != null)
+                SetUIPreviewSource(_uiPreviewSource, false);
+        }
+
+        private void ApplyViewportLayout(float outerVisualWidth, float outerVisualHeight)
+        {
+            if (_gameViewport == null) return;
+            float outerCanvasWidth = Mathf.Max(1f, _resolution.x + _margin * 2f);
+            float outerCanvasHeight = Mathf.Max(1f, _resolution.y + _margin * 2f);
+            float left = outerVisualWidth * _margin / outerCanvasWidth;
+            float top = outerVisualHeight * _margin / outerCanvasHeight;
+            _gameViewport.style.left = left;
+            _gameViewport.style.top = top;
+            _gameViewport.style.width = outerVisualWidth * _resolution.x / outerCanvasWidth;
+            _gameViewport.style.height = outerVisualHeight * _resolution.y / outerCanvasHeight;
+        }
+
+        private void OnViewportWheel(WheelEvent evt)
+        {
+            if (Mathf.Approximately(evt.delta.y, 0f)) return;
+            SetViewportZoom(_viewportZoom * (evt.delta.y > 0f ? 0.9f : 1.1f));
+            evt.StopImmediatePropagation();
+        }
+
+        private void SetViewportZoom(float zoom)
+        {
+            _viewportZoom = Mathf.Clamp(zoom, 0.15f, 2.5f);
+            _viewportZoomSlider?.SetValueWithoutNotify(_viewportZoom);
+            EditorPrefs.SetFloat(GetViewportZoomPrefsKey(), _viewportZoom);
+            FitScreen();
+        }
+
+        private void RefreshMarginArea()
+        {
+            if (_screen == null) return;
+            float alpha = _margin > 0f ? Mathf.Clamp01(_marginOpacity) : 0f;
+            _screen.style.backgroundColor = new Color(0.11f, 0.16f, 0.24f, alpha);
+            if (_marginGuideLabel != null)
+            {
+                _marginGuideLabel.style.display = _margin > 0f ? DisplayStyle.Flex : DisplayStyle.None;
+                _marginGuideLabel.text = $"OFF-SCREEN MARGIN  +{_margin:0.#}";
+                _marginGuideLabel.style.opacity = Mathf.Lerp(0.45f, 1f, alpha);
+            }
         }
 
         private void RefreshSafeArea()
@@ -961,7 +1413,7 @@ namespace Novelify.Editor
         private void RefreshPreviewPose(float progress)
         {
             progress = Mathf.Clamp01(progress);
-            float eased = _easeToggle?.value == false ? progress : SmoothStep(progress);
+            float eased = PortraitTweenEasingUtility.Evaluate(_easing, _customCurve, progress);
             PortraitState pose = PortraitState.Lerp(_start, _target, eased);
             // The screen receives its real dimensions one layout pass after the
             // window is built. Reapply START here so it can never remain at the
@@ -1002,18 +1454,53 @@ namespace Novelify.Editor
 
         private Vector2 GetPortraitBaseSize()
         {
-            if (_screen == null) return new Vector2(100f, 160f);
-            float screenWidth = Mathf.Max(1f, _screen.resolvedStyle.width);
-            float screenHeight = Mathf.Max(1f, _screen.resolvedStyle.height);
-            float aspect = PortraitAspect();
-            float height = screenHeight * 0.58f;
-            float width = height * aspect;
-            if (width > screenWidth * 0.72f)
-            {
-                width = screenWidth * 0.72f;
-                height = width / Mathf.Max(0.05f, aspect);
-            }
-            return new Vector2(width, height);
+            Vector2 viewportSize = GetPreviewScreenSize();
+            Vector2 stageSize = new Vector2(
+                Mathf.Max(1f, _stageCanvasSize.x),
+                Mathf.Max(1f, _stageCanvasSize.y));
+            Vector2 nativeSize = new Vector2(
+                Mathf.Max(1f, _portraitCanvasSize.x),
+                Mathf.Max(1f, _portraitCanvasSize.y));
+            return new Vector2(
+                nativeSize.x / stageSize.x * viewportSize.x,
+                nativeSize.y / stageSize.y * viewportSize.y);
+        }
+
+        private Vector2 GetPortraitContentBaseSize()
+        {
+            Vector2 baseSize = GetPortraitBaseSize();
+            return new Vector2(
+                Mathf.Max(1f, baseSize.x * _portraitContentRect.width),
+                Mathf.Max(1f, baseSize.y * _portraitContentRect.height));
+        }
+
+        private Vector2 GetPortraitContentOffset()
+        {
+            Vector2 baseSize = GetPortraitBaseSize();
+            Vector2 center = _portraitContentRect.center;
+            return new Vector2(
+                (center.x - 0.5f) * baseSize.x,
+                (center.y - 0.5f) * baseSize.y);
+        }
+
+        private void GetPortraitContentGeometry(
+            PortraitState state,
+            out Vector2 center,
+            out Vector2 size)
+        {
+            Vector2 rootCenter = NormalizedToLocal(state.Position);
+            Vector2 scaledOffset = Vector2.Scale(GetPortraitContentOffset(), state.Scale);
+            center = rootCenter + RotateVector(scaledOffset, state.Rotation);
+            size = Vector2.Scale(GetPortraitContentBaseSize(), Abs(state.Scale));
+        }
+
+        private Vector2 ContentCenterToRootCenter(
+            Vector2 contentCenter,
+            Vector2 scale,
+            float rotation)
+        {
+            Vector2 scaledOffset = Vector2.Scale(GetPortraitContentOffset(), scale);
+            return contentCenter - RotateVector(scaledOffset, rotation);
         }
 
         private void RefreshTransformFrame(float progress)
@@ -1023,11 +1510,9 @@ namespace Novelify.Editor
             _transformFrame.style.display = editableTargetVisible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!editableTargetVisible) return;
 
-            Vector2 baseSize = GetPortraitBaseSize();
-            Vector2 size = Vector2.Scale(baseSize, Abs(_target.Scale));
+            GetPortraitContentGeometry(_target, out Vector2 center, out Vector2 size);
             size.x = Mathf.Max(8f, size.x);
             size.y = Mathf.Max(8f, size.y);
-            Vector2 center = NormalizedToLocal(_target.Position);
             _transformFrame.style.width = size.x;
             _transformFrame.style.height = size.y;
             _transformFrame.style.left = center.x - size.x * 0.5f;
@@ -1180,14 +1665,830 @@ namespace Novelify.Editor
             parent.Add(image);
         }
 
-        private float PortraitAspect()
+        private VisualElement CreateUIPreviewOverlay()
         {
-            if (_character == null) return 0.65f;
-            CharacterPortrait portrait = _character.GetPortrait(CharacterEmotion.Neutral);
-            Sprite sprite = portrait.Body ?? portrait.Eyes ?? portrait.Details ?? portrait.Mouth;
-            if (sprite == null || sprite.rect.height <= 0f) return 0.65f;
-            return Mathf.Clamp(sprite.rect.width / sprite.rect.height, 0.15f, 4f);
+            VisualElement overlay = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+
+            overlay.style.position = UnityEngine.UIElements.Position.Absolute;
+            overlay.style.left = 0f;
+            overlay.style.top = 0f;
+            overlay.style.width = 0f;
+            overlay.style.height = 0f;
+            overlay.style.overflow = Overflow.Visible;
+            overlay.style.transformOrigin = new TransformOrigin(
+                Length.Percent(0f),
+                Length.Percent(0f),
+                0f);
+            overlay.style.display = DisplayStyle.None;
+
+            return overlay;
         }
+
+        private static string GetUIPreviewPrefsKey() =>
+            UIPreviewSourcePrefsPrefix + Hash128.Compute(Application.dataPath);
+
+        private static string GetUIPreviewVisiblePrefsKey() =>
+            UIPreviewVisiblePrefsPrefix + Hash128.Compute(Application.dataPath);
+
+        private static string GetMarginOpacityPrefsKey() =>
+            MarginOpacityPrefsPrefix + Hash128.Compute(Application.dataPath);
+
+        private static string GetViewportZoomPrefsKey() =>
+            ViewportZoomPrefsPrefix + Hash128.Compute(Application.dataPath);
+
+        private static void SaveUIPreviewSource(GameObject source)
+        {
+            string key = GetUIPreviewPrefsKey();
+            if (string.IsNullOrEmpty(key))
+                return;
+
+            if (source == null)
+            {
+                EditorPrefs.DeleteKey(key);
+                return;
+            }
+
+            GlobalObjectId globalObjectId =
+                GlobalObjectId.GetGlobalObjectIdSlow(source);
+            string serializedID = globalObjectId.ToString();
+
+            if (string.IsNullOrEmpty(serializedID))
+                EditorPrefs.DeleteKey(key);
+            else
+                EditorPrefs.SetString(key, serializedID);
+        }
+
+        private GameObject LoadUIPreviewSource()
+        {
+            string key = GetUIPreviewPrefsKey();
+            if (string.IsNullOrEmpty(key) || !EditorPrefs.HasKey(key))
+                return null;
+
+            string serializedID = EditorPrefs.GetString(key);
+            if (!GlobalObjectId.TryParse(
+                    serializedID,
+                    out GlobalObjectId globalObjectId))
+            {
+                EditorPrefs.DeleteKey(key);
+                return null;
+            }
+
+            GameObject source =
+                GlobalObjectId.GlobalObjectIdentifierToObjectSlow(
+                    globalObjectId) as GameObject;
+
+            if (source == null)
+                return null;
+
+            bool valid = source.GetComponent<RectTransform>() != null &&
+                         source.GetComponentInParent<Canvas>(true) != null &&
+                         !EditorUtility.IsPersistent(source) &&
+                         source.scene.IsValid();
+
+            if (!valid)
+            {
+                EditorPrefs.DeleteKey(key);
+                return null;
+            }
+
+            return source;
+        }
+
+        private void SetUIPreviewVisibility(bool visible)
+        {
+            _uiPreviewVisible = visible;
+            EditorPrefs.SetBool(GetUIPreviewVisiblePrefsKey(), visible);
+            if (_uiPreviewOverlay == null)
+                return;
+
+            _uiPreviewOverlay.style.display =
+                visible &&
+                _uiPreviewSource != null &&
+                _uiPreviewSource.activeInHierarchy
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+        }
+
+        private static bool LoadUIPreviewVisibility() =>
+            EditorPrefs.GetBool(GetUIPreviewVisiblePrefsKey(), true);
+
+        private void SetUIPreviewSource(GameObject source, bool persist = true)
+        {
+            _uiPreviewSource = source;
+            if (persist) SaveUIPreviewSource(source);
+
+            if (_uiPreviewOverlay == null)
+                return;
+
+            _uiPreviewOverlay.Clear();
+            _uiPreviewOverlay.style.display = DisplayStyle.None;
+
+            if (source == null || !source.activeInHierarchy)
+                return;
+
+            Canvas canvas = source.GetComponentInParent<Canvas>(true);
+            Canvas rootCanvas = canvas != null ? canvas.rootCanvas : null;
+            RectTransform canvasRect = rootCanvas != null
+                ? rootCanvas.GetComponent<RectTransform>()
+                : null;
+
+            RectTransform sourceRect =
+                source.GetComponent<RectTransform>();
+
+            if (canvasRect == null || sourceRect == null)
+            {
+                Debug.LogWarning(
+                    "The selected UI object must be under a Canvas and have a RectTransform.");
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+
+            Vector2 previewSize = GetPreviewScreenSize();
+            float scaleX = previewSize.x / canvasRect.rect.width;
+            float scaleY = previewSize.y / canvasRect.rect.height;
+            Rect viewportRect = GetGameViewportRect();
+
+            _uiPreviewOverlay.style.left = viewportRect.x;
+            _uiPreviewOverlay.style.top = viewportRect.y;
+            _uiPreviewOverlay.style.width = canvasRect.rect.width;
+            _uiPreviewOverlay.style.height = canvasRect.rect.height;
+            _uiPreviewOverlay.style.scale = new Scale(
+                new Vector3(scaleX, scaleY, 1f));
+
+            AddUIElementsRecursively(
+                _uiPreviewOverlay,
+                source.transform,
+                canvasRect,
+                1f);
+
+            SetUIPreviewVisibility(
+                _uiPreviewVisibleToggle == null ||
+                _uiPreviewVisibleToggle.value);
+        }
+
+        private void AddUIElementsRecursively(
+            VisualElement parent,
+            Transform current,
+            RectTransform canvasRect,
+            float parentOpacity)
+        {
+            if (!current.gameObject.activeInHierarchy)
+                return;
+
+            float opacity = parentOpacity;
+            CanvasGroup canvasGroup =
+                current.GetComponent<CanvasGroup>();
+
+            if (canvasGroup != null)
+                opacity *= canvasGroup.alpha;
+
+            RectTransform currentRect =
+                current.GetComponent<RectTransform>();
+
+            if (currentRect != null)
+            {
+                UnityEngine.UI.Image sourceImage =
+                    current.GetComponent<UnityEngine.UI.Image>();
+
+                if (sourceImage != null &&
+                    sourceImage.enabled)
+                {
+                    VisualElement previewImage =
+                        CreateSceneUIImage(sourceImage, opacity);
+
+                    if (previewImage != null)
+                    {
+                        ApplyCanvasRectTransform(
+                            previewImage,
+                            currentRect,
+                            canvasRect);
+                        parent.Add(previewImage);
+                    }
+                }
+
+                UnityEngine.UI.RawImage sourceRawImage =
+                    current.GetComponent<UnityEngine.UI.RawImage>();
+
+                if (sourceRawImage != null &&
+                    sourceRawImage.enabled &&
+                    sourceRawImage.texture != null)
+                {
+                    Image previewImage = new Image
+                    {
+                        image = sourceRawImage.texture,
+                        scaleMode = ScaleMode.StretchToFill,
+                        tintColor = sourceRawImage.color,
+                        pickingMode = PickingMode.Ignore
+                    };
+
+                    previewImage.style.opacity = opacity;
+                    ApplyCanvasRectTransform(
+                        previewImage,
+                        currentRect,
+                        canvasRect);
+                    parent.Add(previewImage);
+                }
+
+                UnityEngine.UI.Text sourceText =
+                    current.GetComponent<UnityEngine.UI.Text>();
+
+                if (sourceText != null && sourceText.enabled)
+                {
+                    Label previewText = new Label(sourceText.text)
+                    {
+                        pickingMode = PickingMode.Ignore
+                    };
+
+                    previewText.style.color = sourceText.color;
+                    previewText.style.fontSize = sourceText.fontSize;
+                    previewText.style.unityTextAlign = sourceText.alignment;
+                    previewText.style.whiteSpace = WhiteSpace.Normal;
+                    previewText.style.opacity = opacity;
+
+                    ApplyCanvasRectTransform(
+                        previewText,
+                        currentRect,
+                        canvasRect);
+                    parent.Add(previewText);
+                }
+
+                Component sourceTMPText =
+                    GetOptionalTMPText(current);
+
+                if (sourceTMPText != null &&
+                    GetComponentBool(sourceTMPText, "enabled", true))
+                {
+                    Label previewText = new Label(
+                        GetComponentString(sourceTMPText, "text"))
+                    {
+                        pickingMode = PickingMode.Ignore
+                    };
+
+                    previewText.style.color = GetComponentColor(
+                        sourceTMPText,
+                        "color",
+                        Color.white);
+                    previewText.style.fontSize = Mathf.Max(
+                        1f,
+                        GetComponentFloat(
+                            sourceTMPText,
+                            "fontSize",
+                            14f));
+                    previewText.style.unityTextAlign =
+                        ConvertTextAlignment(
+                            GetComponentString(
+                                sourceTMPText,
+                                "alignment"));
+                    previewText.style.whiteSpace = WhiteSpace.Normal;
+                    previewText.style.opacity = opacity;
+
+                    ApplyCanvasRectTransform(
+                        previewText,
+                        currentRect,
+                        canvasRect);
+                    parent.Add(previewText);
+                }
+            }
+
+            foreach (Transform child in current)
+            {
+                AddUIElementsRecursively(
+                    parent,
+                    child,
+                    canvasRect,
+                    opacity);
+            }
+        }
+
+        private VisualElement CreateSceneUIImage(
+            UnityEngine.UI.Image sourceImage,
+            float opacity)
+        {
+            if (sourceImage == null || !sourceImage.enabled)
+                return null;
+
+            if (sourceImage.sprite != null &&
+                sourceImage.type == UnityEngine.UI.Image.Type.Sliced)
+            {
+                Sprite sprite = sourceImage.sprite;
+                Vector4 border = sprite.border;
+
+                VisualElement slicedImage = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore
+                };
+
+                // UI Toolkit's Image element has no Sliced scale mode. Use
+                // the sprite as a background and copy the source sprite's
+                // border values so each uGUI Image.Type.Sliced is rendered
+                // with the same 9-slice behavior.
+                slicedImage.style.backgroundImage =
+                    new StyleBackground(sprite);
+                slicedImage.style.unitySliceLeft =
+                    Mathf.RoundToInt(border.x);
+                slicedImage.style.unitySliceRight =
+                    Mathf.RoundToInt(border.z);
+                slicedImage.style.unitySliceBottom =
+                    Mathf.RoundToInt(border.y);
+                slicedImage.style.unitySliceTop =
+                    Mathf.RoundToInt(border.w);
+                slicedImage.style.unitySliceScale = 1f;
+                slicedImage.style.unitySliceType = SliceType.Sliced;
+                slicedImage.style.unityBackgroundImageTintColor =
+                    sourceImage.color;
+                slicedImage.style.opacity = opacity;
+
+                return slicedImage;
+            }
+
+            if (sourceImage.sprite != null)
+            {
+                Image previewImage = new Image
+                {
+                    sprite = sourceImage.sprite,
+                    scaleMode = sourceImage.preserveAspect
+                        ? ScaleMode.ScaleToFit
+                        : ScaleMode.StretchToFill,
+                    tintColor = sourceImage.color,
+                    pickingMode = PickingMode.Ignore
+                };
+
+                previewImage.style.opacity = opacity;
+                return previewImage;
+            }
+
+            if (sourceImage.color.a > 0f)
+            {
+                VisualElement previewPanel = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore
+                };
+
+                previewPanel.style.backgroundColor = sourceImage.color;
+                previewPanel.style.opacity = opacity;
+                return previewPanel;
+            }
+
+            return null;
+        }
+
+        private Rect GetGameViewportRect()
+        {
+            float screenWidth = _screen != null ? _screen.resolvedStyle.width : 0f;
+            float screenHeight = _screen != null ? _screen.resolvedStyle.height : 0f;
+            if (screenWidth <= 0f || screenHeight <= 0f)
+                return new Rect(0f, 0f, Mathf.Max(1f, _resolution.x), Mathf.Max(1f, _resolution.y));
+
+            float outerWidth = Mathf.Max(1f, _resolution.x + _margin * 2f);
+            float outerHeight = Mathf.Max(1f, _resolution.y + _margin * 2f);
+            float left = screenWidth * _margin / outerWidth;
+            float top = screenHeight * _margin / outerHeight;
+            return new Rect(
+                left,
+                top,
+                screenWidth * _resolution.x / outerWidth,
+                screenHeight * _resolution.y / outerHeight);
+        }
+
+        private Vector2 GetPreviewScreenSize()
+        {
+            if (_screen != null)
+            {
+                Rect viewport = GetGameViewportRect();
+                float width = viewport.width;
+                float height = viewport.height;
+
+                if (width > 0f && height > 0f)
+                    return new Vector2(width, height);
+            }
+
+            Rect available = _previewHost != null
+                ? _previewHost.contentRect
+                : Rect.zero;
+
+            float maxWidth = Mathf.Max(100f, available.width - 48f);
+            float maxHeight = Mathf.Max(100f, available.height - 48f);
+            float aspect = _resolution.y > 0
+                ? _resolution.x / (float)_resolution.y
+                : 16f / 9f;
+
+            float widthFromAspect = Mathf.Min(
+                maxWidth,
+                maxHeight * aspect);
+
+            if (widthFromAspect <= 0f)
+                widthFromAspect = _resolution.x;
+
+            return new Vector2(
+                widthFromAspect,
+                widthFromAspect / aspect);
+        }
+
+        private static readonly Type OptionalTMPTextType =
+            Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro") ??
+            Type.GetType("TMPro.TMP_Text, Unity.TextMeshPro.Runtime");
+
+        private static Component GetOptionalTMPText(Transform current)
+        {
+            return OptionalTMPTextType == null
+                ? null
+                : current.GetComponent(OptionalTMPTextType);
+        }
+
+        private static object GetComponentMember(
+            Component component,
+            string memberName)
+        {
+            if (component == null)
+                return null;
+
+            const BindingFlags flags =
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.NonPublic;
+
+            Type type = component.GetType();
+
+            PropertyInfo property = type.GetProperty(
+                memberName,
+                flags);
+
+            if (property != null && property.CanRead)
+                return property.GetValue(component);
+
+            FieldInfo field = type.GetField(
+                memberName,
+                flags);
+
+            return field?.GetValue(component);
+        }
+
+        private static string GetComponentString(
+            Component component,
+            string memberName)
+        {
+            return GetComponentMember(component, memberName)?.ToString()
+                ?? string.Empty;
+        }
+
+        private static float GetComponentFloat(
+            Component component,
+            string memberName,
+            float fallback)
+        {
+            object value = GetComponentMember(component, memberName);
+
+            try
+            {
+                return value == null
+                    ? fallback
+                    : Convert.ToSingle(value);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private static bool GetComponentBool(
+            Component component,
+            string memberName,
+            bool fallback)
+        {
+            object value = GetComponentMember(component, memberName);
+
+            try
+            {
+                return value == null
+                    ? fallback
+                    : Convert.ToBoolean(value);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private static Color GetComponentColor(
+            Component component,
+            string memberName,
+            Color fallback)
+        {
+            object value = GetComponentMember(component, memberName);
+            return value is Color color ? color : fallback;
+        }
+
+        private static TextAnchor ConvertTextAlignment(string alignment)
+        {
+            bool centered = alignment.Contains("Center");
+            bool right = alignment.Contains("Right");
+            bool middle = alignment.Contains("Middle") ||
+                          alignment.Contains("Midline");
+            bool bottom = alignment.Contains("Bottom");
+
+            if (bottom)
+            {
+                if (right) return TextAnchor.LowerRight;
+                if (centered) return TextAnchor.LowerCenter;
+                return TextAnchor.LowerLeft;
+            }
+
+            if (middle)
+            {
+                if (right) return TextAnchor.MiddleRight;
+                if (centered) return TextAnchor.MiddleCenter;
+                return TextAnchor.MiddleLeft;
+            }
+
+            if (right) return TextAnchor.UpperRight;
+            if (centered) return TextAnchor.UpperCenter;
+            return TextAnchor.UpperLeft;
+        }
+
+        private static void ApplyCanvasRectTransform(
+            VisualElement element,
+            RectTransform source,
+            RectTransform canvasRect)
+        {
+            if (canvasRect.rect.width <= 0f ||
+                canvasRect.rect.height <= 0f)
+            {
+                return;
+            }
+
+            Vector3[] corners = new Vector3[4];
+            source.GetWorldCorners(corners);
+
+            float minX = float.MaxValue;
+            float maxX = float.MinValue;
+            float minY = float.MaxValue;
+            float maxY = float.MinValue;
+
+            for (int i = 0; i < corners.Length; i++)
+            {
+                Vector3 local =
+                    canvasRect.InverseTransformPoint(corners[i]);
+
+                minX = Mathf.Min(minX, local.x);
+                maxX = Mathf.Max(maxX, local.x);
+                minY = Mathf.Min(minY, local.y);
+                maxY = Mathf.Max(maxY, local.y);
+            }
+
+            Rect canvasBounds = canvasRect.rect;
+
+            // Keep the original Canvas coordinate system. The overlay itself
+            // is scaled once to fit _screen, so every child—including text—
+            // must remain in the original Canvas units here.
+            float left = minX - canvasBounds.xMin;
+            float top = canvasBounds.yMax - maxY;
+            float width = maxX - minX;
+            float height = maxY - minY;
+
+            element.style.position =
+                UnityEngine.UIElements.Position.Absolute;
+            element.style.left = left;
+            element.style.top = top;
+            element.style.width = width;
+            element.style.height = height;
+            element.style.rotate = new Rotate(
+                new Angle(
+                    source.localEulerAngles.z,
+                    AngleUnit.Degree));
+        }
+
+        private void ResolvePortraitCanvasSize()
+        {
+            _stageCanvasSize = new Vector2(
+                Mathf.Max(1, _resolution.x),
+                Mathf.Max(1, _resolution.y));
+            CharacterInfo layout = null;
+
+            foreach (CharacterInfo info in Resources.FindObjectsOfTypeAll<CharacterInfo>())
+            {
+                if (info == null || !info.gameObject.scene.IsValid() || info.character != _character ||
+                    !string.Equals(info.InstanceID ?? string.Empty, _instanceID ?? string.Empty, StringComparison.Ordinal))
+                    continue;
+                layout = info;
+                _portraitSizeSource = "live CharacterInfo layout";
+                if (info.transform.parent is RectTransform parentRect && IsUsableSize(parentRect.rect.size))
+                    _stageCanvasSize = parentRect.rect.size;
+                break;
+            }
+
+            if (layout == null)
+            {
+                foreach (NovelGraphRunner runner in Resources.FindObjectsOfTypeAll<NovelGraphRunner>())
+                {
+                    if (runner == null || !runner.gameObject.scene.IsValid() || runner.PortraitPrefab == null)
+                        continue;
+                    layout = runner.PortraitPrefab.GetComponent<CharacterInfo>();
+                    if (layout == null) continue;
+                    _portraitSizeSource = $"portrait prefab '{runner.PortraitPrefab.name}'";
+                    if (TryGetRunnerStageSize(runner, out Vector2 stageSize))
+                        _stageCanvasSize = stageSize;
+                    break;
+                }
+            }
+
+            if (layout != null && TryGetPortraitLayoutSize(layout, out Vector2 layoutSize))
+            {
+                _portraitCanvasSize = layoutSize;
+                ResolvePortraitContentRect();
+                return;
+            }
+
+            CharacterPortrait portrait = _character != null
+                ? _character.GetPortrait(CharacterEmotion.Neutral)
+                : default;
+            Sprite sprite = portrait.Body ?? portrait.Eyes ?? portrait.Details ?? portrait.Mouth;
+            if (sprite != null && IsUsableSize(sprite.rect.size))
+            {
+                _portraitCanvasSize = sprite.rect.size;
+                _portraitSizeSource = $"native sprite '{sprite.name}' (no CharacterInfo layout found)";
+                ResolvePortraitContentRect();
+                return;
+            }
+
+            _portraitCanvasSize = new Vector2(100f, 160f);
+            _portraitSizeSource = "fallback size (no portrait layout found)";
+            _portraitContentRect = new Rect(0f, 0f, 1f, 1f);
+        }
+
+        private void ResolvePortraitContentRect()
+        {
+            _portraitContentRect = new Rect(0f, 0f, 1f, 1f);
+            if (_character == null || !IsUsableSize(_portraitCanvasSize)) return;
+            CharacterPortrait portrait = _character.GetPortrait(CharacterEmotion.Neutral);
+            Sprite[] sprites = { portrait.Body, portrait.Eyes, portrait.Details, portrait.Mouth };
+            var visited = new HashSet<Sprite>();
+            bool found = false;
+            Rect combined = default;
+
+            foreach (Sprite sprite in sprites)
+            {
+                if (sprite == null || !visited.Add(sprite) ||
+                    !TryReadSpriteAlphaBounds(sprite, out Rect alphaBounds))
+                    continue;
+
+                Vector2 spriteSize = sprite.rect.size;
+                if (!IsUsableSize(spriteSize)) continue;
+                float fit = Mathf.Min(
+                    _portraitCanvasSize.x / spriteSize.x,
+                    _portraitCanvasSize.y / spriteSize.y);
+                Vector2 fitted = spriteSize * fit;
+                Vector2 inset = (_portraitCanvasSize - fitted) * 0.5f;
+                Rect visible = new Rect(
+                    (inset.x + alphaBounds.xMin * fitted.x) / _portraitCanvasSize.x,
+                    (inset.y + (1f - alphaBounds.yMax) * fitted.y) / _portraitCanvasSize.y,
+                    alphaBounds.width * fitted.x / _portraitCanvasSize.x,
+                    alphaBounds.height * fitted.y / _portraitCanvasSize.y);
+
+                combined = found
+                    ? Rect.MinMaxRect(
+                        Mathf.Min(combined.xMin, visible.xMin),
+                        Mathf.Min(combined.yMin, visible.yMin),
+                        Mathf.Max(combined.xMax, visible.xMax),
+                        Mathf.Max(combined.yMax, visible.yMax))
+                    : visible;
+                found = true;
+            }
+
+            if (!found) return;
+            const float handlePadding = 0.006f;
+            float xMin = Mathf.Clamp01(combined.xMin - handlePadding);
+            float yMin = Mathf.Clamp01(combined.yMin - handlePadding);
+            float xMax = Mathf.Clamp01(combined.xMax + handlePadding);
+            float yMax = Mathf.Clamp01(combined.yMax + handlePadding);
+            if (xMax > xMin && yMax > yMin)
+                _portraitContentRect = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+        }
+
+        private static bool TryReadSpriteAlphaBounds(Sprite sprite, out Rect bounds)
+        {
+            bounds = new Rect(0f, 0f, 1f, 1f);
+            if (sprite == null || sprite.texture == null) return false;
+            if (SpriteAlphaBoundsCache.TryGetValue(sprite, out bounds)) return true;
+            if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None) return false;
+
+            RenderTexture temporary = null;
+            Texture2D readback = null;
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                Rect source = sprite.textureRect;
+                float sampleScale = Mathf.Min(1f, 512f / Mathf.Max(source.width, source.height));
+                int width = Mathf.Max(1, Mathf.RoundToInt(source.width * sampleScale));
+                int height = Mathf.Max(1, Mathf.RoundToInt(source.height * sampleScale));
+                temporary = RenderTexture.GetTemporary(
+                    width,
+                    height,
+                    0,
+                    RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.Linear);
+                Vector2 uvScale = new Vector2(
+                    source.width / sprite.texture.width,
+                    source.height / sprite.texture.height);
+                Vector2 uvOffset = new Vector2(
+                    source.x / sprite.texture.width,
+                    source.y / sprite.texture.height);
+                Graphics.Blit(sprite.texture, temporary, uvScale, uvOffset);
+                RenderTexture.active = temporary;
+                readback = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
+                readback.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                readback.Apply(false, false);
+                Color32[] pixels = readback.GetPixels32();
+
+                int minX = width, minY = height, maxX = -1, maxY = -1;
+                for (int y = 0; y < height; y++)
+                {
+                    int row = y * width;
+                    for (int x = 0; x < width; x++)
+                    {
+                        if (pixels[row + x].a <= 3) continue;
+                        minX = Mathf.Min(minX, x);
+                        minY = Mathf.Min(minY, y);
+                        maxX = Mathf.Max(maxX, x);
+                        maxY = Mathf.Max(maxY, y);
+                    }
+                }
+
+                if (maxX < minX || maxY < minY) return false;
+                bounds = Rect.MinMaxRect(
+                    minX / (float)width,
+                    minY / (float)height,
+                    (maxX + 1f) / width,
+                    (maxY + 1f) / height);
+                SpriteAlphaBoundsCache[sprite] = bounds;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (readback != null) DestroyImmediate(readback);
+                if (temporary != null) RenderTexture.ReleaseTemporary(temporary);
+            }
+        }
+
+        private static bool TryGetPortraitLayoutSize(CharacterInfo info, out Vector2 size)
+        {
+            size = Vector2.zero;
+            if (info == null || info.transform is not RectTransform root) return false;
+            UnityEngine.UI.Image[] images = info.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+            if (images == null || images.Length == 0) return false;
+
+            bool found = false;
+            Vector2 minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            var corners = new Vector3[4];
+            foreach (UnityEngine.UI.Image image in images)
+            {
+                if (image == null || image.transform is not RectTransform rect) continue;
+                rect.GetWorldCorners(corners);
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    Vector3 point = root.InverseTransformPoint(corners[i]);
+                    minimum = Vector2.Min(minimum, point);
+                    maximum = Vector2.Max(maximum, point);
+                    found = true;
+                }
+            }
+
+            size = maximum - minimum;
+            return found && IsUsableSize(size);
+        }
+
+        private static bool TryGetRunnerStageSize(NovelGraphRunner runner, out Vector2 size)
+        {
+            size = Vector2.zero;
+            if (runner == null) return false;
+            if (runner.CharacterContainer is RectTransform stageRect && IsUsableSize(stageRect.rect.size))
+            {
+                size = stageRect.rect.size;
+                return true;
+            }
+
+            Canvas canvas = runner.CanvasDialogue != null
+                ? runner.CanvasDialogue.GetComponentInParent<Canvas>(true)
+                : null;
+            RectTransform canvasRect = canvas != null ? canvas.rootCanvas.GetComponent<RectTransform>() : null;
+            if (canvasRect == null || !IsUsableSize(canvasRect.rect.size)) return false;
+            size = canvasRect.rect.size;
+            return true;
+        }
+
+        private static bool IsUsableSize(Vector2 size) =>
+            size.x > 0.01f && size.y > 0.01f &&
+            !float.IsNaN(size.x) && !float.IsNaN(size.y) &&
+            !float.IsInfinity(size.x) && !float.IsInfinity(size.y);
 
         private void SetTarget(PortraitState state, bool recordUndo = true, string undoLabel = "Change target transform")
         {
@@ -1203,6 +2504,7 @@ namespace Novelify.Editor
                 Mathf.Clamp(state.Scale.x, -10f, 10f),
                 Mathf.Clamp(state.Scale.y, -10f, 10f));
             _target = new PortraitState(position, Mathf.Repeat(state.Rotation + 180f, 360f) - 180f, scale);
+            _targetSeededFromStart = false;
             _playingPreview = false;
             _previewPaused = false;
             _previewCompleted = false;
@@ -1220,10 +2522,20 @@ namespace Novelify.Editor
         private EditorSnapshot CaptureSnapshot() => new EditorSnapshot
         {
             Target = _target,
+            TargetSeededFromStart = _targetSeededFromStart,
             Duration = _durationField?.value ?? GetOption("Duration", 0.5f),
-            Ease = _easeToggle?.value ?? GetOption("Ease In Out", true),
+            Easing = _easing,
+            CustomCurve = CloneCurve(_customCurve),
             Wait = _waitToggle?.value ?? GetOption("Wait For Completion", true),
-            Clamp = _clampToggle?.value ?? true
+            Clamp = _clampToggle?.value ?? true,
+            PositionSpace = _positionSpace,
+            Relative = _relative,
+            AnimateTransform = _animateTransform,
+            Margin = _margin,
+            MarginOpacity = _marginOpacity,
+            InstanceID = _instanceID,
+            UIPreviewSource = _uiPreviewSource,
+            UIPreviewVisible = _uiPreviewVisible
         };
 
         private void RecordLocalUndo(string label) => RecordLocalUndo(CaptureSnapshot(), label);
@@ -1288,13 +2600,34 @@ namespace Novelify.Editor
             try
             {
                 _target = snapshot.Target;
+                _targetSeededFromStart = snapshot.TargetSeededFromStart;
                 _positionField?.SetValueWithoutNotify(snapshot.Target.Position);
                 _rotationField?.SetValueWithoutNotify(snapshot.Target.Rotation);
                 _scaleField?.SetValueWithoutNotify(snapshot.Target.Scale);
                 _durationField?.SetValueWithoutNotify(snapshot.Duration);
-                _easeToggle?.SetValueWithoutNotify(snapshot.Ease);
+                _easing = snapshot.Easing;
+                _customCurve = CloneCurve(snapshot.CustomCurve);
+                _easingDropdown?.SetValueWithoutNotify(EasingName(_easing));
+                _customCurveField?.SetValueWithoutNotify(CloneCurve(_customCurve));
                 _waitToggle?.SetValueWithoutNotify(snapshot.Wait);
                 _clampToggle?.SetValueWithoutNotify(snapshot.Clamp);
+                _positionSpace = snapshot.PositionSpace;
+                _relative = snapshot.Relative;
+                _animateTransform = snapshot.AnimateTransform;
+                _margin = Mathf.Max(0f, snapshot.Margin);
+                _marginOpacity = Mathf.Clamp01(snapshot.MarginOpacity);
+                _instanceID = snapshot.InstanceID ?? string.Empty;
+                _positionSpaceDropdown?.SetValueWithoutNotify(
+                    _positionSpace == CharacterPositionSpace.Canvas ? "Canvas" : "Normalized");
+                _relativeToggle?.SetValueWithoutNotify(_relative);
+                _animateTransformToggle?.SetValueWithoutNotify(_animateTransform);
+                _marginField?.SetValueWithoutNotify(_margin);
+                _marginOpacitySlider?.SetValueWithoutNotify(_marginOpacity);
+                _instanceIDField?.SetValueWithoutNotify(_instanceID);
+                _uiPreviewVisible = snapshot.UIPreviewVisible;
+                _UIPreview?.SetValueWithoutNotify(snapshot.UIPreviewSource);
+                _uiPreviewVisibleToggle?.SetValueWithoutNotify(_uiPreviewVisible);
+                SetUIPreviewSource(snapshot.UIPreviewSource);
                 _timeline?.SetValueWithoutNotify(1f);
                 _playingPreview = false;
                 _previewPaused = false;
@@ -1305,6 +2638,19 @@ namespace Novelify.Editor
                 _updatingFields = false;
                 _applyingHistory = false;
             }
+            RefreshEasingControls();
+            RefreshAnimationControls();
+            RefreshPositionFieldLabel();
+            EditorPrefs.SetFloat(GetMarginOpacityPrefsKey(), _marginOpacity);
+            ResolveStartState();
+            if (_targetSeededFromStart)
+                _target = new PortraitState(_start.Position, _target.Rotation, _target.Scale);
+            _positionField?.SetValueWithoutNotify(_target.Position);
+            ResolvePortraitCanvasSize();
+            if (_startSourceLabel != null)
+                _startSourceLabel.text = $"Ghost start: {_startSource}";
+            RefreshPortraitSizeLabel();
+            FitScreen();
             RefreshPreviewPose(1f);
             RefreshPreviewControls();
         }
@@ -1366,9 +2712,8 @@ namespace Novelify.Editor
             _scaleHandleDirection = direction;
             _gestureUndoRecorded = false;
 
-            Vector2 baseSize = GetPortraitBaseSize();
-            Vector2 halfSize = Vector2.Scale(baseSize, Abs(_gestureStartState.Scale)) * 0.5f;
-            Vector2 center = NormalizedToLocal(_gestureStartState.Position);
+            GetPortraitContentGeometry(_gestureStartState, out Vector2 center, out Vector2 fullSize);
+            Vector2 halfSize = fullSize * 0.5f;
             _fixedScaleCorner = center + RotateVector(Vector2.Scale(-direction, halfSize), _gestureStartState.Rotation);
             _screen.CapturePointer(evt.pointerId);
             evt.StopImmediatePropagation();
@@ -1438,10 +2783,10 @@ namespace Novelify.Editor
 
         private void UpdateScale(Vector2 pointer, bool fromCenter, bool uniform)
         {
-            Vector2 baseSize = GetPortraitBaseSize();
+            Vector2 baseSize = GetPortraitContentBaseSize();
             Vector2 initialMagnitude = Abs(_gestureStartState.Scale);
             Vector2 initialFullSize = Vector2.Scale(baseSize, initialMagnitude);
-            Vector2 center = NormalizedToLocal(_gestureStartState.Position);
+            GetPortraitContentGeometry(_gestureStartState, out Vector2 center, out _);
             Vector2 newFullSize;
             Vector2 newCenter;
 
@@ -1490,7 +2835,11 @@ namespace Novelify.Editor
             Vector2 newScale = Vector2.Scale(new Vector2(
                 newFullSize.x / Mathf.Max(1f, baseSize.x),
                 newFullSize.y / Mathf.Max(1f, baseSize.y)), sign);
-            SetTarget(new PortraitState(LocalToNormalized(newCenter), _gestureStartState.Rotation, newScale), false);
+            Vector2 rootCenter = ContentCenterToRootCenter(
+                newCenter,
+                newScale,
+                _gestureStartState.Rotation);
+            SetTarget(new PortraitState(LocalToNormalized(rootCenter), _gestureStartState.Rotation, newScale), false);
         }
 
         private void UpdateRotation(Vector2 pointer, bool snap)
@@ -1531,9 +2880,9 @@ namespace Novelify.Editor
 
         private bool IsInsideTarget(Vector2 pointer)
         {
-            Vector2 center = NormalizedToLocal(_target.Position);
+            GetPortraitContentGeometry(_target, out Vector2 center, out Vector2 size);
             Vector2 local = RotateVector(pointer - center, -_target.Rotation);
-            Vector2 halfSize = Vector2.Scale(GetPortraitBaseSize(), Abs(_target.Scale)) * 0.5f;
+            Vector2 halfSize = size * 0.5f;
             return Mathf.Abs(local.x) <= Mathf.Max(6f, halfSize.x) &&
                    Mathf.Abs(local.y) <= Mathf.Max(6f, halfSize.y);
         }
@@ -1607,13 +2956,61 @@ namespace Novelify.Editor
             return new Vector2((normalized.x * 0.5f + 0.5f) * width, (0.5f - normalized.y * 0.5f) * height);
         }
 
-        private Vector2 NormalizedToPixels(Vector2 normalized) => new Vector2(
-            (normalized.x * 0.5f + 0.5f) * _resolution.x,
-            (normalized.y * 0.5f + 0.5f) * _resolution.y);
+        private Vector2 NormalizedToPixels(Vector2 normalized)
+        {
+            Vector2 canvas = Vector2.Scale(normalized, GetCanvasExtent(_margin));
+            return canvas + new Vector2(_resolution.x * 0.5f, _resolution.y * 0.5f);
+        }
 
-        private Vector2 CanvasToNormalized(Vector2 canvas) => new Vector2(
-            _resolution.x > 0 ? canvas.x / (_resolution.x * 0.5f) : 0f,
-            _resolution.y > 0 ? canvas.y / (_resolution.y * 0.5f) : 0f);
+        private Vector2 GetCanvasExtent(float margin) => new Vector2(
+            Mathf.Max(1f, _resolution.x * 0.5f + Mathf.Max(0f, margin)),
+            Mathf.Max(1f, _resolution.y * 0.5f + Mathf.Max(0f, margin)));
+
+        private Vector2 CanvasToNormalized(Vector2 canvas)
+        {
+            Vector2 extent = GetCanvasExtent(_margin);
+            return new Vector2(canvas.x / extent.x, canvas.y / extent.y);
+        }
+
+        private Vector2 SourceNormalizedToVisual(Vector2 normalized, float sourceMargin)
+        {
+            Vector2 sourceExtent = GetCanvasExtent(sourceMargin);
+            Vector2 currentExtent = GetCanvasExtent(_margin);
+            return new Vector2(
+                normalized.x * sourceExtent.x / currentExtent.x,
+                normalized.y * sourceExtent.y / currentExtent.y);
+        }
+
+        private Vector2 AuthoredToVisualPosition(Vector2 authored)
+        {
+            Vector2 position = _positionSpace == CharacterPositionSpace.Canvas
+                ? CanvasToNormalized(authored)
+                : authored;
+            return _relative ? _start.Position + position : position;
+        }
+
+        private Vector2 VisualToAuthoredPosition(Vector2 visual)
+        {
+            Vector2 value = _relative ? visual - _start.Position : visual;
+            return _positionSpace == CharacterPositionSpace.Canvas
+                ? Vector2.Scale(value, GetCanvasExtent(_margin))
+                : value;
+        }
+
+        private void SetMargin(float value)
+        {
+            Vector2 authored = VisualToAuthoredPosition(_target.Position);
+            _margin = Mathf.Max(0f, value);
+            _marginField?.SetValueWithoutNotify(_margin);
+            ResolveStartState();
+            _target = new PortraitState(
+                _targetSeededFromStart ? _start.Position : AuthoredToVisualPosition(authored),
+                _target.Rotation,
+                _target.Scale);
+            FitScreen();
+            RefreshPositionFieldLabel();
+            RefreshPreviewPose(_timeline?.value ?? 1f);
+        }
 
         private void TogglePreview()
         {
@@ -1698,14 +3095,19 @@ namespace Novelify.Editor
             _graph.UndoBeginRecordGraph("Compose Portrait Tween");
             try
             {
-                TrySetUnconnected(_node.GetInputPortByName("Position"), _target.Position);
+                _authoredPosition = VisualToAuthoredPosition(_target.Position);
+                TrySetUnconnected(_node.GetInputPortByName("Position"), _authoredPosition);
                 TrySetUnconnected(_node.GetInputPortByName("Rotation"), _target.Rotation);
                 TrySetUnconnected(_node.GetInputPortByName("Scale"), _target.Scale);
-                _node.GetNodeOptionByName("Coordinate Space")?.TrySetValue(CharacterPositionSpace.Normalized);
-                _node.GetNodeOptionByName("Relative")?.TrySetValue(false);
-                _node.GetNodeOptionByName("Animate Transform")?.TrySetValue(true);
+                TrySetUnconnected(_node.GetInputPortByName("Margin"), _margin);
+                _node.GetNodeOptionByName("Coordinate Space")?.TrySetValue(_positionSpace);
+                _node.GetNodeOptionByName("Relative")?.TrySetValue(_relative);
+                _node.GetNodeOptionByName("Animate Transform")?.TrySetValue(_animateTransform);
+                _node.GetNodeOptionByName("Instance ID")?.TrySetValue(_instanceID ?? string.Empty);
                 _node.GetNodeOptionByName("Duration")?.TrySetValue(Mathf.Max(0f, _durationField.value));
-                _node.GetNodeOptionByName("Ease In Out")?.TrySetValue(_easeToggle.value);
+                _node.GetNodeOptionByName("Easing")?.TrySetValue(_easing);
+                _node.GetNodeOptionByName("Custom Easing Curve")?.TrySetValue(CloneCurve(_customCurve));
+                _node.GetNodeOptionByName("Ease In Out")?.TrySetValue(_easing != PortraitTweenEasing.None);
                 _node.GetNodeOptionByName("Wait For Completion")?.TrySetValue(_waitToggle.value);
             }
             finally
@@ -1728,7 +3130,147 @@ namespace Novelify.Editor
             _statusLabel.style.color = warning ? (Color)new Color32(251, 191, 36, 255) : SafeAccent;
         }
 
-        private static float SmoothStep(float t) => t * t * (3f - 2f * t);
+        private static List<string> EasingNames() => new List<string>
+        {
+            "None (Linear)", "Ease In", "Ease Out", "Ease In / Out",
+            "Anticipation", "Overshoot", "Bounce", "Custom Curve"
+        };
+
+        private static int EasingToIndex(PortraitTweenEasing easing) => easing switch
+        {
+            PortraitTweenEasing.EaseIn => 1,
+            PortraitTweenEasing.EaseOut => 2,
+            PortraitTweenEasing.EaseInOut => 3,
+            PortraitTweenEasing.Anticipation => 4,
+            PortraitTweenEasing.Overshoot => 5,
+            PortraitTweenEasing.Bounce => 6,
+            PortraitTweenEasing.Custom => 7,
+            _ => 0
+        };
+
+        private static string EasingName(PortraitTweenEasing easing)
+        {
+            List<string> names = EasingNames();
+            return names[EasingToIndex(easing)];
+        }
+
+        private static PortraitTweenEasing EasingFromName(string name) => name switch
+        {
+            "Ease In" => PortraitTweenEasing.EaseIn,
+            "Ease Out" => PortraitTweenEasing.EaseOut,
+            "Ease In / Out" => PortraitTweenEasing.EaseInOut,
+            "Anticipation" => PortraitTweenEasing.Anticipation,
+            "Overshoot" => PortraitTweenEasing.Overshoot,
+            "Bounce" => PortraitTweenEasing.Bounce,
+            "Custom Curve" => PortraitTweenEasing.Custom,
+            _ => PortraitTweenEasing.None
+        };
+
+        private static PortraitTweenEasing ResolveEasing(INode node)
+        {
+            PortraitTweenEasing easing = GetOption(node, "Easing", PortraitTweenEasing.EaseInOut);
+            bool legacyEaseInOut = GetOption(node, "Ease In Out", true);
+            return easing == PortraitTweenEasing.EaseInOut && !legacyEaseInOut
+                ? PortraitTweenEasing.None
+                : easing;
+        }
+
+        private void RefreshEasingControls()
+        {
+            if (_customCurveContainer != null)
+                _customCurveContainer.style.display = _easing == PortraitTweenEasing.Custom
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+        }
+
+        private void RefreshAnimationControls()
+        {
+            if (_durationField != null)
+                _durationField.tooltip = _animateTransform
+                    ? "Transform time in real-time seconds."
+                    : "Stored on the node, but runtime applies the transform immediately while Animate Transform is disabled.";
+        }
+
+        private void RefreshPositionFieldLabel()
+        {
+            if (_positionField == null) return;
+            _positionField.label = "Visual target (-1 to +1)";
+            Vector2 authored = VisualToAuthoredPosition(_target.Position);
+            string mode = _positionSpace == CharacterPositionSpace.Canvas ? "canvas units" : "normalized units";
+            string relative = _relative ? "relative displacement" : "absolute position";
+            _positionField.tooltip =
+                $"The composer always shows the absolute target visually. Confirm Tween writes {authored.x:0.###}, {authored.y:0.###} as a {relative} in {mode}.";
+        }
+
+        private void RefreshPortraitSizeLabel()
+        {
+            if (_portraitSizeLabel == null) return;
+            _portraitSizeLabel.text =
+                $"Portrait size: {_portraitCanvasSize.x:0.#} × {_portraitCanvasSize.y:0.#} canvas units from {_portraitSizeSource}.";
+        }
+
+        private void RestartPreviewAtCurrentPosition()
+        {
+            _playingPreview = false;
+            _previewPaused = false;
+            _previewCompleted = false;
+            RefreshPreviewPose(_timeline?.value ?? 1f);
+            RefreshPreviewControls();
+            SetStatus($"Timing changed to {EasingName(_easing)} — preview before confirming.", false);
+        }
+
+        private static AnimationCurve CloneCurve(AnimationCurve curve)
+        {
+            AnimationCurve clone = curve != null && curve.length > 0
+                ? new AnimationCurve(curve.keys)
+                : AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            if (curve != null)
+            {
+                clone.preWrapMode = curve.preWrapMode;
+                clone.postWrapMode = curve.postWrapMode;
+            }
+            return clone;
+        }
+
+        private static AnimationCurve SanitizeCustomCurve(AnimationCurve curve)
+        {
+            AnimationCurve sanitized = CloneCurve(curve);
+            var keys = new List<Keyframe>(sanitized.keys);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                Keyframe key = keys[i];
+                key.time = Mathf.Clamp01(key.time);
+                key.value = Mathf.Clamp01(key.value);
+                keys[i] = key;
+            }
+
+            keys.Sort((left, right) => left.time.CompareTo(right.time));
+            if (keys.Count == 0 || keys[0].time > 0.0001f)
+                keys.Insert(0, new Keyframe(0f, 0f));
+            else
+            {
+                Keyframe first = keys[0];
+                first.time = 0f;
+                first.value = 0f;
+                keys[0] = first;
+            }
+            if (keys[keys.Count - 1].time < 0.9999f)
+                keys.Add(new Keyframe(1f, 1f));
+            else
+            {
+                int lastIndex = keys.Count - 1;
+                Keyframe last = keys[lastIndex];
+                last.time = 1f;
+                last.value = 1f;
+                keys[lastIndex] = last;
+            }
+
+            return new AnimationCurve(keys.ToArray())
+            {
+                preWrapMode = sanitized.preWrapMode,
+                postWrapMode = sanitized.postWrapMode
+            };
+        }
 
         private static bool TryGetSelectedGameViewResolution(out Vector2Int resolution)
         {
@@ -1807,18 +3349,18 @@ namespace Novelify.Editor
         private void SetResolution(string name)
         {
             _followGameViewResolution = name.StartsWith("Game View", StringComparison.Ordinal);
+            Vector2Int next = _resolution;
             if (_followGameViewResolution)
             {
-                if (TryGetSelectedGameViewResolution(out Vector2Int selected)) _resolution = selected;
+                if (TryGetSelectedGameViewResolution(out Vector2Int selected)) next = selected;
             }
-            else if (name.StartsWith("2560", StringComparison.Ordinal)) _resolution = new Vector2Int(2560, 1440);
-            else if (name.StartsWith("1280", StringComparison.Ordinal)) _resolution = new Vector2Int(1280, 720);
-            else if (name.StartsWith("1080", StringComparison.Ordinal)) _resolution = new Vector2Int(1080, 1920);
-            else if (name.StartsWith("1920x1200", StringComparison.Ordinal)) _resolution = new Vector2Int(1920, 1200);
-            else if (name.StartsWith("1024", StringComparison.Ordinal)) _resolution = new Vector2Int(1024, 1024);
-            else _resolution = new Vector2Int(1920, 1080);
-            RefreshResolutionLabel();
-            FitScreen();
+            else if (name.StartsWith("2560", StringComparison.Ordinal)) next = new Vector2Int(2560, 1440);
+            else if (name.StartsWith("1280", StringComparison.Ordinal)) next = new Vector2Int(1280, 720);
+            else if (name.StartsWith("1080", StringComparison.Ordinal)) next = new Vector2Int(1080, 1920);
+            else if (name.StartsWith("1920x1200", StringComparison.Ordinal)) next = new Vector2Int(1920, 1200);
+            else if (name.StartsWith("1024", StringComparison.Ordinal)) next = new Vector2Int(1024, 1024);
+            else next = new Vector2Int(1920, 1080);
+            ApplyResolution(next);
         }
 
         private void RefreshAutomaticResolution(bool force)
@@ -1829,8 +3371,22 @@ namespace Novelify.Editor
             _nextResolutionCheck = now + 0.35d;
             if (!TryGetSelectedGameViewResolution(out Vector2Int selected)) return;
             if (selected == _resolution) return;
-            _resolution = selected;
+            ApplyResolution(selected);
+        }
+
+        private void ApplyResolution(Vector2Int resolution)
+        {
+            Vector2 authored = VisualToAuthoredPosition(_target.Position);
+            _resolution = resolution;
+            ResolveStartState();
+            _target = new PortraitState(
+                _targetSeededFromStart ? _start.Position : AuthoredToVisualPosition(authored),
+                _target.Rotation,
+                _target.Scale);
+            ResolvePortraitCanvasSize();
             RefreshResolutionLabel();
+            RefreshPortraitSizeLabel();
+            RefreshPositionFieldLabel();
             FitScreen();
         }
 

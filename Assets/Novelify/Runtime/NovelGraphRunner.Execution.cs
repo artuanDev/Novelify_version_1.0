@@ -134,7 +134,12 @@ namespace Novelify
                                     scale,
                                     move.SmoothMovement,
                                     move.Duration,
-                                    move.EaseInOut);
+                                    move.UseEasingPreset
+                                        ? move.Easing
+                                        : move.EaseInOut
+                                            ? PortraitTweenEasing.EaseInOut
+                                            : PortraitTweenEasing.None,
+                                    move.CustomEasingCurve);
                             }
                             else
                             {

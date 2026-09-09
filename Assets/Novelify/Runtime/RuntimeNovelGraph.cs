@@ -6,7 +6,7 @@ namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
@@ -50,6 +50,18 @@ namespace Novelify
     public enum CharacterFacing { Left, Right }
     public enum DialogueTimeMode { Unscaled, Scaled }
     public enum NovelCheckpointSaveMode { SnapshotOnly, Autosave }
+
+    public enum PortraitTweenEasing
+    {
+        None,
+        EaseIn,
+        EaseOut,
+        EaseInOut,
+        Anticipation,
+        Overshoot,
+        Bounce,
+        Custom
+    }
 
     [Serializable]
     public class RuntimeValue
@@ -291,6 +303,9 @@ namespace Novelify
         public float Duration = 0.5f;
         public bool WaitForCompletion = true;
         public bool EaseInOut = true;
+        public bool UseEasingPreset;
+        public PortraitTweenEasing Easing = PortraitTweenEasing.EaseInOut;
+        public AnimationCurve CustomEasingCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         public bool Relative;
 
         [SerializeReference] public RuntimeValueExpression CharacterValue;

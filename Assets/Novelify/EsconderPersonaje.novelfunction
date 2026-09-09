@@ -19,6 +19,42 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
+    - rid: 1000
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 3
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 1001
+      type: {class: 'Constant`1[[UnityEngine.AnimationCurve, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
     - rid: 8564938495289196870
       type: {class: GraphModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -53,7 +89,7 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: 283
+          x: 284
           y: 167
           width: 439
           height: 396
@@ -313,7 +349,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: c3d70bd4c9e366590387bb9a51e00391
         m_Version: 2
-        m_Position: {x: 283.0025, y: 167.04257}
+        m_Position: {x: 284.15247, y: 167.04257}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -339,6 +375,8 @@ MonoBehaviour:
           - Rotation
           - Scale
           - Margin
+          - __option_Easing
+          - __option_Custom Easing Curve
           m_ValueList:
           - rid: 8564938495289196879
           - rid: 8564938495289196880
@@ -358,6 +396,8 @@ MonoBehaviour:
           - rid: 8564938495289196894
           - rid: 8564938495289196895
           - rid: 8564938495289196896
+          - rid: 1000
+          - rid: 1001
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []

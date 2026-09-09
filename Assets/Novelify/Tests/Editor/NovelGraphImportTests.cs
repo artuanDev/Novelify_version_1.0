@@ -210,6 +210,11 @@ namespace Novelify.Tests
             transform.GetInputPortByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
             transform.GetInputPortByName("Margin").TrySetValue(120f);
             transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
+            transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.Custom);
+            transform.GetNodeOptionByName("Custom Easing Curve").TrySetValue(new AnimationCurve(
+                new Keyframe(0f, 0f),
+                new Keyframe(0.4f, 0.15f),
+                new Keyframe(1f, 1f)));
             Connect(start, transform);
             Connect(transform, dialogue);
 
@@ -226,6 +231,11 @@ namespace Novelify.Tests
             Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
             Assert.That(result.Margin, Is.EqualTo(120f));
             Assert.That(result.SmoothMovement, Is.True);
+            Assert.That(result.UseEasingPreset, Is.True);
+            Assert.That(result.Easing, Is.EqualTo(PortraitTweenEasing.Custom));
+            Assert.That(result.CustomEasingCurve.length, Is.EqualTo(3));
+            Assert.That(result.CustomEasingCurve.keys[1].time, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.CustomEasingCurve.keys[1].value, Is.EqualTo(0.15f).Within(0.0001f));
             Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
         }
 
