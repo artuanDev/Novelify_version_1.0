@@ -240,6 +240,14 @@ namespace Novelify.Editor
             StyleToolbarButton(removeMotion);
             effectRow.Add(removeMotion);
 
+            var soundStart = new Button
+            {
+                text = "Sound start",
+                tooltip = "Play this dialogue's Sound clip when the selected word begins"
+            };
+            StyleToolbarButton(soundStart);
+            effectRow.Add(soundStart);
+
             var previewTitle = new Label("In-game preview");
             previewTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
             previewTitle.style.fontSize = 9f;
@@ -557,6 +565,22 @@ namespace Novelify.Editor
                     }
                 },
                 "Motion removed");
+            soundStart.clicked += () => ApplyToSelection(
+                (document, firstIndex, lastIndex) =>
+                {
+                    // A cue is a single start position. Clear earlier cues and
+                    // mark the selected word so the marker remains easy to see
+                    // and move when the surrounding text is edited.
+                    for (int index = 0; index < document.Characters.Count; index++)
+                    {
+                        StyledCharacter character = document.Characters[index];
+                        character.Style.SoundCue = index >= firstIndex && index < lastIndex;
+                        if (character.Style.SoundCue)
+                            character.Style.Effect = null;
+                        document.Characters[index] = character;
+                    }
+                },
+                "Sound start");
             clearFormatting.clicked += () =>
             {
                 DialogueDocument document = ParseDocument(textProperty.stringValue);
@@ -785,6 +809,7 @@ namespace Novelify.Editor
             var sizes = new Stack<string>();
             var colors = new Stack<string>();
             var effects = new Stack<string>();
+            int soundCueDepth = 0;
 
             for (int index = 0; index < markup.Length; index++)
             {
@@ -802,7 +827,8 @@ namespace Novelify.Editor
                             ref italicDepth,
                             sizes,
                             colors,
-                            effects))
+                            effects,
+                            ref soundCueDepth))
                         {
                             index = closingBracket;
                             continue;
@@ -819,7 +845,8 @@ namespace Novelify.Editor
                         Italic = italicDepth > 0,
                         Size = sizes.Count > 0 ? sizes.Peek() : null,
                         Color = colors.Count > 0 ? colors.Peek() : null,
-                        Effect = effects.Count > 0 ? effects.Peek() : null
+                        Effect = effects.Count > 0 ? effects.Peek() : null,
+                        SoundCue = soundCueDepth > 0
                     }
                 });
             }
@@ -833,7 +860,8 @@ namespace Novelify.Editor
             ref int italicDepth,
             Stack<string> sizes,
             Stack<string> colors,
-            Stack<string> effects)
+            Stack<string> effects,
+            ref int soundCueDepth)
         {
             if (tag.Equals("b", StringComparison.OrdinalIgnoreCase))
             {
@@ -894,6 +922,11 @@ namespace Novelify.Editor
             if (tag.StartsWith("link=", StringComparison.OrdinalIgnoreCase))
             {
                 string effect = CleanTagValue(tag.Substring("link=".Length));
+                if (effect.Equals("novelify-sound", StringComparison.OrdinalIgnoreCase))
+                {
+                    soundCueDepth++;
+                    return true;
+                }
                 if (effect.Equals("novelify-wave", StringComparison.OrdinalIgnoreCase) ||
                     effect.Equals("novelify-shake", StringComparison.OrdinalIgnoreCase))
                 {
@@ -903,9 +936,10 @@ namespace Novelify.Editor
             }
 
             if (tag.Equals("/link", StringComparison.OrdinalIgnoreCase) &&
-                effects.Count > 0)
+                (effects.Count > 0 || soundCueDepth > 0))
             {
-                effects.Pop();
+                if (soundCueDepth > 0) soundCueDepth--;
+                else effects.Pop();
                 return true;
             }
 
@@ -1029,11 +1063,15 @@ namespace Novelify.Editor
             {
                 result.Append("<link=\"").Append(style.Effect).Append("\">");
             }
+            else if (style.SoundCue)
+            {
+                result.Append("<link=\"novelify-sound\">");
+            }
         }
 
         private static void AppendClosingTags(StringBuilder result, DialogueStyle style)
         {
-            if (!string.IsNullOrEmpty(style.Effect))
+            if (!string.IsNullOrEmpty(style.Effect) || style.SoundCue)
             {
                 result.Append("</link>");
             }
@@ -1123,6 +1161,11 @@ namespace Novelify.Editor
             if (DrawToolbarButton(ref x, rect.y, 46f, "Italic", "Toggle italic"))
             {
                 ApplyMarkup(property, selectionKey, "<i>", "</i>");
+            }
+
+            if (DrawToolbarButton(ref x, rect.y, 50f, "Sound", "Start the dialogue sound at the selected word"))
+            {
+                ApplyMarkup(property, selectionKey, "<link=\"novelify-sound\">", "</link>");
             }
 
             x += gap;
@@ -1289,6 +1332,16 @@ namespace Novelify.Editor
 
             bool isBold = openingTag == "<b>";
             bool isItalic = openingTag == "<i>";
+            bool isSoundCue = openingTag.Contains("novelify-sound");
+            if (isSoundCue)
+            {
+                for (int index = 0; index < document.Characters.Count; index++)
+                {
+                    StyledCharacter existing = document.Characters[index];
+                    existing.Style.SoundCue = false;
+                    document.Characters[index] = existing;
+                }
+            }
             bool toggleValue = true;
             if (isBold)
             {
@@ -1326,6 +1379,11 @@ namespace Novelify.Editor
                 else if (openingTag.StartsWith("<color=", StringComparison.Ordinal))
                 {
                     character.Style.Color = openingTag.Substring(7, openingTag.Length - 8);
+                }
+                else if (isSoundCue)
+                {
+                    character.Style.SoundCue = true;
+                    character.Style.Effect = null;
                 }
 
                 document.Characters[index] = character;
@@ -1386,13 +1444,15 @@ namespace Novelify.Editor
             public string Size;
             public string Color;
             public string Effect;
+            public bool SoundCue;
 
             public bool IsDefault =>
                 !Bold &&
                 !Italic &&
                 string.IsNullOrEmpty(Size) &&
                 string.IsNullOrEmpty(Color) &&
-                string.IsNullOrEmpty(Effect);
+                string.IsNullOrEmpty(Effect) &&
+                !SoundCue;
 
             public bool Equals(DialogueStyle other)
             {
@@ -1400,7 +1460,8 @@ namespace Novelify.Editor
                     Italic == other.Italic &&
                     string.Equals(Size, other.Size, StringComparison.Ordinal) &&
                     string.Equals(Color, other.Color, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(Effect, other.Effect, StringComparison.OrdinalIgnoreCase);
+                    string.Equals(Effect, other.Effect, StringComparison.OrdinalIgnoreCase) &&
+                    SoundCue == other.SoundCue;
             }
 
             public override bool Equals(object obj)
@@ -1415,7 +1476,8 @@ namespace Novelify.Editor
                     Italic,
                     Size,
                     Color?.ToUpperInvariant(),
-                    Effect?.ToUpperInvariant());
+                    Effect?.ToUpperInvariant(),
+                    SoundCue);
             }
         }
 

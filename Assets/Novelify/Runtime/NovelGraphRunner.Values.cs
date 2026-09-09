@@ -43,9 +43,33 @@ namespace Novelify
                     return RuntimeValue.From(EvaluateComparison(comparison));
                 case RuntimeBooleanExpression boolean:
                     return RuntimeValue.From(EvaluateBoolean(boolean));
+                case RuntimeRandomNumberExpression random:
+                    return EvaluateRandomNumber(random);
                 default:
                     return RuntimeValue.None();
             }
+        }
+
+        private RuntimeValue EvaluateRandomNumber(RuntimeRandomNumberExpression expression)
+        {
+            RuntimeValue minimum = Evaluate(expression.Minimum);
+            RuntimeValue maximum = Evaluate(expression.Maximum);
+            if (expression.ValueKind == RuntimeValueKind.Integer)
+            {
+                int min = minimum?.Kind == RuntimeValueKind.Integer ? minimum.IntegerValue : 0;
+                int max = maximum?.Kind == RuntimeValueKind.Integer ? maximum.IntegerValue : 1;
+                if (max < min) (min, max) = (max, min);
+                // Unity's integer overload excludes its upper bound. Novelify's
+                // author-facing range is inclusive at both ends.
+                return RuntimeValue.From(max == int.MaxValue
+                    ? (int)(min + Math.Floor(UnityEngine.Random.value * ((double)max - min + 1d)))
+                    : UnityEngine.Random.Range(min, max + 1));
+            }
+
+            float first = AsFloat(minimum, 0f);
+            float second = AsFloat(maximum, 1f);
+            if (second < first) (first, second) = (second, first);
+            return RuntimeValue.From(UnityEngine.Random.Range(first, second));
         }
 
         private RuntimeValue EvaluateArithmetic(RuntimeArithmeticExpression expression)
@@ -261,4 +285,3 @@ namespace Novelify
         }
     }
 }
-

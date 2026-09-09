@@ -6,6 +6,50 @@ namespace Novelify.Editor
 {
     public enum NovelNumericType { Integer, Float }
 
+    [Serializable, Node("Novelify/Values", null, "Random Number"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class RandomNumberNode : Node
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Random value",
+                "Generates a number between Minimum and Maximum whenever this value is evaluated.",
+                new Color32(244, 114, 182, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            INodeOption typeOption = GetNodeOptionByName("Number Type");
+            NovelNumericType numberType = typeOption != null &&
+                                          typeOption.TryGetValue(out NovelNumericType selectedType)
+                ? selectedType
+                : NovelNumericType.Integer;
+            if (numberType == NovelNumericType.Integer)
+            {
+                context.AddInputPort<int>("Minimum").WithDefaultValue(0).Build();
+                context.AddInputPort<int>("Maximum").WithDefaultValue(1).Build();
+                context.AddOutputPort<int>("Result")
+                    .WithTooltip("A random integer, including both Minimum and Maximum.")
+                    .Build();
+            }
+            else
+            {
+                context.AddInputPort<float>("Minimum").WithDefaultValue(0f).Build();
+                context.AddInputPort<float>("Maximum").WithDefaultValue(1f).Build();
+                context.AddOutputPort<float>("Result")
+                    .WithTooltip("A random floating-point value between Minimum and Maximum.")
+                    .Build();
+            }
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context) =>
+            context.AddOption<NovelNumericType>("Number Type")
+                .WithDefaultValue(NovelNumericType.Integer)
+                .Build();
+    }
+
     internal static class NovelStatePortDefinition
     {
         public static NovelVariableType GetValueType(INode node)

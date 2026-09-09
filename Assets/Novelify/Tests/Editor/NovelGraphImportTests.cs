@@ -106,14 +106,17 @@ namespace Novelify.Tests
             EndNode purchaseEnd = Add<EndNode>();
             EndNode leaveEnd = Add<EndNode>();
             EndNode fallbackEnd = Add<EndNode>();
-            choice.GetInputPortByName("Choice ID 0").TrySetValue("buy-key");
-            choice.GetInputPortByName("Choice Text 0").TrySetValue("Buy the key -- 20 coins");
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "buy-key";
+            choices.Entries[0].Text = "Buy the key -- 20 coins";
+            choices.Entries[0].UnavailablePolicy = NovelChoiceUnavailablePolicy.Disable;
+            choices.Entries[0].DisabledReason = "Need 20 coins.";
+            choices.Entries[0].OnceOnly = true;
+            choices.Entries[0].Transaction = transaction;
+            choices.Entries[1].Text = "Leave";
+            choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices);
+            choice.DefineNode();
             choice.GetInputPortByName("Condition 0").TrySetValue(false);
-            choice.GetInputPortByName("Unavailable Policy 0").TrySetValue(NovelChoiceUnavailablePolicy.Disable);
-            choice.GetInputPortByName("Disabled Reason 0").TrySetValue("Need 20 coins.");
-            choice.GetInputPortByName("Once Only 0").TrySetValue(true);
-            choice.GetInputPortByName("Transaction 0").TrySetValue(transaction);
-            choice.GetInputPortByName("Choice Text 1").TrySetValue("Leave");
             Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
             Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), purchaseEnd.GetInputPortByName("in")), Is.True);
             Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 1"), leaveEnd.GetInputPortByName("in")), Is.True);
@@ -131,6 +134,68 @@ namespace Novelify.Tests
             Assert.That(((RuntimeConstantExpression)purchase.StateChanges.Single().Value).Value.IntegerValue, Is.EqualTo(20));
             Assert.That(runtime.Choices[1].ChoiceID, Is.Not.Null.And.Not.Empty, "Blank IDs must derive a stable fallback ID.");
             Assert.That(runtime.UnavailableDestinationNodeID, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void ChoiceDropdownUsesItsIdForTheOutputNameAndRuntimeChoice()
+        {
+            StartNode start = Add<StartNode>();
+            ChoiceNode choice = Add<ChoiceNode>();
+            EndNode end = Add<EndNode>();
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "mall";
+            choices.Entries[0].Text = "Let's go to the mall";
+            Assert.That(choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices), Is.True);
+            choice.DefineNode();
+
+            Assert.That(choice.GetOutputPortByName("Choice 0").DisplayName, Is.EqualTo("mall"));
+            Assert.That(choice.GetInputPortByName("Condition 0"), Is.Not.Null,
+                "Only the non-redundant dynamic availability input should remain per choice.");
+            Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), end.GetInputPortByName("in")), Is.True);
+
+            RuntimeChoiceNode runtime = Import().AllNodes.OfType<RuntimeChoiceNode>().Single();
+            Assert.That(runtime.Choices[0].ChoiceID, Is.EqualTo("mall"));
+            Assert.That(runtime.Choices[0].ChoiceText, Is.EqualTo("Let's go to the mall"));
+        }
+
+        [Test]
+        public void DialogueSoundMarkerCompilesToItsVisibleCharacterIndex()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("Hello <b>dear</b> <link=\"novelify-sound\">friend</link>."));
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.PlaySoundCharacterIndex, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void RandomNumberNodeCompilesAsANumericExpression()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            RandomNumberNode random = Add<RandomNumberNode>();
+            EndNode end = Add<EndNode>();
+            random.GetNodeOptionByName("Number Type").TrySetValue(NovelNumericType.Float);
+            random.DefineNode();
+            random.GetInputPortByName("Minimum").TrySetValue(-15f);
+            random.GetInputPortByName("Maximum").TrySetValue(15f);
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Assert.That(_graph.Connect(random.GetOutputPortByName("Result"),
+                transform.GetInputPortByName("Rotation")), Is.True);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode runtime = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            var expression = runtime.RotationValue as RuntimeRandomNumberExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.ValueKind, Is.EqualTo(RuntimeValueKind.Float));
+            Assert.That(((RuntimeConstantExpression)expression.Minimum).Value.FloatValue, Is.EqualTo(-15f));
+            Assert.That(((RuntimeConstantExpression)expression.Maximum).Value.FloatValue, Is.EqualTo(15f));
         }
 
         [Test]

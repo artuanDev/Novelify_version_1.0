@@ -133,6 +133,14 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression B;
     }
 
+    [Serializable]
+    public class RuntimeRandomNumberExpression : RuntimeValueExpression
+    {
+        public RuntimeValueKind ValueKind = RuntimeValueKind.Integer;
+        [SerializeReference] public RuntimeValueExpression Minimum;
+        [SerializeReference] public RuntimeValueExpression Maximum;
+    }
+
     public enum RuntimeCharacterComponent
     {
         Character,
@@ -237,6 +245,10 @@ namespace Novelify
         public AudioClip TalkSound;
         public AudioClip PlaySound;
         [SerializeReference] public RuntimeValueExpression PlaySoundValue;
+
+        // -1 plays the clip as soon as the dialogue appears. Any other value is
+        // the visible character at which the rich-text sound marker begins.
+        public int PlaySoundCharacterIndex = -1;
 
         public float PitchMinVariation = -0.05f;
         public float PitchMaxVariation = 0.05f;

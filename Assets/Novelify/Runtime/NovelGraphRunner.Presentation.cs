@@ -79,7 +79,8 @@ namespace Novelify
             if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
             StopAudio(NodeSoundSource);
             AudioClip nodeClip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
-            if (NodeSoundSource != null && nodeClip != null)
+            if (NodeSoundSource != null && nodeClip != null &&
+                (node.PlaySoundCharacterIndex < 0 || node.ShowTextImmediately))
             {
                 NodeSoundSource.clip = nodeClip;
                 NodeSoundSource.Play();
@@ -125,7 +126,12 @@ namespace Novelify
                 character != null ? character.PitchMaxVariation : node.PitchMaxVariation,
                 node.CharactersPerSecond,
                 letter => _speaker?.RevealLetter(letter),
-                TimeMode);
+                TimeMode,
+                (characterIndex, _) =>
+                {
+                    if (characterIndex == node.PlaySoundCharacterIndex)
+                        PlayDialogueCue(node);
+                });
             if (_currentNode != node) yield break;
             _textRevealCoroutine = null;
             _isTextRevealing = false;
@@ -133,6 +139,15 @@ namespace Novelify
             _speaker?.StopSpeaking();
             StopTalkAudio();
             OnSupportedSaveBoundary();
+        }
+
+        private void PlayDialogueCue(RuntimeDialogueNode node)
+        {
+            AudioClip clip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
+            if (NodeSoundSource == null || clip == null) return;
+            NodeSoundSource.clip = clip;
+            NodeSoundSource.loop = false;
+            NodeSoundSource.Play();
         }
         private void PlaySound(RuntimePlaySoundNode node)
         {
@@ -211,6 +226,9 @@ namespace Novelify
             if (DialogueText == null) return;
             if (_textRevealCoroutine != null) StopCoroutine(_textRevealCoroutine);
             _textRevealCoroutine = null;
+            if (_currentNode is RuntimeDialogueNode dialogue &&
+                dialogue.PlaySoundCharacterIndex >= DialogueText.maxVisibleCharacters)
+                PlayDialogueCue(dialogue);
             DialogueText.maxVisibleCharacters = int.MaxValue;
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;

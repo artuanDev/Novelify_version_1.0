@@ -67,9 +67,9 @@ namespace Novelify.Editor.Samples.TopDownKeyQuest
                 throw new InvalidOperationException("The door graph must branch on HasKey and emit the open event.");
 
             Scene loaded = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            if (!loaded.IsValid() || UnityEngine.Object.FindFirstObjectByType<TopDownPlayerController>() == null ||
-                UnityEngine.Object.FindFirstObjectByType<TopDownNovelDoor>() == null ||
-                UnityEngine.Object.FindObjectsByType<TopDownNovelInteractable>(FindObjectsSortMode.None).Length < 2)
+            if (!loaded.IsValid() || UnityEngine.Object.FindAnyObjectByType<TopDownPlayerController>() == null ||
+                UnityEngine.Object.FindAnyObjectByType<TopDownNovelDoor>() == null ||
+                UnityEngine.Object.FindObjectsByType<TopDownNovelInteractable>().Length < 2)
                 throw new InvalidOperationException("The top-down scene is missing its player, door, or interactables.");
             Debug.Log("Novelify validated the top-down key quest scene and both runtime graphs.");
         }
@@ -480,9 +480,14 @@ namespace Novelify.Editor.Samples.TopDownKeyQuest
 
         private static void ConfigureChoice(ChoiceNode choice, int index, string id, string text)
         {
-            choice.GetInputPortByName($"Choice ID {index}").TrySetValue(id);
-            choice.GetInputPortByName($"Choice Text {index}").TrySetValue(text);
-            choice.GetInputPortByName($"Unavailable Policy {index}").TrySetValue(NovelChoiceUnavailablePolicy.Hide);
+            INodeOption option = choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID);
+            option.TryGetValue(out ChoiceAuthoringList current);
+            ChoiceAuthoringList updated = current?.Clone(index + 1) ?? ChoiceAuthoringList.CreateDefault(index + 1);
+            updated.Entries[index].ID = id;
+            updated.Entries[index].Text = text;
+            updated.Entries[index].UnavailablePolicy = NovelChoiceUnavailablePolicy.Hide;
+            option.TrySetValue(updated);
+            choice.DefineNode();
         }
 
         private static T Add<T>(NovelGraph graph, float x, float y) where T : Node, new()

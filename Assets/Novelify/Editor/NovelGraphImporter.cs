@@ -276,6 +276,7 @@ namespace Novelify.Editor
             SetPresentationOptions(node, runtimeNode);
             runtimeNode.UnavailableDestinationNodeID =
                 GetDestinationID(node.GetOutputPortByName("Fallback"), nodeIDMap);
+            IReadOnlyList<ChoiceAuthoringEntry> authoredChoices = node.GetAuthoredChoices();
 
             IEnumerable<IPort> choiceOutputPorts =
                 node.GetOutputPorts()
@@ -287,11 +288,14 @@ namespace Novelify.Editor
                 string index =
                     outputPort.Name.Substring("Choice ".Length);
 
-                IPort textPort =
-                    node.GetInputPortByName(
-                        $"Choice Text {index}");
+                int choiceIndex = int.TryParse(index, out int parsedIndex) ? parsedIndex : -1;
+                ChoiceAuthoringEntry authored = choiceIndex >= 0 && authoredChoices != null &&
+                    choiceIndex < authoredChoices.Count ? authoredChoices[choiceIndex] : null;
+                IPort conditionPort = node.GetInputPortByName($"Condition {index}");
 
-                string choiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
+                string authoredChoiceID = authored?.ID?.Trim();
+                string legacyChoiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
+                string choiceID = !string.IsNullOrEmpty(authoredChoiceID) ? authoredChoiceID : legacyChoiceID;
                 if (string.IsNullOrEmpty(choiceID)) choiceID = $"{nodeIDMap[node]}:{index}";
                 if (!_choiceIDs.Add(choiceID))
                     _context?.LogImportError($"Duplicate Choice ID '{choiceID}'. Choice IDs must be unique within a graph.");
@@ -299,27 +303,42 @@ namespace Novelify.Editor
                 var choiceData = new ChoiceData
                 {
                     ChoiceID = choiceID,
-                    ChoiceText =
-                        GetPortValue<string>(textPort),
+                    ChoiceText = !string.IsNullOrEmpty(authored?.Text)
+                        ? authored.Text
+                        : GetPortValue<string>(node.GetInputPortByName($"Choice Text {index}")),
 
-                    ChoiceTextValue = BuildExpression(textPort),
+                    ChoiceTextValue = !string.IsNullOrEmpty(authored?.Text)
+                        ? Constant(authored.Text)
+                        : BuildExpression(node.GetInputPortByName($"Choice Text {index}")),
 
-                    Condition = BuildExpression(node.GetInputPortByName($"Condition {index}")),
+                    Condition = conditionPort?.IsConnected == true || authored == null || authored.Condition
+                        ? BuildExpression(conditionPort)
+                        : Constant(false),
 
-                    UnavailablePolicy = GetPortValue<NovelChoiceUnavailablePolicy>(
-                        node.GetInputPortByName($"Unavailable Policy {index}")),
+                    UnavailablePolicy = authored != null &&
+                                        authored.UnavailablePolicy != NovelChoiceUnavailablePolicy.Hide
+                        ? authored.UnavailablePolicy
+                        : GetPortValue<NovelChoiceUnavailablePolicy>(
+                            node.GetInputPortByName($"Unavailable Policy {index}")),
 
-                    DisabledReason = GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
+                    DisabledReason = !string.IsNullOrEmpty(authored?.DisabledReason)
+                        ? authored.DisabledReason
+                        : GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
 
-                    DisabledReasonValue = BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
+                    DisabledReasonValue = !string.IsNullOrEmpty(authored?.DisabledReason)
+                        ? Constant(authored.DisabledReason)
+                        : BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
 
-                    OnceOnly = GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
+                    OnceOnly = authored?.OnceOnly == true ||
+                               GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
 
                     DestinationNodeID = GetDestinationID(outputPort, nodeIDMap)
                 };
 
-                NovelChoiceTransactionDefinition transaction = GetPortValue<NovelChoiceTransactionDefinition>(
-                    node.GetInputPortByName($"Transaction {index}"));
+                NovelChoiceTransactionDefinition transaction = authored?.Transaction != null
+                    ? authored.Transaction
+                    : GetPortValue<NovelChoiceTransactionDefinition>(
+                        node.GetInputPortByName($"Transaction {index}"));
                 if (transaction != null)
                 {
                     string transactionPath = AssetDatabase.GetAssetPath(transaction);
@@ -712,7 +731,8 @@ namespace Novelify.Editor
         }
 
         private static bool IsValueNode(INode node) =>
-            node is FloatBinaryNode || node is Vector2BinaryNode || node is SplitNovelCharacterNode ||
+            node is FloatBinaryNode || node is Vector2BinaryNode || node is RandomNumberNode ||
+            node is SplitNovelCharacterNode ||
             node is MakeNovelCharacterReferenceNode || node is SplitNovelCharacterReferenceNode ||
             node is GetNovelVariableNode || node is CompareNovelValuesNode ||
             node is AndNovelValuesNode || node is OrNovelValuesNode || node is NotNovelValueNode;
@@ -796,6 +816,20 @@ namespace Novelify.Editor
                     ValueKind = node is FloatBinaryNode ? RuntimeValueKind.Float : RuntimeValueKind.Vector2,
                     A = BuildExpression(node.GetInputPortByName("A"), activePath),
                     B = BuildExpression(node.GetInputPortByName("B"), activePath)
+                };
+            }
+
+            if (node is RandomNumberNode random)
+            {
+                NovelNumericType numberType = GetOptionValue(
+                    random.GetNodeOptionByName("Number Type"), NovelNumericType.Integer);
+                return new RuntimeRandomNumberExpression
+                {
+                    ValueKind = numberType == NovelNumericType.Integer
+                        ? RuntimeValueKind.Integer
+                        : RuntimeValueKind.Float,
+                    Minimum = BuildExpression(random.GetInputPortByName("Minimum"), activePath),
+                    Maximum = BuildExpression(random.GetInputPortByName("Maximum"), activePath)
                 };
             }
 
@@ -1183,6 +1217,7 @@ namespace Novelify.Editor
 
             runtimeNode.DialogueText =
                 dialogue.Text ?? string.Empty;
+            runtimeNode.PlaySoundCharacterIndex = FindSoundCueCharacterIndex(runtimeNode.DialogueText);
 
             runtimeNode.Emotion =
                 GetOptionValue(
@@ -1213,6 +1248,34 @@ namespace Novelify.Editor
                     node.GetNodeOptionByName(
                         "Animate Blinking"),
                     true);
+        }
+
+        internal static int FindSoundCueCharacterIndex(string markup)
+        {
+            if (string.IsNullOrEmpty(markup)) return -1;
+            int visibleCharacters = 0;
+            for (int index = 0; index < markup.Length; index++)
+            {
+                if (markup[index] != '<')
+                {
+                    visibleCharacters++;
+                    continue;
+                }
+
+                int closingBracket = markup.IndexOf('>', index + 1);
+                if (closingBracket < 0)
+                {
+                    visibleCharacters++;
+                    continue;
+                }
+
+                string tag = markup.Substring(index + 1, closingBracket - index - 1);
+                if (tag.IndexOf("novelify-sound", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return visibleCharacters;
+                index = closingBracket;
+            }
+
+            return -1;
         }
 
         private T GetPortValue<T>(IPort port)
