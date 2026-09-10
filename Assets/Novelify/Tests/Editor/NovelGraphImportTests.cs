@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Novelify.Editor;
 using NUnit.Framework;
+using TMPro;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -170,6 +172,30 @@ namespace Novelify.Tests
 
             RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
             Assert.That(runtime.PlaySoundCharacterIndex, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void DialogueFontsAndFontMarkupSurviveImport()
+        {
+            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                "Assets/Novelify/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset");
+            Assert.That(font, Is.Not.Null);
+
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            var authored = new RichDialogueText(
+                $"Hello <font=\"{font.name}\">friend</font>.")
+            {
+                DefaultFont = font,
+                FontAssets = new List<TMP_FontAsset> { font }
+            };
+            Assert.That(dialogue.GetNodeOptionByName("Dialogue").TrySetValue(authored), Is.True);
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.DialogueFont, Is.SameAs(font));
+            Assert.That(runtime.DialogueFontAssets, Is.EquivalentTo(new[] { font }));
+            Assert.That(runtime.DialogueText, Does.Contain($"<font=\"{font.name}\">"));
         }
 
         [Test]

@@ -1,15 +1,19 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 namespace Novelify
 {
     public partial class NovelGraphRunner
     {
+        private TMP_FontAsset _defaultDialogueFont;
+
         private void InitializePresentation()
         {
             if (_customPresentation != null) return;
             if (DialogueText != null)
             {
+                _defaultDialogueFont = DialogueText.font;
                 DialogueText.richText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
                 if (DialogueText.GetComponent<NovelTextEffects>() == null)
@@ -90,6 +94,7 @@ namespace Novelify
             _speaker?.BeginDialogue(node);
             if (DialogueText != null)
             {
+                ApplyDialogueFonts(node);
                 DialogueText.SetText(node.DialogueText ?? string.Empty);
                 if (node.ShowTextImmediately || string.IsNullOrEmpty(node.DialogueText))
                     DialogueText.maxVisibleCharacters = int.MaxValue;
@@ -106,6 +111,34 @@ namespace Novelify
                 OnDialogueBoundaryPresented(node, speakerName, node.DialogueText ?? string.Empty);
                 Session.RaiseDialoguePresented(RuntimeGraph, node, speakerName);
             }
+        }
+
+        private void ApplyDialogueFonts(RuntimeDialogueNode node)
+        {
+            if (DialogueText == null || node == null)
+            {
+                return;
+            }
+
+            if (node.DialogueFont != null)
+            {
+                MaterialReferenceManager.AddFontAsset(node.DialogueFont);
+            }
+
+            if (node.DialogueFontAssets != null)
+            {
+                foreach (TMP_FontAsset font in node.DialogueFontAssets)
+                {
+                    if (font != null)
+                    {
+                        MaterialReferenceManager.AddFontAsset(font);
+                    }
+                }
+            }
+
+            DialogueText.font = node.DialogueFont != null
+                ? node.DialogueFont
+                : _defaultDialogueFont;
         }
 
         private void OnCustomRevealCompleted(RuntimeDialogueNode node)

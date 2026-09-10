@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(11, NovelGraph.AssetExtension)]
+    [ScriptedImporter(12, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -1226,8 +1226,12 @@ namespace Novelify.Editor
                     node.GetNodeOptionByName("Dialogue"),
                     new RichDialogueText(string.Empty));
 
-            runtimeNode.DialogueText =
-                dialogue.Text ?? string.Empty;
+            runtimeNode.DialogueText = dialogue.Text ?? string.Empty;
+            runtimeNode.DialogueFont = dialogue.DefaultFont;
+            runtimeNode.DialogueFontAssets = dialogue.FontAssets?
+                .Where(font => font != null)
+                .Distinct()
+                .ToList() ?? new List<TMPro.TMP_FontAsset>();
             runtimeNode.PlaySoundCharacterIndex = FindSoundCueCharacterIndex(runtimeNode.DialogueText);
 
             runtimeNode.Emotion =
@@ -1328,7 +1332,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(6, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(7, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

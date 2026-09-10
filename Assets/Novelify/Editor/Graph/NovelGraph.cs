@@ -307,46 +307,26 @@ namespace Novelify.Editor
                         node.GetInputPortByName("Speaker"));
                     CharacterEmotion emotion = CharacterEmotion.Neutral;
                     node.GetNodeOptionByName("Emotion")?.TryGetValue(out emotion);
-                    INodeOption speakerPreviewOption = node.GetNodeOptionByName("Speaker Preview");
-                    bool updateSpeakerPreview = speakerPreviewOption != null &&
-                        speakerPreviewOption.TryGetValue(out SpeakerPortraitOption currentSpeakerPreview) &&
-                        (currentSpeakerPreview.Character != character || currentSpeakerPreview.Emotion != emotion);
+                    INodeOption previewOption = node.GetNodeOptionByName("Speaker Preview");
 
-                    RichDialogueText dialogue = new RichDialogueText(string.Empty);
-                    node.GetNodeOptionByName("Dialogue")?.TryGetValue(out dialogue);
-                    INodeOption dialoguePreviewOption = node.GetNodeOptionByName("Dialogue Preview");
-                    bool updateDialoguePreview = dialoguePreviewOption != null &&
-                        dialoguePreviewOption.TryGetValue(out DialoguePreviewOption currentDialoguePreview) &&
-                        !string.Equals(
-                            currentDialoguePreview.Text,
-                            dialogue.Text,
-                            StringComparison.Ordinal);
-
-                    if (!updateSpeakerPreview && !updateDialoguePreview)
+                    if (previewOption == null ||
+                        !previewOption.TryGetValue(out SpeakerPortraitOption currentPreview) ||
+                        (currentPreview.Character == character && currentPreview.Emotion == emotion))
                     {
                         continue;
                     }
 
                     if (!isRecordingUndo)
                     {
-                        graph.UndoBeginRecordGraph("Update Dialogue Node Previews");
+                        graph.UndoBeginRecordGraph("Update Speaker Portrait Previews");
                         isRecordingUndo = true;
                     }
 
-                    if (updateSpeakerPreview)
+                    previewOption.TrySetValue(new SpeakerPortraitOption
                     {
-                        speakerPreviewOption.TrySetValue(new SpeakerPortraitOption
-                        {
-                            Character = character,
-                            Emotion = emotion
-                        });
-                    }
-
-                    if (updateDialoguePreview)
-                    {
-                        dialoguePreviewOption.TrySetValue(
-                            new DialoguePreviewOption(dialogue.Text ?? string.Empty));
-                    }
+                        Character = character,
+                        Emotion = emotion
+                    });
                 }
             }
             finally

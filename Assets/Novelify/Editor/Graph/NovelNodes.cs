@@ -269,7 +269,6 @@ namespace Novelify.Editor
         {
             context.AddOption("Dialogue", typeof(RichDialogueText))
                 .WithDefaultValue(new RichDialogueText(string.Empty))
-                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption("Show Text Immediately", typeof(bool))
@@ -323,9 +322,6 @@ namespace Novelify.Editor
 
             context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
                 .WithDefaultValue(new SpeakerPortraitOption())
-                .Build();
-            context.AddOption("Dialogue Preview", typeof(DialoguePreviewOption))
-                .WithDefaultValue(new DialoguePreviewOption(string.Empty))
                 .Build();
             base.OnDefineOptions(context);
 
@@ -429,13 +425,9 @@ namespace Novelify.Editor
             context.AddOption("Speaker Preview", typeof(SpeakerPortraitOption))
                 .WithDefaultValue(new SpeakerPortraitOption())
                 .Build();
-            context.AddOption("Dialogue Preview", typeof(DialoguePreviewOption))
-                .WithDefaultValue(new DialoguePreviewOption(string.Empty))
-                .Build();
 
             context.AddOption("Dialogue", typeof(RichDialogueText))
                 .WithDefaultValue(new RichDialogueText(string.Empty))
-                .ShowInInspectorOnly()
                 .Build();
 
             context.AddOption(ChoicesOptionID, typeof(ChoiceAuthoringList))

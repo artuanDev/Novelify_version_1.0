@@ -1,7 +1,9 @@
 @import url("NovelNodeBase.uss");
 
 .ge-node {
-    min-width: 290px;
+    width: 500px;
+    min-width: 500px;
+    max-width: 500px;
     background-color: #111d32;
     border-left-color: #28769a;
     border-right-color: #28769a;

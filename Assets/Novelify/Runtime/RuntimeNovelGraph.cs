@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 3;
+        public const int CurrentSchemaVersion = 4;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
@@ -238,6 +239,8 @@ namespace Novelify
         public Sprite PortraitMouthOpen;
 
         public string DialogueText;
+        public TMP_FontAsset DialogueFont;
+        public List<TMP_FontAsset> DialogueFontAssets = new List<TMP_FontAsset>();
 
         public bool ShowTextImmediately;
         public float CharactersPerSecond = 30f;
