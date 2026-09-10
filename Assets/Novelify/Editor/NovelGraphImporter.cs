@@ -471,6 +471,7 @@ namespace Novelify.Editor
                 IPort rotationPort = node.GetInputPortByName("Rotation");
                 IPort scalePort = node.GetInputPortByName("Scale");
                 IPort marginPort = node.GetInputPortByName("Margin");
+                IPort opacityPort = node.GetInputPortByName("Opacity");
                 Vector2 legacyPosition = new Vector2(
                     GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0f),
                     GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0f));
@@ -491,6 +492,7 @@ namespace Novelify.Editor
                 runtimeNode.RotationValue = useLegacyRotation ? Constant(legacyRotation) : BuildExpression(rotationPort);
                 runtimeNode.ScaleValue = useLegacyScale ? Constant(legacyScale) : BuildExpression(scalePort);
                 runtimeNode.MarginValue = useLegacyMargin ? Constant(legacyMargin) : BuildExpression(marginPort);
+                runtimeNode.OpacityValue = BuildExpression(opacityPort);
                 if (useLegacyPosition) position = legacyPosition;
                 if (useLegacyRotation) rotation = legacyRotation;
                 if (useLegacyScale) scale = legacyScale;
@@ -500,6 +502,7 @@ namespace Novelify.Editor
                 runtimeNode.Rotation = rotation;
                 runtimeNode.Scale = scale;
                 runtimeNode.Margin = Mathf.Max(0f, margin);
+                runtimeNode.Opacity = Mathf.Clamp01(GetPortValue<float>(opacityPort));
             }
             else
             {
@@ -527,6 +530,8 @@ namespace Novelify.Editor
                 AnimationCurve.Linear(0f, 0f, 1f, 1f)));
             runtimeNode.EaseInOut = easing != PortraitTweenEasing.None;
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
+            runtimeNode.AnimateOpacity = node is TransformSpeakerPortraitNode &&
+                GetOptionValue(node.GetNodeOptionByName("Animate Transparency"), false);
 
             if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
                 IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
@@ -615,7 +620,13 @@ namespace Novelify.Editor
                 case HideCharacterNode _:
                     return new RuntimeHideCharacterNode { Character = character, InstanceID = instanceID,
                         CharacterValue = BuildExpression(node.GetInputPortByName("Character")),
-                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")) };
+                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")),
+                        Transition = GetOptionValue(node.GetNodeOptionByName("Hide Transition"), CharacterTransitionMode.Instant),
+                        Direction = GetOptionValue(node.GetNodeOptionByName("Exit Toward"), CharacterTransitionDirection.Left),
+                        SlideOffset = GetOptionValue(node.GetNodeOptionByName("Slide Offset"), 0.45f),
+                        Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.35f)),
+                        Easing = GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseIn),
+                        WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true) };
                 case HideAllCharactersNode _: return new RuntimeHideAllCharactersNode();
                 case SetCharacterEmotionNode _:
                     return new RuntimeSetCharacterEmotionNode { Character = character, InstanceID = instanceID, Emotion = emotion,
@@ -1238,6 +1249,17 @@ namespace Novelify.Editor
                 GetOptionValue(
                     node.GetNodeOptionByName("Emotion"),
                     CharacterEmotion.Neutral);
+
+            runtimeNode.Appearance = GetOptionValue(
+                node.GetNodeOptionByName("Character Appearance"), CharacterTransitionMode.Instant);
+            runtimeNode.AppearanceDirection = GetOptionValue(
+                node.GetNodeOptionByName("Appear From"), CharacterTransitionDirection.Left);
+            runtimeNode.AppearanceDuration = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Appearance Duration"), 0.35f));
+            runtimeNode.SlideOffset = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Slide Offset"), 0.45f));
+            runtimeNode.AppearanceEasing = GetOptionValue(
+                node.GetNodeOptionByName("Appearance Easing"), PortraitTweenEasing.EaseOut);
 
             runtimeNode.ShowTextImmediately =
                 GetOptionValue(

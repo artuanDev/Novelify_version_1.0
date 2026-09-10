@@ -102,6 +102,10 @@ namespace Novelify.Editor
                 .WithDefaultValue(0f)
                 .WithTooltip("Canvas-unit distance allowed beyond each screen edge.")
                 .Build();
+            context.AddInputPort<float>("Opacity")
+                .WithDefaultValue(1f)
+                .WithTooltip("Target portrait opacity from 0 (transparent) to 1 (opaque). Used when Animate Transparency is enabled.")
+                .Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -125,6 +129,7 @@ namespace Novelify.Editor
                 .Build();
             context.AddOption<bool>("Relative").WithTooltip("Add the X/Y displacement, in the selected coordinate space, to the current position. Rotation and scale remain absolute.").Build();
             context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
+            context.AddOption<bool>("Animate Transparency").WithTooltip("Animate the portrait opacity to the Opacity value over the same duration and easing.").WithDefaultValue(false).Build();
             context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
             context.AddOption<PortraitTweenEasing>("Easing").WithTooltip("Timing preset for the portrait tween. None uses constant linear timing; Custom uses the editable curve.").WithDefaultValue(PortraitTweenEasing.EaseInOut).Build();
             context.AddOption<AnimationCurve>("Custom Easing Curve").WithTooltip("Custom tween progress from time 0 to 1. Used only when Easing is Custom.").WithDefaultValue(AnimationCurve.Linear(0f, 0f, 1f, 1f)).ShowInInspectorOnly().Build();
@@ -337,6 +342,27 @@ namespace Novelify.Editor
 
             context.AddOption("Animate Blinking", typeof(bool))
                 .WithDefaultValue(true)
+                .Build();
+
+            context.AddOption<CharacterTransitionMode>("Character Appearance")
+                .WithDefaultValue(CharacterTransitionMode.Instant)
+                .WithTooltip("Optionally fade or slide the speaker into the scene when this dialogue begins.")
+                .Build();
+            context.AddOption<CharacterTransitionDirection>("Appear From")
+                .WithDefaultValue(CharacterTransitionDirection.Left)
+                .WithTooltip("Direction used by Slide and Fade And Slide appearances.")
+                .Build();
+            context.AddOption<float>("Slide Offset")
+                .WithDefaultValue(0.45f)
+                .WithTooltip("In case of sliding, how much? the lower the number the less it slides")
+                .Build();
+            context.AddOption<float>("Appearance Duration")
+                .WithDefaultValue(0.35f)
+                .WithTooltip("Appearance time in real-time seconds.")
+                .Build();
+            context.AddOption<PortraitTweenEasing>("Appearance Easing")
+                .WithDefaultValue(PortraitTweenEasing.EaseOut)
+                .WithTooltip("Timing preset for the speaker appearance.")
                 .Build();
         }
     }

@@ -114,7 +114,37 @@ namespace Novelify.Editor
     }
 
     [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
-    public class HideCharacterNode : CharacterActionNode { }
+    public class HideCharacterNode : CharacterActionNode
+    {
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<CharacterTransitionMode>("Hide Transition")
+                .WithDefaultValue(CharacterTransitionMode.Instant)
+                .WithTooltip("Hide instantly, fade out, slide out, or fade and slide out.")
+                .Build();
+            context.AddOption<CharacterTransitionDirection>("Exit Toward")
+                .WithDefaultValue(CharacterTransitionDirection.Left)
+                .WithTooltip("Direction used by Slide and Fade And Slide exits.")
+                .Build();
+            context.AddOption<float>("Duration")
+                .WithDefaultValue(0.35f)
+                .WithTooltip("Exit time in real-time seconds.")
+                .Build();
+            context.AddOption<float>("Slide Offset")
+                .WithDefaultValue(0.45f)
+                .WithTooltip("In case of sliding, how much? the lower the number the less it slides")
+                .Build();
+            context.AddOption<PortraitTweenEasing>("Easing")
+                .WithDefaultValue(PortraitTweenEasing.EaseIn)
+                .WithTooltip("Timing preset for the exit transition.")
+                .Build();
+            context.AddOption<bool>("Wait For Completion")
+                .WithDefaultValue(true)
+                .WithTooltip("Wait for the exit before continuing. Disable to run it during following nodes.")
+                .Build();
+        }
+    }
 
     [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class HideAllCharactersNode : ActionNode { }

@@ -189,6 +189,7 @@ The composer has its own Undo/Redo history. One complete drag is stored as one a
 - **Scale input:** absolute target local X/Y scale.
 - **Relative:** interpret normalized X/Y as a displacement from the current position; rotation and scale remain absolute.
 - **Animate Transform:** animate position, rotation and scale together. Disabled applies them instantly.
+- **Opacity / Animate Transparency:** optionally tween the portrait's CanvasGroup opacity from its current value to a 0-to-1 target, independently of transform animation.
 - **Duration:** transform time in real-time seconds. Zero applies instantly.
 - **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
 - **Wait For Completion:** pause story flow until the transform finishes. Disable to continue to dialogue or animate multiple characters in parallel.
@@ -203,14 +204,16 @@ Math nodes are non-flow expressions and do not execute on their own. Float and V
 
 **Random Number** is also a value node. Choose Integer or Float, connect or enter its inclusive minimum/maximum range, and wire Result into any matching numeric input. A new value is generated whenever the expression is evaluated.
 
-**Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
+**Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. The active Dialogue speaker is moved in front of the other portraits while the character stage remains behind the dialogue panel. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
+
+Dialogue nodes can set **Character Appearance** to Instant, Fade, Slide, or Fade And Slide, with a direction, duration, and easing preset. **Hide Character** exposes the matching exit controls and can either wait for the transition or continue story flow while it plays.
 
 ### Utility Nodes
 
 | Node | Behavior |
 | --- | --- |
 | Show Character | Creates/reveals one instance and sets its position and emotion. |
-| Hide Character | Hides one instance without deleting it; showing it again reuses it. |
+| Hide Character | Hides one instance without deleting it; optionally fades/slides it out before reuse. |
 | Hide All Characters | Hides the entire stage. |
 | Set Character Emotion | Applies the selected expression, creating the character if needed. |
 | Wait | Pauses flow for dialogue-clock seconds; dialogue clicks cannot skip it. |

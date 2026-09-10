@@ -175,6 +175,8 @@ namespace Novelify.Editor
             public CharacterPositionSpace PositionSpace;
             public bool Relative;
             public bool AnimateTransform;
+            public bool AnimateOpacity;
+            public float TargetOpacity;
             public float Margin;
             public float MarginOpacity;
             public string InstanceID;
@@ -250,6 +252,9 @@ namespace Novelify.Editor
         private CharacterPositionSpace _positionSpace;
         private bool _relative;
         private bool _animateTransform;
+        private bool _animateOpacity;
+        private float _startOpacity = 1f;
+        private float _targetOpacity = 1f;
         private float _margin;
         [SerializeField] private float _marginOpacity = 0.35f;
         [SerializeField] private float _viewportZoom = 1f;
@@ -279,6 +284,7 @@ namespace Novelify.Editor
         private FloatField _rotationField;
         private Vector2Field _scaleField;
         private FloatField _durationField;
+        private Slider _opacitySlider;
         private ObjectField _UIPreview;
         [SerializeField] private GameObject _uiPreviewSource;
         private Toggle _uiPreviewVisibleToggle;
@@ -291,6 +297,7 @@ namespace Novelify.Editor
         private DropdownField _positionSpaceDropdown;
         private Toggle _relativeToggle;
         private Toggle _animateTransformToggle;
+        private Toggle _animateOpacityToggle;
         private FloatField _marginField;
         private Slider _marginOpacitySlider;
         private Slider _viewportZoomSlider;
@@ -686,6 +693,24 @@ namespace Novelify.Editor
             _scaleField.RegisterValueChangedCallback(evt => SetTarget(new PortraitState(_target.Position, _target.Rotation, evt.newValue)));
             inspector.Add(_scaleField);
 
+            _opacitySlider = new Slider("Opacity", 0f, 1f)
+            {
+                value = _targetOpacity,
+                showInputField = true
+            };
+            _opacitySlider.tooltip = "Target portrait opacity. Enable Animate transparency below to include it in this tween.";
+            _opacitySlider.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.TargetOpacity = evt.previousValue;
+                RecordLocalUndo(before, "Change target opacity");
+                _targetOpacity = Mathf.Clamp01(evt.newValue);
+                _opacitySlider.SetValueWithoutNotify(_targetOpacity);
+                RestartPreviewAtCurrentPosition();
+            });
+            inspector.Add(_opacitySlider);
+
             _marginField = new FloatField("Off-screen margin") { value = _margin };
             _marginField.tooltip = "Extra canvas units beyond every game-screen edge. The shaded bands in the stage show this reachable margin.";
             _marginField.RegisterValueChangedCallback(evt =>
@@ -860,6 +885,20 @@ namespace Novelify.Editor
                 RefreshAnimationControls();
             });
             inspector.Add(_animateTransformToggle);
+
+            _animateOpacityToggle = new Toggle("Animate transparency") { value = _animateOpacity };
+            _animateOpacityToggle.tooltip = "Tween the portrait from its current opacity to the target opacity using this duration and timing.";
+            _animateOpacityToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields) return;
+                EditorSnapshot before = CaptureSnapshot();
+                before.AnimateOpacity = evt.previousValue;
+                RecordLocalUndo(before, "Change transparency animation");
+                _animateOpacity = evt.newValue;
+                RefreshAnimationControls();
+                RestartPreviewAtCurrentPosition();
+            });
+            inspector.Add(_animateOpacityToggle);
 
             _durationField = new FloatField("Duration (seconds)") { value = GetOption("Duration", 0.5f) };
             _durationField.RegisterValueChangedCallback(evt =>
@@ -1063,6 +1102,8 @@ namespace Novelify.Editor
             _positionSpace = GetOption(_node, "Coordinate Space", CharacterPositionSpace.Normalized);
             _relative = GetOption(_node, "Relative", false);
             _animateTransform = GetOption(_node, "Animate Transform", false);
+            _animateOpacity = GetOption(_node, "Animate Transparency", false);
+            _targetOpacity = ResolveOpacity(_node);
             _margin = Mathf.Max(0f, ResolveMargin(_node));
             _easing = ResolveEasing(_node);
             _customCurve = SanitizeCustomCurve(GetOption(
@@ -1093,6 +1134,7 @@ namespace Novelify.Editor
 
         private void ResolveStartState()
         {
+            _startOpacity = 1f;
             if (Application.isPlaying)
             {
                 foreach (CharacterInfo info in Resources.FindObjectsOfTypeAll<CharacterInfo>())
@@ -1100,6 +1142,7 @@ namespace Novelify.Editor
                     if (info == null || !info.gameObject.scene.IsValid() || info.character != _character ||
                         !string.Equals(info.InstanceID ?? string.Empty, _instanceID, StringComparison.Ordinal)) continue;
                     _start = new PortraitState(CanvasToNormalized(info.Position), info.Rotation, info.Scale);
+                    _startOpacity = info.Opacity;
                     _startSource = "Live character in Play Mode";
                     return;
                 }
@@ -1261,17 +1304,25 @@ namespace Novelify.Editor
                 : value;
         }
 
+        private float ResolveOpacity(TransformSpeakerPortraitNode node)
+        {
+            IPort port = node.GetInputPortByName("Opacity");
+            return port == null ? 1f : Mathf.Clamp01(NovelGraphValues.Resolve<float>(_graph, port));
+        }
+
         private void RefreshAll()
         {
             _updatingFields = true;
             _positionField?.SetValueWithoutNotify(_target.Position);
             _rotationField?.SetValueWithoutNotify(_target.Rotation);
             _scaleField?.SetValueWithoutNotify(_target.Scale);
+            _opacitySlider?.SetValueWithoutNotify(_targetOpacity);
             _marginField?.SetValueWithoutNotify(_margin);
             _positionSpaceDropdown?.SetValueWithoutNotify(
                 _positionSpace == CharacterPositionSpace.Canvas ? "Canvas" : "Normalized");
             _relativeToggle?.SetValueWithoutNotify(_relative);
             _animateTransformToggle?.SetValueWithoutNotify(_animateTransform);
+            _animateOpacityToggle?.SetValueWithoutNotify(_animateOpacity);
             _instanceIDField?.SetValueWithoutNotify(_instanceID ?? string.Empty);
             _marginOpacitySlider?.SetValueWithoutNotify(_marginOpacity);
             _viewportZoomSlider?.SetValueWithoutNotify(_viewportZoom);
@@ -1316,7 +1367,7 @@ namespace Novelify.Editor
             if (_node.GetInputPortByName("Rotation")?.IsConnected == true) connected.Add("Rotation");
             if (_node.GetInputPortByName("Scale")?.IsConnected == true) connected.Add("Scale");
             if (_node.GetInputPortByName("Margin")?.IsConnected == true) connected.Add("Margin");
-            if (_node.GetInputPortByName("Margin")?.IsConnected == true) connected.Add("Margin");
+            if (_node.GetInputPortByName("Opacity")?.IsConnected == true) connected.Add("Opacity");
             if (_node.GetInputPortByName("Character Reference")?.IsConnected == true) connected.Add("Character Reference / Instance ID");
             bool visible = connected.Count > 0;
             _connectedHelp.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
@@ -1423,6 +1474,10 @@ namespace Novelify.Editor
             // UI Toolkit default top-left position after an early zero-size pass.
             ApplyVisualState(_ghost, _start);
             ApplyVisualState(_targetPortrait, pose);
+            if (_targetPortrait != null)
+                _targetPortrait.style.opacity = _animateOpacity
+                    ? Mathf.LerpUnclamped(_startOpacity, _targetOpacity, eased)
+                    : _startOpacity;
             RefreshGhostVisibility();
             RefreshTransformFrame(progress);
 
@@ -2602,6 +2657,8 @@ namespace Novelify.Editor
             PositionSpace = _positionSpace,
             Relative = _relative,
             AnimateTransform = _animateTransform,
+            AnimateOpacity = _animateOpacity,
+            TargetOpacity = _targetOpacity,
             Margin = _margin,
             MarginOpacity = _marginOpacity,
             InstanceID = _instanceID,
@@ -2685,6 +2742,8 @@ namespace Novelify.Editor
                 _positionSpace = snapshot.PositionSpace;
                 _relative = snapshot.Relative;
                 _animateTransform = snapshot.AnimateTransform;
+                _animateOpacity = snapshot.AnimateOpacity;
+                _targetOpacity = Mathf.Clamp01(snapshot.TargetOpacity);
                 _margin = Mathf.Max(0f, snapshot.Margin);
                 _marginOpacity = Mathf.Clamp01(snapshot.MarginOpacity);
                 _instanceID = snapshot.InstanceID ?? string.Empty;
@@ -2692,6 +2751,8 @@ namespace Novelify.Editor
                     _positionSpace == CharacterPositionSpace.Canvas ? "Canvas" : "Normalized");
                 _relativeToggle?.SetValueWithoutNotify(_relative);
                 _animateTransformToggle?.SetValueWithoutNotify(_animateTransform);
+                _animateOpacityToggle?.SetValueWithoutNotify(_animateOpacity);
+                _opacitySlider?.SetValueWithoutNotify(_targetOpacity);
                 _marginField?.SetValueWithoutNotify(_margin);
                 _marginOpacitySlider?.SetValueWithoutNotify(_marginOpacity);
                 _instanceIDField?.SetValueWithoutNotify(_instanceID);
@@ -3199,9 +3260,11 @@ namespace Novelify.Editor
                 TrySetUnconnected(_node.GetInputPortByName("Rotation"), _target.Rotation);
                 TrySetUnconnected(_node.GetInputPortByName("Scale"), _target.Scale);
                 TrySetUnconnected(_node.GetInputPortByName("Margin"), _margin);
+                TrySetUnconnected(_node.GetInputPortByName("Opacity"), _targetOpacity);
                 _node.GetNodeOptionByName("Coordinate Space")?.TrySetValue(_positionSpace);
                 _node.GetNodeOptionByName("Relative")?.TrySetValue(_relative);
                 _node.GetNodeOptionByName("Animate Transform")?.TrySetValue(_animateTransform);
+                _node.GetNodeOptionByName("Animate Transparency")?.TrySetValue(_animateOpacity);
                 _node.GetNodeOptionByName("Instance ID")?.TrySetValue(_instanceID ?? string.Empty);
                 _node.GetNodeOptionByName("Duration")?.TrySetValue(Mathf.Max(0f, _durationField.value));
                 _node.GetNodeOptionByName("Easing")?.TrySetValue(_easing);
@@ -3285,9 +3348,11 @@ namespace Novelify.Editor
         private void RefreshAnimationControls()
         {
             if (_durationField != null)
-                _durationField.tooltip = _animateTransform
-                    ? "Transform time in real-time seconds."
-                    : "Stored on the node, but runtime applies the transform immediately while Animate Transform is disabled.";
+                _durationField.tooltip = _animateTransform || _animateOpacity
+                    ? "Tween time in real-time seconds."
+                    : "Stored on the node, but no animation channel is currently enabled.";
+            _opacitySlider?.SetEnabled(
+                _animateOpacity && _node.GetInputPortByName("Opacity")?.IsConnected != true);
         }
 
         private void RefreshPositionFieldLabel()

@@ -43,7 +43,7 @@ namespace Novelify
             }
             if (TryGet(character, instanceID, out CharacterInfo existing))
             {
-                existing.gameObject.SetActive(true);
+                existing.PrepareToShow();
                 return existing;
             }
             if (_root == null || _prefab == null)
@@ -64,13 +64,32 @@ namespace Novelify
 
         public void Hide(NovelCharacter character, string instanceID = "")
         {
-            if (TryGet(character, instanceID, out CharacterInfo info)) info.gameObject.SetActive(false);
+            if (TryGet(character, instanceID, out CharacterInfo info)) info.HideImmediately();
+        }
+
+        public CharacterInfo Hide(
+            NovelCharacter character,
+            string instanceID,
+            CharacterTransitionMode transition,
+            CharacterTransitionDirection direction,
+            float duration,
+            float offset,
+            PortraitTweenEasing easing)
+        {
+            if (!TryGet(character, instanceID, out CharacterInfo info)) return null;
+            info.TransitionOut(transition, direction, duration, offset, easing);
+            return info;
+        }
+
+        public void BringToFront(CharacterInfo info)
+        {
+            if (info != null && info.transform.parent == _root) info.transform.SetAsLastSibling();
         }
 
         public void HideAll()
         {
             foreach (CharacterInfo info in _characters.Values)
-                if (info != null) info.gameObject.SetActive(false);
+                if (info != null) info.HideImmediately();
         }
 
         public void StopMovement()

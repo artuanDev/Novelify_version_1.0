@@ -49,6 +49,8 @@ namespace Novelify
 
     public enum CharacterPositionSpace { Canvas, Normalized }
     public enum CharacterFacing { Left, Right }
+    public enum CharacterTransitionMode { Instant, Fade, Slide, FadeAndSlide }
+    public enum CharacterTransitionDirection { Left, Right, Up, Down }
     public enum DialogueTimeMode { Unscaled, Scaled }
     public enum NovelCheckpointSaveMode { SnapshotOnly, Autosave }
 
@@ -248,6 +250,12 @@ namespace Novelify
         public bool AnimateBlinking = true;
         public CharacterEmotion Emotion = CharacterEmotion.Neutral;
 
+        public CharacterTransitionMode Appearance = CharacterTransitionMode.Instant;
+        public CharacterTransitionDirection AppearanceDirection = CharacterTransitionDirection.Left;
+        public float AppearanceDuration = 0.35f;
+        public float SlideOffset = 0.45f;
+        public PortraitTweenEasing AppearanceEasing = PortraitTweenEasing.EaseOut;
+
         public float MouthFrameInterval = 0.12f;
         public float MouthTimingVariation = 0.35f;
         public float MouthPauseChance = 0.12f;
@@ -310,6 +318,8 @@ namespace Novelify
         public PortraitTweenEasing Easing = PortraitTweenEasing.EaseInOut;
         public AnimationCurve CustomEasingCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         public bool Relative;
+        public bool AnimateOpacity;
+        public float Opacity = 1f;
 
         [SerializeReference] public RuntimeValueExpression CharacterValue;
         [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
@@ -317,6 +327,7 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression RotationValue;
         [SerializeReference] public RuntimeValueExpression ScaleValue;
         [SerializeReference] public RuntimeValueExpression MarginValue;
+        [SerializeReference] public RuntimeValueExpression OpacityValue;
     }
 
     [Serializable]
@@ -391,6 +402,12 @@ namespace Novelify
     {
         public NovelCharacter Character;
         public string InstanceID;
+        public CharacterTransitionMode Transition = CharacterTransitionMode.Instant;
+        public CharacterTransitionDirection Direction = CharacterTransitionDirection.Left;
+        public float Duration = 0.35f;
+        public float SlideOffset = 0.45f;
+        public PortraitTweenEasing Easing = PortraitTweenEasing.EaseIn;
+        public bool WaitForCompletion = true;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
         [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
     }

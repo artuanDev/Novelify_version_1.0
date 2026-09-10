@@ -235,7 +235,9 @@ namespace Novelify.Tests
             transform.GetInputPortByName("Rotation").TrySetValue(35f);
             transform.GetInputPortByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
             transform.GetInputPortByName("Margin").TrySetValue(120f);
+            transform.GetInputPortByName("Opacity").TrySetValue(0.4f);
             transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
+            transform.GetNodeOptionByName("Animate Transparency").TrySetValue(true);
             transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.Custom);
             transform.GetNodeOptionByName("Custom Easing Curve").TrySetValue(new AnimationCurve(
                 new Keyframe(0f, 0f),
@@ -256,6 +258,9 @@ namespace Novelify.Tests
             Assert.That(result.Rotation, Is.EqualTo(35f));
             Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
             Assert.That(result.Margin, Is.EqualTo(120f));
+            Assert.That(result.Opacity, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.AnimateOpacity, Is.True);
+            Assert.That(result.OpacityValue, Is.TypeOf<RuntimeConstantExpression>());
             Assert.That(result.SmoothMovement, Is.True);
             Assert.That(result.UseEasingPreset, Is.True);
             Assert.That(result.Easing, Is.EqualTo(PortraitTweenEasing.Custom));
@@ -263,6 +268,41 @@ namespace Novelify.Tests
             Assert.That(result.CustomEasingCurve.keys[1].time, Is.EqualTo(0.4f).Within(0.0001f));
             Assert.That(result.CustomEasingCurve.keys[1].value, Is.EqualTo(0.15f).Within(0.0001f));
             Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
+        }
+
+        [Test]
+        public void DialogueAppearanceAndHideTransitionOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
+            dialogue.GetNodeOptionByName("Character Appearance").TrySetValue(CharacterTransitionMode.FadeAndSlide);
+            dialogue.GetNodeOptionByName("Appear From").TrySetValue(CharacterTransitionDirection.Right);
+            dialogue.GetNodeOptionByName("Appearance Duration").TrySetValue(0.6f);
+            dialogue.GetNodeOptionByName("Appearance Easing").TrySetValue(PortraitTweenEasing.Bounce);
+            HideCharacterNode hide = Add<HideCharacterNode>();
+            hide.GetInputPortByName("Character").TrySetValue(_character);
+            hide.GetNodeOptionByName("Hide Transition").TrySetValue(CharacterTransitionMode.Fade);
+            hide.GetNodeOptionByName("Exit Toward").TrySetValue(CharacterTransitionDirection.Up);
+            hide.GetNodeOptionByName("Duration").TrySetValue(0.45f);
+            hide.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.EaseInOut);
+            hide.GetNodeOptionByName("Wait For Completion").TrySetValue(false);
+            Connect(start, dialogue);
+            Connect(dialogue, hide);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeDialogueNode line = runtime.AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(line.Appearance, Is.EqualTo(CharacterTransitionMode.FadeAndSlide));
+            Assert.That(line.AppearanceDirection, Is.EqualTo(CharacterTransitionDirection.Right));
+            Assert.That(line.AppearanceDuration, Is.EqualTo(0.6f));
+            Assert.That(line.AppearanceEasing, Is.EqualTo(PortraitTweenEasing.Bounce));
+
+            RuntimeHideCharacterNode exit = runtime.AllNodes.OfType<RuntimeHideCharacterNode>().Single();
+            Assert.That(exit.Transition, Is.EqualTo(CharacterTransitionMode.Fade));
+            Assert.That(exit.Direction, Is.EqualTo(CharacterTransitionDirection.Up));
+            Assert.That(exit.Duration, Is.EqualTo(0.45f));
+            Assert.That(exit.Easing, Is.EqualTo(PortraitTweenEasing.EaseInOut));
+            Assert.That(exit.WaitForCompletion, Is.False);
         }
 
         [Test]

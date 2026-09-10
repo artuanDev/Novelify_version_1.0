@@ -85,10 +85,10 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: -1174
-          y: -96
-          width: 3982
-          height: 2388
+          x: -1255
+          y: -122
+          width: 4170
+          height: 2498
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 13473657899483121740
@@ -518,7 +518,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b335e55ab06fbf550409bc73f83ab61d
         m_Version: 2
-        m_Position: {x: 125.165924, y: -95.86292}
+        m_Position: {x: 97.18182, y: -122.098015}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -537,6 +537,10 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Appearance Duration
+          - __option_Appearance Easing
           m_ValueList:
           - rid: 8564938495289196563
           - rid: 8564938495289196564
@@ -549,6 +553,10 @@ MonoBehaviour:
           - rid: 8564938495289196571
           - rid: 8564938495289196572
           - rid: 8564938495289196573
+          - rid: 8564938531055075415
+          - rid: 8564938531055075416
+          - rid: 8564938531055075417
+          - rid: 8564938531055075418
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -779,6 +787,10 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Appearance Duration
+          - __option_Appearance Easing
           m_ValueList:
           - rid: 8564938495289196607
           - rid: 8564938495289196608
@@ -791,6 +803,10 @@ MonoBehaviour:
           - rid: 8564938495289196615
           - rid: 8564938495289196616
           - rid: 8564938495289196617
+          - rid: 8564938531055075419
+          - rid: 8564938531055075420
+          - rid: 8564938531055075421
+          - rid: 8564938531055075422
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -939,7 +955,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 6232102727ae55d619a0f69aeee18205
         m_Version: 2
-        m_Position: {x: 2618.4436, y: 1451.3258}
+        m_Position: {x: 2724.9048, y: 1901.5049}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1008,7 +1024,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 2e4155a6850e0506af3bbfe630f396d9
         m_Version: 2
-        m_Position: {x: 2590.7493, y: 643.3503}
+        m_Position: {x: 1369.943, y: 604.87213}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1051,7 +1067,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: fbed42e6c1cb916a9e8ffdd535013745
         m_Version: 2
-        m_Position: {x: -1173.876, y: 1485.2708}
+        m_Position: {x: -1254.5485, y: 1502.4633}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1105,7 +1121,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 4240a628bbfabd73e53088dd360494ce
         m_Version: 2
-        m_Position: {x: -962.62177, y: 1366.2578}
+        m_Position: {x: -1043.2942, y: 1383.4503}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1450,7 +1466,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: a30029339f2ba97a4a402cd47d2f95d5
         m_Version: 2
-        m_Position: {x: -749.7342, y: 1573.2155}
+        m_Position: {x: -688.86456, y: 2066.2588}
         m_Title: Template
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1538,6 +1554,10 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Appearance Duration
+          - __option_Appearance Easing
           m_ValueList:
           - rid: 8564938495289196694
           - rid: 8564938495289196695
@@ -1550,6 +1570,10 @@ MonoBehaviour:
           - rid: 8564938495289196702
           - rid: 8564938495289196703
           - rid: 8564938495289196704
+          - rid: 8564938531055075423
+          - rid: 8564938531055075424
+          - rid: 8564938531055075425
+          - rid: 8564938531055075426
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1688,6 +1712,8 @@ MonoBehaviour:
           - Margin
           - __option_Easing
           - __option_Custom Easing Curve
+          - __option_Animate Transparency
+          - Opacity
           m_ValueList:
           - rid: 8564938495289196711
           - rid: 8564938495289196712
@@ -1709,6 +1735,8 @@ MonoBehaviour:
           - rid: 8564938495289196728
           - rid: 8564938510498267589
           - rid: 8564938510498267590
+          - rid: 8564938531055075427
+          - rid: 8564938531055075428
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -1954,7 +1982,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b2ed07d68a1cd4a4396e5969796ba162
         m_Version: 2
-        m_Position: {x: 1902.0725, y: 1091.5953}
+        m_Position: {x: 1950.7405, y: 1141.7842}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1973,6 +2001,10 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Appearance Duration
+          - __option_Appearance Easing
           m_ValueList:
           - rid: 8564938495289196737
           - rid: 8564938495289196738
@@ -1985,6 +2017,10 @@ MonoBehaviour:
           - rid: 8564938495289196745
           - rid: 8564938495289196746
           - rid: 8564938495289196747
+          - rid: 8564938531055075429
+          - rid: 8564938531055075430
+          - rid: 8564938531055075431
+          - rid: 8564938531055075432
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2101,7 +2137,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: ba4e72f8c22973c8bcc0cabaea600297
         m_Version: 2
-        m_Position: {x: 2391.7563, y: 1439.3038}
+        m_Position: {x: 2498.2175, y: 1889.4829}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -2163,6 +2199,10 @@ MonoBehaviour:
           - Sound
           - Speaker
           - Speaker Reference
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Appearance Duration
+          - __option_Appearance Easing
           m_ValueList:
           - rid: 8564938495289196775
           - rid: 8564938495289196776
@@ -2175,6 +2215,10 @@ MonoBehaviour:
           - rid: 8564938495289196783
           - rid: 8564938495289196784
           - rid: 8564938495289196785
+          - rid: 8564938531055075433
+          - rid: 8564938531055075434
+          - rid: 8564938531055075435
+          - rid: 8564938531055075436
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2355,7 +2399,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: a45709ad20f4a01e2836f6a7641d4ae4
         m_Version: 2
-        m_Position: {x: 1666.3894, y: 1740.6775}
+        m_Position: {x: 1089.165, y: 2134.3604}
         m_Title: 
         m_Tooltip: EsconderPersonaje
         m_NodePreviewModel:
@@ -2594,6 +2638,8 @@ MonoBehaviour:
           - Margin
           - __option_Easing
           - __option_Custom Easing Curve
+          - __option_Animate Transparency
+          - Opacity
           m_ValueList:
           - rid: 8564938508181438881
           - rid: 8564938508181438882
@@ -2615,6 +2661,8 @@ MonoBehaviour:
           - rid: 8564938508181438898
           - rid: 8564938510498267591
           - rid: 8564938510498267592
+          - rid: 8564938531055075437
+          - rid: 8564938531055075438
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -2944,3 +2992,174 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 8564938531055075415
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 3
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075416
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 1
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075417
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938531055075418
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075419
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075420
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075421
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.35
+    - rid: 8564938531055075422
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075423
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075424
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075425
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.35
+    - rid: 8564938531055075426
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075427
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938531055075428
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1
+    - rid: 8564938531055075429
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075430
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075431
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.35
+    - rid: 8564938531055075432
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075433
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075434
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075435
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.35
+    - rid: 8564938531055075436
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938531055075437
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938531055075438
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1

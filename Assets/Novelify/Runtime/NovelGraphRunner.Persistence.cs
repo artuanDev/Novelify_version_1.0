@@ -105,6 +105,7 @@ namespace Novelify
                 Vector2 scale = data.Scale;
                 scale.x = Mathf.Abs(scale.x) * facingSign;
                 info.TransformTo(data.Position, data.Rotation, scale, false, 0f);
+                info.Opacity = data.HasOpacity ? Mathf.Clamp01(data.Opacity) : 1f;
                 info.SetEmotion(data.Emotion);
                 info.gameObject.SetActive(data.Visible);
             }
@@ -302,7 +303,9 @@ namespace Novelify
                     Position = info.Position,
                     Rotation = info.Rotation,
                     Scale = new Vector2(Mathf.Abs(scale.x), scale.y),
-                    Facing = scale.x < 0f ? CharacterFacing.Left : CharacterFacing.Right
+                    Facing = scale.x < 0f ? CharacterFacing.Left : CharacterFacing.Right,
+                    HasOpacity = true,
+                    Opacity = info.Opacity
                 });
             }
 
@@ -581,4 +584,3 @@ namespace Novelify
         }
     }
 }
-

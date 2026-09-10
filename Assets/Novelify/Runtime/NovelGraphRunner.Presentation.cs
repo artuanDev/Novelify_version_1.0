@@ -90,8 +90,12 @@ namespace Novelify
                 NodeSoundSource.Play();
             }
             _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
+            Stage.BringToFront(_speaker);
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
+            if (_speaker != null && node.Appearance != CharacterTransitionMode.Instant)
+                _speaker.TransitionIn(node.Appearance, node.AppearanceDirection,
+                    Mathf.Max(0f, node.AppearanceDuration), node.SlideOffset, node.AppearanceEasing);
             if (DialogueText != null)
             {
                 ApplyDialogueFonts(node);
