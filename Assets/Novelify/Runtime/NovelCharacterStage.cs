@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Novelify
@@ -45,12 +46,15 @@ namespace Novelify
             {
                 existing.PrepareToShow();
                 return existing;
+
             }
+
             if (_root == null || _prefab == null)
             {
                 Debug.LogWarning("NovelGraphRunner needs a Portrait Prefab and a Character Container (or Canvas Dialogue) to create characters.");
                 return null;
             }
+
             GameObject portrait = Object.Instantiate(_prefab, _root, false);
             portrait.name = string.IsNullOrEmpty(instanceID) ? character.name : $"{character.name} ({instanceID})";
             portrait.transform.SetAsFirstSibling();
@@ -77,7 +81,9 @@ namespace Novelify
             PortraitTweenEasing easing)
         {
             if (!TryGet(character, instanceID, out CharacterInfo info)) return null;
+
             info.TransitionOut(transition, direction, duration, offset, easing);
+
             return info;
         }
 

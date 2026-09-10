@@ -15,10 +15,10 @@ namespace Novelify
                 case PortraitTweenEasing.EaseInOut: return t * t * (3f - 2f * t);
                 case PortraitTweenEasing.Anticipation: return t * t * (2.70158f * t - 1.70158f);
                 case PortraitTweenEasing.Overshoot:
-                {
-                    float shifted = t - 1f;
-                    return 1f + 2.70158f * shifted * shifted * shifted + 1.70158f * shifted * shifted;
-                }
+                    {
+                        float shifted = t - 1f;
+                        return 1f + 2.70158f * shifted * shifted * shifted + 1.70158f * shifted * shifted;
+                    }
                 case PortraitTweenEasing.Bounce: return BounceOut(t);
                 case PortraitTweenEasing.Custom:
                     return customCurve != null && customCurve.length > 0
@@ -71,6 +71,8 @@ namespace Novelify
         private PortraitTweenEasing _moveEasing;
         private AnimationCurve _moveCustomCurve;
         private bool _tweenTransform, _tweenOpacity, _deactivateAfterTween;
+        private bool _wasHiddenBeforePrepare;
+        private bool _hasEnteredStage;
         private Vector2 _positionBeforeHide;
         private CanvasGroup _canvasGroup;
         private bool _speaking, _animateMouth, _animateBlinking = true, _speechPause;
@@ -308,6 +310,14 @@ namespace Novelify
             float offset,
             PortraitTweenEasing easing)
         {
+            bool shouldTransition = !_hasEnteredStage || _wasHiddenBeforePrepare || !gameObject.activeSelf;
+            _wasHiddenBeforePrepare = false;
+
+            if (!shouldTransition)
+                return;
+
+            _hasEnteredStage = true;
+
             bool slide = transition is CharacterTransitionMode.Slide or CharacterTransitionMode.FadeAndSlide;
             bool fade = transition is CharacterTransitionMode.Fade or CharacterTransitionMode.FadeAndSlide;
             Vector2 target = Position;
@@ -348,6 +358,7 @@ namespace Novelify
             bool restorePosition = _deactivateAfterTween;
             Vector2 position = _positionBeforeHide;
             bool wasHidden = !gameObject.activeSelf;
+            _wasHiddenBeforePrepare = !_hasEnteredStage || wasHidden;
             if (restorePosition)
             {
                 StopMovement();
@@ -368,7 +379,6 @@ namespace Novelify
         private Vector2 TransitionOffset(CharacterTransitionDirection direction, float transitionExtent)
         {
             Vector2 distance = GetStageExtent(0) * transitionExtent;
-            //Vector2 distance = new Vector2(100, 100);
             return direction switch
             {
                 CharacterTransitionDirection.Right => new Vector2(distance.x, 0f),
@@ -426,6 +436,7 @@ namespace Novelify
             }
 
             if (character == null) return;
+
             float now = TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledTime : Time.time;
             if (_animateBlinking && Portrait.EyesClosed != null && now >= _nextBlink)
             {
