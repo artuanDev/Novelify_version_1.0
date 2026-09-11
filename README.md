@@ -118,7 +118,7 @@ A left mouse click advances the current dialogue. During text reveal, the first 
 4. Add **Dialogue** or **SimpleDialogue** nodes.
 5. Connect the flow ports from Start through the conversation and finally to End.
 6. Add a **Choice** node when the player should select a branch.
-7. Set the choice count, enter each choice's text and connect each output to its destination node.
+7. Open each dropdown under **Choices**, enter its text and stable ID, then connect the output named after that ID to its destination node. Use its single **Available when** port only when the choice needs a dynamic condition.
 8. Save the graph so Unity can import its runtime representation.
 
 ### Dialogue Nodes
@@ -176,6 +176,12 @@ Characters have no fixed slot limit. Each character asset gets its own default i
 
 Use **Show Character** to place a character before their first line, or connect a character to **Transform Speaker Portrait > Character**. Transform creates that character if necessary and reuses it thereafter. You can assign the asset directly, connect a Character variable, or connect a Dialogue node's **Current Speaker** output.
 
+Double-click **Transform Speaker Portrait** to open the visual tween composer as a normal resizable Unity editor window; its native title bar provides the standard maximize and close controls. Its framed stage automatically follows the currently selected Game View resolution and displays the exact size, normalized screen limits, pixel coordinates, center grid and an optional safe-area guide. The translucent **START** ghost comes from the matching live character in Play Mode, or from the closest earlier Show/Transform node when editing; chains of earlier relative Transform nodes are accumulated. When a new node still has its untouched default transform, the composer's local **TARGET** begins at that incoming START pose, so visual authors can drag naturally from the character's real location. This visual initialization does not modify the node until **Confirm Tween** is clicked, and connected or explicitly edited transform values remain authoritative. The ghost remains visible while composing or scrubbing and is hidden only while preview playback is active or paused. Drag the solid TARGET to move it, drag a corner of its transform frame to scale it, or drag any side of the frame to rotate it. While moving, Shift locks movement to the dominant axis. While scaling, Shift scales from the center and Ctrl makes the scale uniform; both modifiers can be combined. While rotating, Ctrl snaps to 10-degree increments. Arrow keys still provide precise nudging.
+
+Use the timeline to scrub the motion, press Space or use **Preview/Pause/Replay** to play it inside the same window, and use **Stop** to return to the start. Pressing Space again after playback reaches the end resets it to START and replays it. Timing can be linear with **None**, use Ease In, Ease Out, Ease In/Out, Anticipation, Overshoot or Bounce presets, or use a **Custom Curve** whose keys can be edited and extended between `(0,0)` and `(1,1)`. The composer sizes the character from the live `CharacterInfo` or assigned Portrait Prefab RectTransform layout, matching its runtime canvas footprint instead of using an arbitrary preview percentage. The transform frame scans the portrait layers' alpha and hugs their visible pixels instead of including transparent sprite padding. Use **Viewport Zoom** or the mouse wheel over the stage to zoom the editor camera without modifying the node; zooming out keeps oversized portrait handles reachable. **Off-screen Margin** expands the composition stage around the outlined game viewport, and **Margin Opacity** controls how strongly those editor-only bands are shaded. Coordinate Space, Relative positioning, Instance ID, Animate Transform, Duration, Timing and Wait For Completion can all be authored in the composer. Drop any active scene UI GameObject beneath a Canvas into **UI Preview** to render that object and all of its children over the portrait stage. The selected UI object and its visibility are stored once per Unity project and automatically reused when any other Transform Speaker Portrait node is opened. **Confirm Tween** writes the target in the selected coordinate space, margin and all runtime options back to the node; connected Position, Rotation, Scale or Margin ports remain controlled by their graph wires and are clearly identified instead of being overwritten.
+
+The composer has its own Undo/Redo history. One complete drag is stored as one action, and target fields, presets, nudges, resets, duration, easing, wait and clamp changes are included. Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z are routed to this local history only while the mouse is over the open tween window; outside it, Novelify does not intercept Unity's normal project Undo.
+
 - **Coordinate Space:** choose normalized (`(-1,-1)` bottom-left to `(1,1)` top-right) or canvas anchored units. Show Character defaults to legacy canvas units; Transform Speaker Portrait defaults to normalized.
 - **Position input:** a Vector2 interpreted in the selected coordinate space.
 - **Margin input:** expands each bound in canvas units. Use at least half the portrait's relevant dimension to move it completely beyond that edge.
@@ -183,6 +189,7 @@ Use **Show Character** to place a character before their first line, or connect 
 - **Scale input:** absolute target local X/Y scale.
 - **Relative:** interpret normalized X/Y as a displacement from the current position; rotation and scale remain absolute.
 - **Animate Transform:** animate position, rotation and scale together. Disabled applies them instantly.
+- **Opacity / Animate Transparency:** optionally tween the portrait's CanvasGroup opacity from its current value to a 0-to-1 target, independently of transform animation.
 - **Duration:** transform time in real-time seconds. Zero applies instantly.
 - **Ease In Out:** smooth acceleration/deceleration; disabled uses constant speed.
 - **Wait For Completion:** pause story flow until the transform finishes. Disable to continue to dialogue or animate multiple characters in parallel.
@@ -195,14 +202,18 @@ Use **Split Novel Character** when a graph needs the selected character's data. 
 
 Math nodes are non-flow expressions and do not execute on their own. Float and Vector2 versions of **Add**, **Subtract**, **Multiply** and **Divide** can be chained into action inputs or function outputs. Vector2 multiply/divide operate component-by-component; division by zero produces zero for that component.
 
-**Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
+**Random Number** is also a value node. Choose Integer or Float, connect or enter its inclusive minimum/maximum range, and wire Result into any matching numeric input. A new value is generated whenever the expression is evaluated.
+
+**Character Container** is an optional parent outside the dialogue panel. When omitted, the manager creates a separate stage under **Canvas Dialogue**'s canvas so Wait/audio/movement nodes can hide dialogue without hiding the cast. The active Dialogue speaker is moved in front of the other portraits while the character stage remains behind the dialogue panel. To reuse scene-authored characters, place them under an assigned Character Container with their `CharacterInfo` asset and instance ID set. **Hide Characters On End** controls whether the cast is hidden when the story ends.
+
+Dialogue nodes can set **Character Appearance** to Instant, Fade, Slide, or Fade And Slide, with a direction, duration, and easing preset. **Hide Character** exposes the matching exit controls and can either wait for the transition or continue story flow while it plays.
 
 ### Utility Nodes
 
 | Node | Behavior |
 | --- | --- |
 | Show Character | Creates/reveals one instance and sets its position and emotion. |
-| Hide Character | Hides one instance without deleting it; showing it again reuses it. |
+| Hide Character | Hides one instance without deleting it; optionally fades/slides it out before reuse. |
 | Hide All Characters | Hides the entire stage. |
 | Set Character Emotion | Applies the selected expression, creating the character if needed. |
 | Wait | Pauses flow for dialogue-clock seconds; dialogue clicks cannot skip it. |
@@ -310,6 +321,7 @@ Dialogue text can be formatted from the custom inspector. Select text and use th
 - Colour.
 - Wave motion.
 - Shake motion.
+- Sound start: select a word and click this button to play the dialogue node's **Sound** clip when that word begins revealing. A dialogue contains one sound-start marker; applying it again moves the marker.
 
 The built-in presentation enables TextMesh Pro rich text automatically. The `NovelTextEffects` component animates ranges marked with the wave or shake effect.
 

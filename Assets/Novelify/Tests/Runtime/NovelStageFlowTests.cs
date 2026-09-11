@@ -35,6 +35,103 @@ namespace Novelify.Tests
             _manager.RuntimeGraph = _graph;
         }
 
+        [Test]
+        public void PortraitTweenTimingSupportsLinearPresetsAndCustomCurves()
+        {
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.None, null, 0.25f),
+                Is.EqualTo(0.25f).Within(0.0001f));
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.EaseIn, null, 0.5f),
+                Is.EqualTo(0.125f).Within(0.0001f));
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.EaseOut, null, 0.5f),
+                Is.EqualTo(0.875f).Within(0.0001f));
+
+            AnimationCurve custom = AnimationCurve.Linear(0f, 0f, 1f, 0.5f);
+            Assert.That(PortraitTweenEasingUtility.Evaluate(PortraitTweenEasing.Custom, custom, 1f),
+                Is.EqualTo(0.5f).Within(0.0001f));
+        }
+
+        [Test]
+        public void DialogueSpeakerIsPromotedInFrontOfOtherPortraits()
+        {
+            CharacterInfo speaker = _manager.ShowCharacter(_character, "speaker");
+            CharacterInfo other = _manager.ShowCharacter(_character, "other");
+            Assert.That(other.transform.GetSiblingIndex(), Is.GreaterThan(speaker.transform.GetSiblingIndex()));
+
+            Play(new RuntimeDialogueNode
+            {
+                NodeID = "line",
+                NovelCharacter = _character,
+                InstanceID = "speaker",
+                ShowTextImmediately = true
+            });
+
+            Assert.That(speaker.transform.GetSiblingIndex(), Is.GreaterThan(other.transform.GetSiblingIndex()));
+        }
+
+        [UnityTest]
+        public IEnumerator DialogueAppearanceAndHideTransitionsAnimateOpacityAndDirection()
+        {
+            CharacterInfo info = _manager.ShowCharacter(_character);
+            info.Position = Vector2.zero;
+            Play(new RuntimeDialogueNode
+            {
+                NodeID = "enter",
+                NovelCharacter = _character,
+                ShowTextImmediately = true,
+                Appearance = CharacterTransitionMode.FadeAndSlide,
+                AppearanceDirection = CharacterTransitionDirection.Left,
+                AppearanceDuration = 0.15f,
+                AppearanceEasing = PortraitTweenEasing.None
+            });
+
+            Assert.That(info.Opacity, Is.Zero.Within(0.001f));
+            Assert.That(info.Position.x, Is.LessThan(-700f));
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.That(info.Opacity, Is.EqualTo(1f).Within(0.01f));
+            Assert.That(info.Position.x, Is.Zero.Within(0.01f));
+
+            Play(new RuntimeHideCharacterNode
+                {
+                    NodeID = "hide", NextNodeID = "after", Character = _character,
+                    Transition = CharacterTransitionMode.FadeAndSlide,
+                    Direction = CharacterTransitionDirection.Right,
+                    Duration = 0.15f,
+                    Easing = PortraitTweenEasing.None,
+                    WaitForCompletion = true
+                },
+                new RuntimeDialogueNode { NodeID = "after", ShowTextImmediately = true });
+
+            Assert.That(_manager.IsWaiting, Is.True);
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.That(info.gameObject.activeSelf, Is.False);
+            Assert.That(info.Position.x, Is.Zero.Within(0.01f));
+            Assert.That(info.Opacity, Is.EqualTo(1f).Within(0.01f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
+        }
+
+        [UnityTest]
+        public IEnumerator PortraitTweenCanAnimateOnlyTransparency()
+        {
+            CharacterInfo info = _manager.ShowCharacter(_character);
+            Play(new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "opacity", NextNodeID = "line", Character = _character,
+                    SmoothMovement = false,
+                    AnimateOpacity = true,
+                    Opacity = 0.25f,
+                    Duration = 0.15f,
+                    Easing = PortraitTweenEasing.None,
+                    UseEasingPreset = true
+                },
+                new RuntimeDialogueNode { NodeID = "line", ShowTextImmediately = true });
+
+            Assert.That(_manager.IsWaiting, Is.True);
+            Assert.That(info.Opacity, Is.EqualTo(1f).Within(0.001f));
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.That(info.Opacity, Is.EqualTo(0.25f).Within(0.01f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+        }
+
         [TearDown]
         public void TearDown()
         {

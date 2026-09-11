@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(11, NovelGraph.AssetExtension)]
+    [ScriptedImporter(12, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -276,6 +276,7 @@ namespace Novelify.Editor
             SetPresentationOptions(node, runtimeNode);
             runtimeNode.UnavailableDestinationNodeID =
                 GetDestinationID(node.GetOutputPortByName("Fallback"), nodeIDMap);
+            IReadOnlyList<ChoiceAuthoringEntry> authoredChoices = node.GetAuthoredChoices();
 
             IEnumerable<IPort> choiceOutputPorts =
                 node.GetOutputPorts()
@@ -287,11 +288,14 @@ namespace Novelify.Editor
                 string index =
                     outputPort.Name.Substring("Choice ".Length);
 
-                IPort textPort =
-                    node.GetInputPortByName(
-                        $"Choice Text {index}");
+                int choiceIndex = int.TryParse(index, out int parsedIndex) ? parsedIndex : -1;
+                ChoiceAuthoringEntry authored = choiceIndex >= 0 && authoredChoices != null &&
+                    choiceIndex < authoredChoices.Count ? authoredChoices[choiceIndex] : null;
+                IPort conditionPort = node.GetInputPortByName($"Condition {index}");
 
-                string choiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
+                string authoredChoiceID = authored?.ID?.Trim();
+                string legacyChoiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
+                string choiceID = !string.IsNullOrEmpty(authoredChoiceID) ? authoredChoiceID : legacyChoiceID;
                 if (string.IsNullOrEmpty(choiceID)) choiceID = $"{nodeIDMap[node]}:{index}";
                 if (!_choiceIDs.Add(choiceID))
                     _context?.LogImportError($"Duplicate Choice ID '{choiceID}'. Choice IDs must be unique within a graph.");
@@ -299,27 +303,42 @@ namespace Novelify.Editor
                 var choiceData = new ChoiceData
                 {
                     ChoiceID = choiceID,
-                    ChoiceText =
-                        GetPortValue<string>(textPort),
+                    ChoiceText = !string.IsNullOrEmpty(authored?.Text)
+                        ? authored.Text
+                        : GetPortValue<string>(node.GetInputPortByName($"Choice Text {index}")),
 
-                    ChoiceTextValue = BuildExpression(textPort),
+                    ChoiceTextValue = !string.IsNullOrEmpty(authored?.Text)
+                        ? Constant(authored.Text)
+                        : BuildExpression(node.GetInputPortByName($"Choice Text {index}")),
 
-                    Condition = BuildExpression(node.GetInputPortByName($"Condition {index}")),
+                    Condition = conditionPort?.IsConnected == true || authored == null || authored.Condition
+                        ? BuildExpression(conditionPort)
+                        : Constant(false),
 
-                    UnavailablePolicy = GetPortValue<NovelChoiceUnavailablePolicy>(
-                        node.GetInputPortByName($"Unavailable Policy {index}")),
+                    UnavailablePolicy = authored != null &&
+                                        authored.UnavailablePolicy != NovelChoiceUnavailablePolicy.Hide
+                        ? authored.UnavailablePolicy
+                        : GetPortValue<NovelChoiceUnavailablePolicy>(
+                            node.GetInputPortByName($"Unavailable Policy {index}")),
 
-                    DisabledReason = GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
+                    DisabledReason = !string.IsNullOrEmpty(authored?.DisabledReason)
+                        ? authored.DisabledReason
+                        : GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
 
-                    DisabledReasonValue = BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
+                    DisabledReasonValue = !string.IsNullOrEmpty(authored?.DisabledReason)
+                        ? Constant(authored.DisabledReason)
+                        : BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
 
-                    OnceOnly = GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
+                    OnceOnly = authored?.OnceOnly == true ||
+                               GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
 
                     DestinationNodeID = GetDestinationID(outputPort, nodeIDMap)
                 };
 
-                NovelChoiceTransactionDefinition transaction = GetPortValue<NovelChoiceTransactionDefinition>(
-                    node.GetInputPortByName($"Transaction {index}"));
+                NovelChoiceTransactionDefinition transaction = authored?.Transaction != null
+                    ? authored.Transaction
+                    : GetPortValue<NovelChoiceTransactionDefinition>(
+                        node.GetInputPortByName($"Transaction {index}"));
                 if (transaction != null)
                 {
                     string transactionPath = AssetDatabase.GetAssetPath(transaction);
@@ -452,6 +471,7 @@ namespace Novelify.Editor
                 IPort rotationPort = node.GetInputPortByName("Rotation");
                 IPort scalePort = node.GetInputPortByName("Scale");
                 IPort marginPort = node.GetInputPortByName("Margin");
+                IPort opacityPort = node.GetInputPortByName("Opacity");
                 Vector2 legacyPosition = new Vector2(
                     GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0f),
                     GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0f));
@@ -472,6 +492,7 @@ namespace Novelify.Editor
                 runtimeNode.RotationValue = useLegacyRotation ? Constant(legacyRotation) : BuildExpression(rotationPort);
                 runtimeNode.ScaleValue = useLegacyScale ? Constant(legacyScale) : BuildExpression(scalePort);
                 runtimeNode.MarginValue = useLegacyMargin ? Constant(legacyMargin) : BuildExpression(marginPort);
+                runtimeNode.OpacityValue = BuildExpression(opacityPort);
                 if (useLegacyPosition) position = legacyPosition;
                 if (useLegacyRotation) rotation = legacyRotation;
                 if (useLegacyScale) scale = legacyScale;
@@ -481,6 +502,7 @@ namespace Novelify.Editor
                 runtimeNode.Rotation = rotation;
                 runtimeNode.Scale = scale;
                 runtimeNode.Margin = Mathf.Max(0f, margin);
+                runtimeNode.Opacity = Mathf.Clamp01(GetPortValue<float>(opacityPort));
             }
             else
             {
@@ -495,8 +517,21 @@ namespace Novelify.Editor
                 : GetOptionValue(node.GetNodeOptionByName("Animate Transform"), false);
             runtimeNode.Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.5f));
             runtimeNode.WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true);
-            runtimeNode.EaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
+            bool legacyEaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
+            PortraitTweenEasing easing = node is TransformSpeakerPortraitNode
+                ? GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseInOut)
+                : legacyEaseInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None;
+            if (node is TransformSpeakerPortraitNode && easing == PortraitTweenEasing.EaseInOut && !legacyEaseInOut)
+                easing = PortraitTweenEasing.None;
+            runtimeNode.UseEasingPreset = node is TransformSpeakerPortraitNode;
+            runtimeNode.Easing = easing;
+            runtimeNode.CustomEasingCurve = CloneCurve(GetOptionValue(
+                node.GetNodeOptionByName("Custom Easing Curve"),
+                AnimationCurve.Linear(0f, 0f, 1f, 1f)));
+            runtimeNode.EaseInOut = easing != PortraitTweenEasing.None;
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
+            runtimeNode.AnimateOpacity = node is TransformSpeakerPortraitNode &&
+                GetOptionValue(node.GetNodeOptionByName("Animate Transparency"), false);
 
             if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
                 IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
@@ -585,7 +620,13 @@ namespace Novelify.Editor
                 case HideCharacterNode _:
                     return new RuntimeHideCharacterNode { Character = character, InstanceID = instanceID,
                         CharacterValue = BuildExpression(node.GetInputPortByName("Character")),
-                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")) };
+                        CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference")),
+                        Transition = GetOptionValue(node.GetNodeOptionByName("Hide Transition"), CharacterTransitionMode.Instant),
+                        Direction = GetOptionValue(node.GetNodeOptionByName("Exit Toward"), CharacterTransitionDirection.Left),
+                        SlideOffset = GetOptionValue(node.GetNodeOptionByName("Slide Offset"), 0.45f),
+                        Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.35f)),
+                        Easing = GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseIn),
+                        WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true) };
                 case HideAllCharactersNode _: return new RuntimeHideAllCharactersNode();
                 case SetCharacterEmotionNode _:
                     return new RuntimeSetCharacterEmotionNode { Character = character, InstanceID = instanceID, Emotion = emotion,
@@ -712,7 +753,8 @@ namespace Novelify.Editor
         }
 
         private static bool IsValueNode(INode node) =>
-            node is FloatBinaryNode || node is Vector2BinaryNode || node is SplitNovelCharacterNode ||
+            node is FloatBinaryNode || node is Vector2BinaryNode || node is RandomNumberNode ||
+            node is SplitNovelCharacterNode ||
             node is MakeNovelCharacterReferenceNode || node is SplitNovelCharacterReferenceNode ||
             node is GetNovelVariableNode || node is CompareNovelValuesNode ||
             node is AndNovelValuesNode || node is OrNovelValuesNode || node is NotNovelValueNode;
@@ -796,6 +838,20 @@ namespace Novelify.Editor
                     ValueKind = node is FloatBinaryNode ? RuntimeValueKind.Float : RuntimeValueKind.Vector2,
                     A = BuildExpression(node.GetInputPortByName("A"), activePath),
                     B = BuildExpression(node.GetInputPortByName("B"), activePath)
+                };
+            }
+
+            if (node is RandomNumberNode random)
+            {
+                NovelNumericType numberType = GetOptionValue(
+                    random.GetNodeOptionByName("Number Type"), NovelNumericType.Integer);
+                return new RuntimeRandomNumberExpression
+                {
+                    ValueKind = numberType == NovelNumericType.Integer
+                        ? RuntimeValueKind.Integer
+                        : RuntimeValueKind.Float,
+                    Minimum = BuildExpression(random.GetInputPortByName("Minimum"), activePath),
+                    Maximum = BuildExpression(random.GetInputPortByName("Maximum"), activePath)
                 };
             }
 
@@ -1181,13 +1237,29 @@ namespace Novelify.Editor
                     node.GetNodeOptionByName("Dialogue"),
                     new RichDialogueText(string.Empty));
 
-            runtimeNode.DialogueText =
-                dialogue.Text ?? string.Empty;
+            runtimeNode.DialogueText = dialogue.Text ?? string.Empty;
+            runtimeNode.DialogueFont = dialogue.DefaultFont;
+            runtimeNode.DialogueFontAssets = dialogue.FontAssets?
+                .Where(font => font != null)
+                .Distinct()
+                .ToList() ?? new List<TMPro.TMP_FontAsset>();
+            runtimeNode.PlaySoundCharacterIndex = FindSoundCueCharacterIndex(runtimeNode.DialogueText);
 
             runtimeNode.Emotion =
                 GetOptionValue(
                     node.GetNodeOptionByName("Emotion"),
                     CharacterEmotion.Neutral);
+
+            runtimeNode.Appearance = GetOptionValue(
+                node.GetNodeOptionByName("Character Appearance"), CharacterTransitionMode.Instant);
+            runtimeNode.AppearanceDirection = GetOptionValue(
+                node.GetNodeOptionByName("Appear From"), CharacterTransitionDirection.Left);
+            runtimeNode.AppearanceDuration = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Appearance Duration"), 0.35f));
+            runtimeNode.SlideOffset = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Slide Offset"), 0.45f));
+            runtimeNode.AppearanceEasing = GetOptionValue(
+                node.GetNodeOptionByName("Appearance Easing"), PortraitTweenEasing.EaseOut);
 
             runtimeNode.ShowTextImmediately =
                 GetOptionValue(
@@ -1215,6 +1287,34 @@ namespace Novelify.Editor
                     true);
         }
 
+        internal static int FindSoundCueCharacterIndex(string markup)
+        {
+            if (string.IsNullOrEmpty(markup)) return -1;
+            int visibleCharacters = 0;
+            for (int index = 0; index < markup.Length; index++)
+            {
+                if (markup[index] != '<')
+                {
+                    visibleCharacters++;
+                    continue;
+                }
+
+                int closingBracket = markup.IndexOf('>', index + 1);
+                if (closingBracket < 0)
+                {
+                    visibleCharacters++;
+                    continue;
+                }
+
+                string tag = markup.Substring(index + 1, closingBracket - index - 1);
+                if (tag.IndexOf("novelify-sound", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return visibleCharacters;
+                index = closingBracket;
+            }
+
+            return -1;
+        }
+
         private T GetPortValue<T>(IPort port)
         {
             T value = NovelGraphValues.Resolve<T>(_editorGraph, port);
@@ -1224,6 +1324,19 @@ namespace Novelify.Editor
                 if (!string.IsNullOrEmpty(path)) _context?.DependsOnSourceAsset(path);
             }
             return value;
+        }
+
+        private static AnimationCurve CloneCurve(AnimationCurve source)
+        {
+            AnimationCurve clone = source != null
+                ? new AnimationCurve(source.keys)
+                : AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            if (source != null)
+            {
+                clone.preWrapMode = source.preWrapMode;
+                clone.postWrapMode = source.postWrapMode;
+            }
+            return clone;
         }
 
         private T GetOptionValue<T>(
@@ -1241,7 +1354,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(6, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(7, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

@@ -144,6 +144,8 @@ namespace Novelify
         public float Rotation;
         public Vector2 Scale = Vector2.one;
         public CharacterFacing Facing = CharacterFacing.Right;
+        public bool HasOpacity;
+        public float Opacity = 1f;
     }
 
     [Serializable]

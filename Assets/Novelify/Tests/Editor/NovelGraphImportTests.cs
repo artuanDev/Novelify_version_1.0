@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Novelify.Editor;
 using NUnit.Framework;
+using TMPro;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -106,14 +108,17 @@ namespace Novelify.Tests
             EndNode purchaseEnd = Add<EndNode>();
             EndNode leaveEnd = Add<EndNode>();
             EndNode fallbackEnd = Add<EndNode>();
-            choice.GetInputPortByName("Choice ID 0").TrySetValue("buy-key");
-            choice.GetInputPortByName("Choice Text 0").TrySetValue("Buy the key -- 20 coins");
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "buy-key";
+            choices.Entries[0].Text = "Buy the key -- 20 coins";
+            choices.Entries[0].UnavailablePolicy = NovelChoiceUnavailablePolicy.Disable;
+            choices.Entries[0].DisabledReason = "Need 20 coins.";
+            choices.Entries[0].OnceOnly = true;
+            choices.Entries[0].Transaction = transaction;
+            choices.Entries[1].Text = "Leave";
+            choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices);
+            choice.DefineNode();
             choice.GetInputPortByName("Condition 0").TrySetValue(false);
-            choice.GetInputPortByName("Unavailable Policy 0").TrySetValue(NovelChoiceUnavailablePolicy.Disable);
-            choice.GetInputPortByName("Disabled Reason 0").TrySetValue("Need 20 coins.");
-            choice.GetInputPortByName("Once Only 0").TrySetValue(true);
-            choice.GetInputPortByName("Transaction 0").TrySetValue(transaction);
-            choice.GetInputPortByName("Choice Text 1").TrySetValue("Leave");
             Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
             Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), purchaseEnd.GetInputPortByName("in")), Is.True);
             Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 1"), leaveEnd.GetInputPortByName("in")), Is.True);
@@ -134,6 +139,92 @@ namespace Novelify.Tests
         }
 
         [Test]
+        public void ChoiceDropdownUsesItsIdForTheOutputNameAndRuntimeChoice()
+        {
+            StartNode start = Add<StartNode>();
+            ChoiceNode choice = Add<ChoiceNode>();
+            EndNode end = Add<EndNode>();
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "mall";
+            choices.Entries[0].Text = "Let's go to the mall";
+            Assert.That(choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices), Is.True);
+            choice.DefineNode();
+
+            Assert.That(choice.GetOutputPortByName("Choice 0").DisplayName, Is.EqualTo("mall"));
+            Assert.That(choice.GetInputPortByName("Condition 0"), Is.Not.Null,
+                "Only the non-redundant dynamic availability input should remain per choice.");
+            Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), end.GetInputPortByName("in")), Is.True);
+
+            RuntimeChoiceNode runtime = Import().AllNodes.OfType<RuntimeChoiceNode>().Single();
+            Assert.That(runtime.Choices[0].ChoiceID, Is.EqualTo("mall"));
+            Assert.That(runtime.Choices[0].ChoiceText, Is.EqualTo("Let's go to the mall"));
+        }
+
+        [Test]
+        public void DialogueSoundMarkerCompilesToItsVisibleCharacterIndex()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("Hello <b>dear</b> <link=\"novelify-sound\">friend</link>."));
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.PlaySoundCharacterIndex, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void DialogueFontsAndFontMarkupSurviveImport()
+        {
+            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                "Assets/Novelify/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset");
+            Assert.That(font, Is.Not.Null);
+
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            var authored = new RichDialogueText(
+                $"Hello <font=\"{font.name}\">friend</font>.")
+            {
+                DefaultFont = font,
+                FontAssets = new List<TMP_FontAsset> { font }
+            };
+            Assert.That(dialogue.GetNodeOptionByName("Dialogue").TrySetValue(authored), Is.True);
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.DialogueFont, Is.SameAs(font));
+            Assert.That(runtime.DialogueFontAssets, Is.EquivalentTo(new[] { font }));
+            Assert.That(runtime.DialogueText, Does.Contain($"<font=\"{font.name}\">"));
+        }
+
+        [Test]
+        public void RandomNumberNodeCompilesAsANumericExpression()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            RandomNumberNode random = Add<RandomNumberNode>();
+            EndNode end = Add<EndNode>();
+            random.GetNodeOptionByName("Number Type").TrySetValue(NovelNumericType.Float);
+            random.DefineNode();
+            random.GetInputPortByName("Minimum").TrySetValue(-15f);
+            random.GetInputPortByName("Maximum").TrySetValue(15f);
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Assert.That(_graph.Connect(random.GetOutputPortByName("Result"),
+                transform.GetInputPortByName("Rotation")), Is.True);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode runtime = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            var expression = runtime.RotationValue as RuntimeRandomNumberExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.ValueKind, Is.EqualTo(RuntimeValueKind.Float));
+            Assert.That(((RuntimeConstantExpression)expression.Minimum).Value.FloatValue, Is.EqualTo(-15f));
+            Assert.That(((RuntimeConstantExpression)expression.Maximum).Value.FloatValue, Is.EqualTo(15f));
+        }
+
+        [Test]
         public void TransformSpeakerPortraitOptionsSurviveImport()
         {
             StartNode start = Add<StartNode>();
@@ -144,7 +235,14 @@ namespace Novelify.Tests
             transform.GetInputPortByName("Rotation").TrySetValue(35f);
             transform.GetInputPortByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
             transform.GetInputPortByName("Margin").TrySetValue(120f);
+            transform.GetInputPortByName("Opacity").TrySetValue(0.4f);
             transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
+            transform.GetNodeOptionByName("Animate Transparency").TrySetValue(true);
+            transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.Custom);
+            transform.GetNodeOptionByName("Custom Easing Curve").TrySetValue(new AnimationCurve(
+                new Keyframe(0f, 0f),
+                new Keyframe(0.4f, 0.15f),
+                new Keyframe(1f, 1f)));
             Connect(start, transform);
             Connect(transform, dialogue);
 
@@ -160,8 +258,51 @@ namespace Novelify.Tests
             Assert.That(result.Rotation, Is.EqualTo(35f));
             Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
             Assert.That(result.Margin, Is.EqualTo(120f));
+            Assert.That(result.Opacity, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.AnimateOpacity, Is.True);
+            Assert.That(result.OpacityValue, Is.TypeOf<RuntimeConstantExpression>());
             Assert.That(result.SmoothMovement, Is.True);
+            Assert.That(result.UseEasingPreset, Is.True);
+            Assert.That(result.Easing, Is.EqualTo(PortraitTweenEasing.Custom));
+            Assert.That(result.CustomEasingCurve.length, Is.EqualTo(3));
+            Assert.That(result.CustomEasingCurve.keys[1].time, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.CustomEasingCurve.keys[1].value, Is.EqualTo(0.15f).Within(0.0001f));
             Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
+        }
+
+        [Test]
+        public void DialogueAppearanceAndHideTransitionOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
+            dialogue.GetNodeOptionByName("Character Appearance").TrySetValue(CharacterTransitionMode.FadeAndSlide);
+            dialogue.GetNodeOptionByName("Appear From").TrySetValue(CharacterTransitionDirection.Right);
+            dialogue.GetNodeOptionByName("Appearance Duration").TrySetValue(0.6f);
+            dialogue.GetNodeOptionByName("Appearance Easing").TrySetValue(PortraitTweenEasing.Bounce);
+            HideCharacterNode hide = Add<HideCharacterNode>();
+            hide.GetInputPortByName("Character").TrySetValue(_character);
+            hide.GetNodeOptionByName("Hide Transition").TrySetValue(CharacterTransitionMode.Fade);
+            hide.GetNodeOptionByName("Exit Toward").TrySetValue(CharacterTransitionDirection.Up);
+            hide.GetNodeOptionByName("Duration").TrySetValue(0.45f);
+            hide.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.EaseInOut);
+            hide.GetNodeOptionByName("Wait For Completion").TrySetValue(false);
+            Connect(start, dialogue);
+            Connect(dialogue, hide);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeDialogueNode line = runtime.AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(line.Appearance, Is.EqualTo(CharacterTransitionMode.FadeAndSlide));
+            Assert.That(line.AppearanceDirection, Is.EqualTo(CharacterTransitionDirection.Right));
+            Assert.That(line.AppearanceDuration, Is.EqualTo(0.6f));
+            Assert.That(line.AppearanceEasing, Is.EqualTo(PortraitTweenEasing.Bounce));
+
+            RuntimeHideCharacterNode exit = runtime.AllNodes.OfType<RuntimeHideCharacterNode>().Single();
+            Assert.That(exit.Transition, Is.EqualTo(CharacterTransitionMode.Fade));
+            Assert.That(exit.Direction, Is.EqualTo(CharacterTransitionDirection.Up));
+            Assert.That(exit.Duration, Is.EqualTo(0.45f));
+            Assert.That(exit.Easing, Is.EqualTo(PortraitTweenEasing.EaseInOut));
+            Assert.That(exit.WaitForCompletion, Is.False);
         }
 
         [Test]

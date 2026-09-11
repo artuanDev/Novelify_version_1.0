@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 4;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
@@ -48,8 +49,22 @@ namespace Novelify
 
     public enum CharacterPositionSpace { Canvas, Normalized }
     public enum CharacterFacing { Left, Right }
+    public enum CharacterTransitionMode { Instant, Fade, Slide, FadeAndSlide }
+    public enum CharacterTransitionDirection { Left, Right, Up, Down }
     public enum DialogueTimeMode { Unscaled, Scaled }
     public enum NovelCheckpointSaveMode { SnapshotOnly, Autosave }
+
+    public enum PortraitTweenEasing
+    {
+        None,
+        EaseIn,
+        EaseOut,
+        EaseInOut,
+        Anticipation,
+        Overshoot,
+        Bounce,
+        Custom
+    }
 
     [Serializable]
     public class RuntimeValue
@@ -131,6 +146,14 @@ namespace Novelify
         public RuntimeBooleanOperation Operation;
         [SerializeReference] public RuntimeValueExpression A;
         [SerializeReference] public RuntimeValueExpression B;
+    }
+
+    [Serializable]
+    public class RuntimeRandomNumberExpression : RuntimeValueExpression
+    {
+        public RuntimeValueKind ValueKind = RuntimeValueKind.Integer;
+        [SerializeReference] public RuntimeValueExpression Minimum;
+        [SerializeReference] public RuntimeValueExpression Maximum;
     }
 
     public enum RuntimeCharacterComponent
@@ -218,12 +241,20 @@ namespace Novelify
         public Sprite PortraitMouthOpen;
 
         public string DialogueText;
+        public TMP_FontAsset DialogueFont;
+        public List<TMP_FontAsset> DialogueFontAssets = new List<TMP_FontAsset>();
 
         public bool ShowTextImmediately;
         public float CharactersPerSecond = 30f;
         public bool AnimateMouth = true;
         public bool AnimateBlinking = true;
         public CharacterEmotion Emotion = CharacterEmotion.Neutral;
+
+        public CharacterTransitionMode Appearance = CharacterTransitionMode.Instant;
+        public CharacterTransitionDirection AppearanceDirection = CharacterTransitionDirection.Left;
+        public float AppearanceDuration = 0.35f;
+        public float SlideOffset = 0.45f;
+        public PortraitTweenEasing AppearanceEasing = PortraitTweenEasing.EaseOut;
 
         public float MouthFrameInterval = 0.12f;
         public float MouthTimingVariation = 0.35f;
@@ -237,6 +268,10 @@ namespace Novelify
         public AudioClip TalkSound;
         public AudioClip PlaySound;
         [SerializeReference] public RuntimeValueExpression PlaySoundValue;
+
+        // -1 plays the clip as soon as the dialogue appears. Any other value is
+        // the visible character at which the rich-text sound marker begins.
+        public int PlaySoundCharacterIndex = -1;
 
         public float PitchMinVariation = -0.05f;
         public float PitchMaxVariation = 0.05f;
@@ -279,7 +314,12 @@ namespace Novelify
         public float Duration = 0.5f;
         public bool WaitForCompletion = true;
         public bool EaseInOut = true;
+        public bool UseEasingPreset;
+        public PortraitTweenEasing Easing = PortraitTweenEasing.EaseInOut;
+        public AnimationCurve CustomEasingCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         public bool Relative;
+        public bool AnimateOpacity;
+        public float Opacity = 1f;
 
         [SerializeReference] public RuntimeValueExpression CharacterValue;
         [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
@@ -287,6 +327,7 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression RotationValue;
         [SerializeReference] public RuntimeValueExpression ScaleValue;
         [SerializeReference] public RuntimeValueExpression MarginValue;
+        [SerializeReference] public RuntimeValueExpression OpacityValue;
     }
 
     [Serializable]
@@ -361,6 +402,12 @@ namespace Novelify
     {
         public NovelCharacter Character;
         public string InstanceID;
+        public CharacterTransitionMode Transition = CharacterTransitionMode.Instant;
+        public CharacterTransitionDirection Direction = CharacterTransitionDirection.Left;
+        public float Duration = 0.35f;
+        public float SlideOffset = 0.45f;
+        public PortraitTweenEasing Easing = PortraitTweenEasing.EaseIn;
+        public bool WaitForCompletion = true;
         [SerializeReference] public RuntimeValueExpression CharacterValue;
         [SerializeReference] public RuntimeValueExpression CharacterReferenceValue;
     }

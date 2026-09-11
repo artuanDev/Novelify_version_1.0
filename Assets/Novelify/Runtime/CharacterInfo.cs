@@ -3,6 +3,51 @@ using UnityEngine.UI;
 
 namespace Novelify
 {
+    public static class PortraitTweenEasingUtility
+    {
+        public static float Evaluate(PortraitTweenEasing easing, AnimationCurve customCurve, float progress)
+        {
+            float t = Mathf.Clamp01(progress);
+            switch (easing)
+            {
+                case PortraitTweenEasing.EaseIn: return t * t * t;
+                case PortraitTweenEasing.EaseOut: return 1f - Mathf.Pow(1f - t, 3f);
+                case PortraitTweenEasing.EaseInOut: return t * t * (3f - 2f * t);
+                case PortraitTweenEasing.Anticipation: return t * t * (2.70158f * t - 1.70158f);
+                case PortraitTweenEasing.Overshoot:
+                    {
+                        float shifted = t - 1f;
+                        return 1f + 2.70158f * shifted * shifted * shifted + 1.70158f * shifted * shifted;
+                    }
+                case PortraitTweenEasing.Bounce: return BounceOut(t);
+                case PortraitTweenEasing.Custom:
+                    return customCurve != null && customCurve.length > 0
+                        ? Mathf.Clamp01(customCurve.Evaluate(t))
+                        : t;
+                default: return t;
+            }
+        }
+
+        private static float BounceOut(float t)
+        {
+            const float scale = 7.5625f;
+            const float divisor = 2.75f;
+            if (t < 1f / divisor) return scale * t * t;
+            if (t < 2f / divisor)
+            {
+                t -= 1.5f / divisor;
+                return scale * t * t + 0.75f;
+            }
+            if (t < 2.5f / divisor)
+            {
+                t -= 2.25f / divisor;
+                return scale * t * t + 0.9375f;
+            }
+            t -= 2.625f / divisor;
+            return scale * t * t + 0.984375f;
+        }
+    }
+
     public class CharacterInfo : MonoBehaviour
     {
         [System.NonSerialized] public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
@@ -21,8 +66,15 @@ namespace Novelify
         private Vector2 _moveStart, _moveTarget;
         private Vector2 _scaleStart, _scaleTarget;
         private float _rotationStart, _rotationTarget;
+        private float _opacityStart, _opacityTarget = 1f;
         private float _moveElapsed, _moveDuration;
-        private bool _easeMovement;
+        private PortraitTweenEasing _moveEasing;
+        private AnimationCurve _moveCustomCurve;
+        private bool _tweenTransform, _tweenOpacity, _deactivateAfterTween;
+        private bool _wasHiddenBeforePrepare;
+        private bool _hasEnteredStage;
+        private Vector2 _positionBeforeHide;
+        private CanvasGroup _canvasGroup;
         private bool _speaking, _animateMouth, _animateBlinking = true, _speechPause;
         private bool _eyesClosed;
         private float _nextMouthFrame, _nextBlink;
@@ -47,6 +99,12 @@ namespace Novelify
         {
             get => new Vector2(transform.localScale.x, transform.localScale.y);
             set => transform.localScale = new Vector3(value.x, value.y, transform.localScale.z);
+        }
+
+        public float Opacity
+        {
+            get => ResolveCanvasGroup().alpha;
+            set => ResolveCanvasGroup().alpha = Mathf.Clamp01(value);
         }
 
         private void Awake() => ResolveLayers();
@@ -78,6 +136,18 @@ namespace Novelify
                 }
                 layer.raycastTarget = false;
             }
+        }
+
+        private CanvasGroup ResolveCanvasGroup()
+        {
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                _canvasGroup.interactable = false;
+                _canvasGroup.blocksRaycasts = false;
+            }
+            return _canvasGroup;
         }
 
         public void SetEmotion(CharacterEmotion emotion)
@@ -168,28 +238,165 @@ namespace Novelify
             float duration,
             bool easeInOut = true)
         {
+            TransformTo(
+                targetPosition,
+                targetRotation,
+                targetScale,
+                smooth,
+                duration,
+                easeInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None,
+                null);
+        }
+
+        public void TransformTo(
+            Vector2 targetPosition,
+            float targetRotation,
+            Vector2 targetScale,
+            bool smooth,
+            float duration,
+            PortraitTweenEasing easing,
+            AnimationCurve customCurve)
+        {
+            TransformTo(targetPosition, targetRotation, targetScale, smooth, duration,
+                easing, customCurve, false, Opacity);
+        }
+
+        public void TransformTo(
+            Vector2 targetPosition,
+            float targetRotation,
+            Vector2 targetScale,
+            bool animateTransform,
+            float duration,
+            PortraitTweenEasing easing,
+            AnimationCurve customCurve,
+            bool animateOpacity,
+            float targetOpacity)
+        {
+            StopMovement();
             _moveStart = Position;
             _moveTarget = targetPosition;
             _rotationStart = Rotation;
             _rotationTarget = targetRotation;
             _scaleStart = Scale;
             _scaleTarget = targetScale;
+            _opacityStart = Opacity;
+            _opacityTarget = Mathf.Clamp01(targetOpacity);
             _moveElapsed = 0f;
             _moveDuration = duration;
-            _easeMovement = easeInOut;
-            bool hasChanged = _moveStart != targetPosition ||
-                              !Mathf.Approximately(Mathf.DeltaAngle(_rotationStart, targetRotation), 0f) ||
-                              _scaleStart != targetScale;
-            IsMoving = smooth && duration > 0f && !float.IsInfinity(duration) && hasChanged;
-            if (!IsMoving)
+            _moveEasing = easing;
+            _moveCustomCurve = customCurve;
+            _tweenTransform = animateTransform;
+            _tweenOpacity = animateOpacity;
+            bool transformChanged = _moveStart != targetPosition ||
+                                    !Mathf.Approximately(Mathf.DeltaAngle(_rotationStart, targetRotation), 0f) ||
+                                    _scaleStart != targetScale;
+            bool opacityChanged = !Mathf.Approximately(_opacityStart, _opacityTarget);
+            bool validDuration = duration > 0f && !float.IsInfinity(duration);
+            IsMoving = validDuration &&
+                       (animateTransform && transformChanged || animateOpacity && opacityChanged);
+            if (!animateTransform || !IsMoving)
             {
                 Position = targetPosition;
                 Rotation = targetRotation;
                 Scale = targetScale;
             }
+            if (animateOpacity && !IsMoving) Opacity = _opacityTarget;
         }
 
-        public void StopMovement() => IsMoving = false;
+        public void TransitionIn(
+            CharacterTransitionMode transition,
+            CharacterTransitionDirection direction,
+            float duration,
+            float offset,
+            PortraitTweenEasing easing)
+        {
+            bool shouldTransition = !_hasEnteredStage || _wasHiddenBeforePrepare || !gameObject.activeSelf;
+            _wasHiddenBeforePrepare = false;
+
+            if (!shouldTransition)
+                return;
+
+            _hasEnteredStage = true;
+
+            bool slide = transition is CharacterTransitionMode.Slide or CharacterTransitionMode.FadeAndSlide;
+            bool fade = transition is CharacterTransitionMode.Fade or CharacterTransitionMode.FadeAndSlide;
+            Vector2 target = Position;
+            if (slide) Position = target + TransitionOffset(direction, offset);
+            if (fade) Opacity = 0f;
+            TransformTo(target, Rotation, Scale, slide, duration, easing, null, fade, 1f);
+        }
+
+        public void TransitionOut(
+            CharacterTransitionMode transition,
+            CharacterTransitionDirection direction,
+            float duration,
+            float offset,
+            PortraitTweenEasing easing)
+        {
+            bool slide = transition is CharacterTransitionMode.Slide or CharacterTransitionMode.FadeAndSlide;
+            bool fade = transition is CharacterTransitionMode.Fade or CharacterTransitionMode.FadeAndSlide;
+            _positionBeforeHide = Position;
+            Vector2 target = slide ? Position + TransitionOffset(direction, offset) : Position;
+            TransformTo(target, Rotation, Scale, slide, duration, easing, null, fade, 0f);
+            _deactivateAfterTween = true;
+
+            if (!IsMoving) CompleteHide();
+        }
+
+        public void HideImmediately()
+        {
+            bool restorePosition = _deactivateAfterTween;
+            Vector2 position = _positionBeforeHide;
+            StopMovement();
+            if (restorePosition) Position = position;
+            Opacity = 1f;
+            gameObject.SetActive(false);
+        }
+
+        public void PrepareToShow()
+        {
+            bool restorePosition = _deactivateAfterTween;
+            Vector2 position = _positionBeforeHide;
+            bool wasHidden = !gameObject.activeSelf;
+            _wasHiddenBeforePrepare = !_hasEnteredStage || wasHidden;
+            if (restorePosition)
+            {
+                StopMovement();
+                Position = position;
+            }
+            if (wasHidden || restorePosition) Opacity = 1f;
+            gameObject.SetActive(true);
+        }
+
+        public void StopMovement()
+        {
+            IsMoving = false;
+            _tweenTransform = false;
+            _tweenOpacity = false;
+            _deactivateAfterTween = false;
+        }
+
+        private Vector2 TransitionOffset(CharacterTransitionDirection direction, float transitionExtent)
+        {
+            Vector2 distance = GetStageExtent(0) * transitionExtent;
+            return direction switch
+            {
+                CharacterTransitionDirection.Right => new Vector2(distance.x, 0f),
+                CharacterTransitionDirection.Up => new Vector2(0f, distance.y),
+                CharacterTransitionDirection.Down => new Vector2(0f, -distance.y),
+                _ => new Vector2(-distance.x, 0f)
+            };
+        }
+
+        private void CompleteHide()
+        {
+            Vector2 restorePosition = _positionBeforeHide;
+            _deactivateAfterTween = false;
+            IsMoving = false;
+            gameObject.SetActive(false);
+            Position = restorePosition;
+            Opacity = 1f;
+        }
 
         private void Update()
         {
@@ -197,20 +404,39 @@ namespace Novelify
             {
                 _moveElapsed += TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;
                 float t = Mathf.Clamp01(_moveElapsed / _moveDuration);
-                float easedT = _easeMovement ? t * t * (3f - 2f * t) : t;
-                Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, easedT);
-                Rotation = Mathf.LerpAngle(_rotationStart, _rotationTarget, easedT);
-                Scale = Vector2.LerpUnclamped(_scaleStart, _scaleTarget, easedT);
+                float easedT = PortraitTweenEasingUtility.Evaluate(_moveEasing, _moveCustomCurve, t);
+                if (_tweenTransform)
+                {
+                    Position = Vector2.LerpUnclamped(_moveStart, _moveTarget, easedT);
+                    Rotation = _rotationStart + Mathf.DeltaAngle(_rotationStart, _rotationTarget) * easedT;
+                    Scale = Vector2.LerpUnclamped(_scaleStart, _scaleTarget, easedT);
+                }
+                if (_tweenOpacity)
+                {
+                    Opacity = Mathf.LerpUnclamped(_opacityStart, _opacityTarget, easedT);
+                }
+
+                //Function to call when the destination of a movement has been reached.
                 if (t >= 1f)
                 {
-                    Position = _moveTarget;
-                    Rotation = _rotationTarget;
-                    Scale = _scaleTarget;
+                    if (_tweenTransform)
+                    {
+                        Position = _moveTarget;
+                        Rotation = _rotationTarget;
+                        Scale = _scaleTarget;
+                    }
+                    if (_tweenOpacity) Opacity = _opacityTarget;
                     IsMoving = false;
+                    if (_deactivateAfterTween)
+                    {
+                        CompleteHide();
+                        return;
+                    }
                 }
             }
 
             if (character == null) return;
+
             float now = TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledTime : Time.time;
             if (_animateBlinking && Portrait.EyesClosed != null && now >= _nextBlink)
             {

@@ -1,15 +1,19 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 namespace Novelify
 {
     public partial class NovelGraphRunner
     {
+        private TMP_FontAsset _defaultDialogueFont;
+
         private void InitializePresentation()
         {
             if (_customPresentation != null) return;
             if (DialogueText != null)
             {
+                _defaultDialogueFont = DialogueText.font;
                 DialogueText.richText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
                 if (DialogueText.GetComponent<NovelTextEffects>() == null)
@@ -79,16 +83,22 @@ namespace Novelify
             if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
             StopAudio(NodeSoundSource);
             AudioClip nodeClip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
-            if (NodeSoundSource != null && nodeClip != null)
+            if (NodeSoundSource != null && nodeClip != null &&
+                (node.PlaySoundCharacterIndex < 0 || node.ShowTextImmediately))
             {
                 NodeSoundSource.clip = nodeClip;
                 NodeSoundSource.Play();
             }
             _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
+            Stage.BringToFront(_speaker);
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
+            if (_speaker != null && node.Appearance != CharacterTransitionMode.Instant)
+                _speaker.TransitionIn(node.Appearance, node.AppearanceDirection,
+                    Mathf.Max(0f, node.AppearanceDuration), node.SlideOffset, node.AppearanceEasing);
             if (DialogueText != null)
             {
+                ApplyDialogueFonts(node);
                 DialogueText.SetText(node.DialogueText ?? string.Empty);
                 if (node.ShowTextImmediately || string.IsNullOrEmpty(node.DialogueText))
                     DialogueText.maxVisibleCharacters = int.MaxValue;
@@ -105,6 +115,34 @@ namespace Novelify
                 OnDialogueBoundaryPresented(node, speakerName, node.DialogueText ?? string.Empty);
                 Session.RaiseDialoguePresented(RuntimeGraph, node, speakerName);
             }
+        }
+
+        private void ApplyDialogueFonts(RuntimeDialogueNode node)
+        {
+            if (DialogueText == null || node == null)
+            {
+                return;
+            }
+
+            if (node.DialogueFont != null)
+            {
+                MaterialReferenceManager.AddFontAsset(node.DialogueFont);
+            }
+
+            if (node.DialogueFontAssets != null)
+            {
+                foreach (TMP_FontAsset font in node.DialogueFontAssets)
+                {
+                    if (font != null)
+                    {
+                        MaterialReferenceManager.AddFontAsset(font);
+                    }
+                }
+            }
+
+            DialogueText.font = node.DialogueFont != null
+                ? node.DialogueFont
+                : _defaultDialogueFont;
         }
 
         private void OnCustomRevealCompleted(RuntimeDialogueNode node)
@@ -125,7 +163,12 @@ namespace Novelify
                 character != null ? character.PitchMaxVariation : node.PitchMaxVariation,
                 node.CharactersPerSecond,
                 letter => _speaker?.RevealLetter(letter),
-                TimeMode);
+                TimeMode,
+                (characterIndex, _) =>
+                {
+                    if (characterIndex == node.PlaySoundCharacterIndex)
+                        PlayDialogueCue(node);
+                });
             if (_currentNode != node) yield break;
             _textRevealCoroutine = null;
             _isTextRevealing = false;
@@ -133,6 +176,15 @@ namespace Novelify
             _speaker?.StopSpeaking();
             StopTalkAudio();
             OnSupportedSaveBoundary();
+        }
+
+        private void PlayDialogueCue(RuntimeDialogueNode node)
+        {
+            AudioClip clip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
+            if (NodeSoundSource == null || clip == null) return;
+            NodeSoundSource.clip = clip;
+            NodeSoundSource.loop = false;
+            NodeSoundSource.Play();
         }
         private void PlaySound(RuntimePlaySoundNode node)
         {
@@ -211,6 +263,9 @@ namespace Novelify
             if (DialogueText == null) return;
             if (_textRevealCoroutine != null) StopCoroutine(_textRevealCoroutine);
             _textRevealCoroutine = null;
+            if (_currentNode is RuntimeDialogueNode dialogue &&
+                dialogue.PlaySoundCharacterIndex >= DialogueText.maxVisibleCharacters)
+                PlayDialogueCue(dialogue);
             DialogueText.maxVisibleCharacters = int.MaxValue;
             _isTextRevealing = false;
             _textCompletedFrame = Time.frameCount;

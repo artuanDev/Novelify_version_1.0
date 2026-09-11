@@ -1,6 +1,8 @@
 ﻿<Solution>
   <Project Path="Novelify.Runtime.csproj" />
   <Project Path="Novelify.Runtime.Tests.csproj" />
-  <Project Path="Novelify.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Novelify.Editor.Tests.csproj" />
+  <Project Path="Novelify.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
 </Solution>

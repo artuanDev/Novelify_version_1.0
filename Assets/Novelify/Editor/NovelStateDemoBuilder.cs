@@ -378,12 +378,18 @@ namespace Novelify.Editor
             NovelChoiceUnavailablePolicy policy, string disabledReason, bool onceOnly,
             NovelChoiceTransactionDefinition transaction)
         {
-            node.GetInputPortByName($"Choice ID {index}").TrySetValue(id);
-            node.GetInputPortByName($"Choice Text {index}").TrySetValue(text);
-            node.GetInputPortByName($"Unavailable Policy {index}").TrySetValue(policy);
-            node.GetInputPortByName($"Disabled Reason {index}").TrySetValue(disabledReason);
-            node.GetInputPortByName($"Once Only {index}").TrySetValue(onceOnly);
-            node.GetInputPortByName($"Transaction {index}").TrySetValue(transaction);
+            INodeOption option = node.GetNodeOptionByName(ChoiceNode.ChoicesOptionID);
+            option.TryGetValue(out ChoiceAuthoringList current);
+            ChoiceAuthoringList updated = current?.Clone(index + 1) ?? ChoiceAuthoringList.CreateDefault(index + 1);
+            ChoiceAuthoringEntry entry = updated.Entries[index];
+            entry.ID = id;
+            entry.Text = text;
+            entry.UnavailablePolicy = policy;
+            entry.DisabledReason = disabledReason;
+            entry.OnceOnly = onceOnly;
+            entry.Transaction = transaction;
+            option.TrySetValue(updated);
+            node.DefineNode();
         }
 
         private static NovelChoiceTransactionDefinition CreateTransaction(

@@ -1,6 +1,6 @@
 {
   "name": "Novelify.Editor.Tests",
-  "references": ["Novelify.Runtime", "Novelify.Editor", "UnityEngine.UI"],
+  "references": ["Novelify.Runtime", "Novelify.Editor", "UnityEngine.UI", "Unity.TextMeshPro"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

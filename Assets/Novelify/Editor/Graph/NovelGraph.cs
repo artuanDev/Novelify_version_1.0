@@ -280,6 +280,28 @@ namespace Novelify.Editor
                         continue;
                     }
 
+                    if (node is ChoiceNode choice && choice.TryGetMigratedChoices(out ChoiceAuthoringList migrated))
+                    {
+                        if (!isRecordingUndo)
+                        {
+                            graph.UndoBeginRecordGraph("Migrate Choice Dropdowns");
+                            isRecordingUndo = true;
+                        }
+                        choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID)?.TrySetValue(migrated);
+                        choice.ClearMigratedLegacyChoiceValues();
+                        choice.DefineNode();
+                    }
+
+                    if (node is ChoiceNode namedChoice && !namedChoice.ChoiceOutputNamesMatch())
+                    {
+                        if (!isRecordingUndo)
+                        {
+                            graph.UndoBeginRecordGraph("Update Novelify Authoring UI");
+                            isRecordingUndo = true;
+                        }
+                        namedChoice.DefineNode();
+                    }
+
                     NovelCharacter character = NovelGraphValues.Resolve<NovelCharacter>(
                         graph,
                         node.GetInputPortByName("Speaker"));

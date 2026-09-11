@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: NovelGraphCatalog
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelGraphCatalog
   Graphs:
+  - GraphID: dc805c59063c35942909d3ca581e0b23
+    Graph: {fileID: 3965311268370046156, guid: dc805c59063c35942909d3ca581e0b23, type: 3}
+  - GraphID: e7a34679c901f0a4daa7e270b01a37ff
+    Graph: {fileID: 3965311268370046156, guid: e7a34679c901f0a4daa7e270b01a37ff, type: 3}
   - GraphID: eaba161d2b48e494e932da88627b1e04
     Graph: {fileID: 3965311268370046156, guid: eaba161d2b48e494e932da88627b1e04, type: 3}
   - GraphID: 58ecfcf76453a8d4d98cdd0db324176e
@@ -25,6 +29,10 @@ MonoBehaviour:
     Graph: {fileID: 3965311268370046156, guid: 072f951ef7a40604aabbc23dc3dec50a, type: 3}
   - GraphID: 9de781201ae9fda4a863b6991ebfac1b
     Graph: {fileID: 3965311268370046156, guid: 9de781201ae9fda4a863b6991ebfac1b, type: 3}
+  - GraphID: 5f076618c03a0ec46ae80f825a04054d
+    Graph: {fileID: 3965311268370046156, guid: 5f076618c03a0ec46ae80f825a04054d, type: 3}
+  - GraphID: 42e81436c11dd414cb2264130be49017
+    Graph: {fileID: 3965311268370046156, guid: 42e81436c11dd414cb2264130be49017, type: 3}
   Characters:
   - CharacterID: 0d06353a589f16c46857e95fa67f398f
     Character: {fileID: 11400000, guid: 0d06353a589f16c46857e95fa67f398f, type: 2}
@@ -37,6 +45,8 @@ MonoBehaviour:
     Variable: {fileID: 11400000, guid: 6993ee962f7bfb54c8a39ae3e88e4823, type: 2}
   - VariableID: 8b03c72e0bac4408ab821167e1c55e0a
     Variable: {fileID: 11400000, guid: c8256e8b7bca4304d8eaf96c0e37a658, type: 2}
+  - VariableID: 8c3a079973da41338005415df93e482f
+    Variable: {fileID: 11400000, guid: bb3474df4b1a3024199914447bb6f5a5, type: 2}
   - VariableID: a333cd1f0c2b40d2a4a196c647ac28a5
     Variable: {fileID: 11400000, guid: 6b9fbde715f6fa945b6d47139ddab91f, type: 2}
   - VariableID: a7dd496b73af4f74823e30a3a24f8fff
@@ -49,4 +59,4 @@ MonoBehaviour:
     Variable: {fileID: 11400000, guid: 5114b891fa7227d4983a003ff0fd77be, type: 2}
   - VariableID: f5fa035bb42543b8833c605f87b4161b
     Variable: {fileID: 11400000, guid: 33934ed9f60c348418a4a38c578f2e43, type: 2}
-  GeneratedAtUtc: 2026-09-08T18:03:04.4588560Z
+  GeneratedAtUtc: 2026-09-08T23:25:00.7527851Z

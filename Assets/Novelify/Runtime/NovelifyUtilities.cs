@@ -13,7 +13,8 @@ namespace Novelify
             float minPitchVariation = 0, float maxPitchVariation = 0,
             float charactersPerSecond = 30f,
             Action<char> onCharacterShown = null,
-            DialogueTimeMode timeMode = DialogueTimeMode.Unscaled)
+            DialogueTimeMode timeMode = DialogueTimeMode.Unscaled,
+            Action<int, char> onCharacterShownAtIndex = null)
         {
             text ??= string.Empty;
             textDisplay.richText = true;
@@ -48,6 +49,7 @@ namespace Novelify
 
                 textDisplay.maxVisibleCharacters = characterIndex + 1;
                 onCharacterShown?.Invoke(letter);
+                onCharacterShownAtIndex?.Invoke(characterIndex, letter);
 
                 if (characterIndex == visibleCharacterCount - 1)
                 {

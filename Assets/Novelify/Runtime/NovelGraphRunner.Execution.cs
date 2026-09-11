@@ -119,6 +119,7 @@ namespace Novelify
                             float margin = Mathf.Max(0f, AsFloat(Evaluate(move.MarginValue), move.Margin));
                             float rotation = AsFloat(Evaluate(move.RotationValue), move.Rotation);
                             Vector2 scale = AsVector2(Evaluate(move.ScaleValue), move.Scale);
+                            float opacity = Mathf.Clamp01(AsFloat(Evaluate(move.OpacityValue), move.Opacity));
                             bool normalizedPosition = move.PositionSpace == CharacterPositionSpace.Normalized;
                             Vector2 target = normalizedPosition
                                 ? moving.NormalizedToAnchoredPosition(offset, margin)
@@ -134,7 +135,14 @@ namespace Novelify
                                     scale,
                                     move.SmoothMovement,
                                     move.Duration,
-                                    move.EaseInOut);
+                                    move.UseEasingPreset
+                                        ? move.Easing
+                                        : move.EaseInOut
+                                            ? PortraitTweenEasing.EaseInOut
+                                            : PortraitTweenEasing.None,
+                                    move.CustomEasingCurve,
+                                    move.AnimateOpacity,
+                                    opacity);
                             }
                             else
                             {
@@ -195,7 +203,14 @@ namespace Novelify
                     case RuntimeHideCharacterNode hide:
                         NovelCharacterReference hideTarget = ResolveCharacterReference(
                             hide.CharacterReferenceValue, hide.CharacterValue, hide.Character, hide.InstanceID);
-                        Stage.Hide(hideTarget.Character, hideTarget.InstanceID);
+                        CharacterInfo hiding = Stage.Hide(hideTarget.Character, hideTarget.InstanceID,
+                            hide.Transition, hide.Direction, hide.Duration, hide.SlideOffset, hide.Easing);
+                        if (hide.WaitForCompletion && hiding != null && hiding.IsMoving)
+                        {
+                            _isWaiting = true;
+                            _waitCoroutine = StartCoroutine(WaitThenContinue(node, version, 0f, hiding));
+                            return;
+                        }
                         break;
                     case RuntimeHideAllCharactersNode _: Stage.HideAll(); break;
                     case RuntimeSetCharacterEmotionNode emotion:

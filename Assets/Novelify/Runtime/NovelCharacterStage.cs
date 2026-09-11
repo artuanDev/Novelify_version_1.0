@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Novelify
@@ -43,14 +44,17 @@ namespace Novelify
             }
             if (TryGet(character, instanceID, out CharacterInfo existing))
             {
-                existing.gameObject.SetActive(true);
+                existing.PrepareToShow();
                 return existing;
+
             }
+
             if (_root == null || _prefab == null)
             {
                 Debug.LogWarning("NovelGraphRunner needs a Portrait Prefab and a Character Container (or Canvas Dialogue) to create characters.");
                 return null;
             }
+
             GameObject portrait = Object.Instantiate(_prefab, _root, false);
             portrait.name = string.IsNullOrEmpty(instanceID) ? character.name : $"{character.name} ({instanceID})";
             portrait.transform.SetAsFirstSibling();
@@ -64,13 +68,34 @@ namespace Novelify
 
         public void Hide(NovelCharacter character, string instanceID = "")
         {
-            if (TryGet(character, instanceID, out CharacterInfo info)) info.gameObject.SetActive(false);
+            if (TryGet(character, instanceID, out CharacterInfo info)) info.HideImmediately();
+        }
+
+        public CharacterInfo Hide(
+            NovelCharacter character,
+            string instanceID,
+            CharacterTransitionMode transition,
+            CharacterTransitionDirection direction,
+            float duration,
+            float offset,
+            PortraitTweenEasing easing)
+        {
+            if (!TryGet(character, instanceID, out CharacterInfo info)) return null;
+
+            info.TransitionOut(transition, direction, duration, offset, easing);
+
+            return info;
+        }
+
+        public void BringToFront(CharacterInfo info)
+        {
+            if (info != null && info.transform.parent == _root) info.transform.SetAsLastSibling();
         }
 
         public void HideAll()
         {
             foreach (CharacterInfo info in _characters.Values)
-                if (info != null) info.gameObject.SetActive(false);
+                if (info != null) info.HideImmediately();
         }
 
         public void StopMovement()
