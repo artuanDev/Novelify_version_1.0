@@ -156,4 +156,42 @@ namespace Novelify.Editor
                 .WithDefaultValue(true).Build();
         }
     }
+
+    [Serializable]
+    [Node("Novelify/Transitions", null, "Fade In")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class FadeInNode : FadeAuthoringNode { }
+
+    [Serializable]
+    [Node("Novelify/Transitions", null, "Fade Out")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class FadeOutNode : FadeAuthoringNode { }
+
+    //Node for speech bubbles
+    [Serializable]
+    [Node("Novelify/Story", null, "Speech Bubble")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class SpeechBubbleNode : DialogueNode
+    {
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            NovelPresentationNodeOptions.AddStyle(
+                context, NovelBoxStyle.BubbleDefault);
+            context.AddOption<float>("Minimum Width")
+                .WithDefaultValue(180f).Build();
+            context.AddOption<float>("Maximum Width")
+                .WithDefaultValue(520f).Build();
+            context.AddOption<float>("Horizontal Padding")
+                .WithDefaultValue(24f).Build();
+            context.AddOption<float>("Vertical Padding")
+                .WithDefaultValue(18f).Build();
+            context.AddOption<float>("Tail Width")
+                .WithDefaultValue(34f).Build();
+            context.AddOption<float>("Tail Length")
+                .WithDefaultValue(30f).Build();
+            context.AddOption<float>("Target Margin")
+                .WithDefaultValue(18f).Build();
+        }
+    }
 }
