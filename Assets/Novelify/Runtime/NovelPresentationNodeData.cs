@@ -63,6 +63,7 @@ namespace Novelify
             }
         }
 
+        //Default styles
         public static NovelBoxStyle DialogueDefault = new NovelBoxStyle
         {
             FillColor = new Color(0.055f, 0.075f, 0.13f, 1f),
@@ -82,6 +83,34 @@ namespace Novelify
             OutlineColor = Color.white,
             OutlineThickness = 2f,
         };
+    }
 
+    //Create a dialogue box in runtime
+    [Serializable]
+    public sealed class RuntimeCreateDialogueBoxNode : RuntimeNode
+    {
+        public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+        public float Height = 180f;
+        public float BottomMargin = 32f;
+        public float HorizontalMargin = 48f;
+        public float HorizontalPadding = 32f;
+        public float VerticalPadding = 22f;
+    }
+
+    [Serializable]
+    public sealed class RuntimeCreateDialogueSpeakerBoxNode : RuntimeNode
+    {
+        public NovelBoxStyle Style = NovelBoxStyle.SpeakerDefault;
+        public float Width = 260f;
+        public float Height = 54f;
+        public float HorizontalOffset = 24f;
+        public float VerticalOverlap = 27f;
+    }
+
+    [Serializable]
+    public sealed class RuntimeChangeDialogueStyleNode : RuntimeNode
+    {
+        public NovelBoxTarget Target = NovelBoxTarget.Both;
+        public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
     }
 }
