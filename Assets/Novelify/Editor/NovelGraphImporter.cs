@@ -2,14 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Unity.Burst.CompilerServices;
+using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEditor.AssetImporters;
-using Unity.GraphToolkit.Editor;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(12, NovelGraph.AssetExtension)]
+    [ScriptedImporter(13, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -116,6 +118,21 @@ namespace Novelify.Editor
                     subgraphNode.GetSubgraph() is NovelFunctionGraph functionGraph)
                 {
                     runtimeNode = ProcessFunctionCallNode(editorNode, functionGraph, nodeIDMap);
+                }
+                else if(editorNode is SpeechBubbleNode speechBubbleNode)
+                {
+                    var runtimeSpeechBubble = new RuntimeSpeechBubbleNode
+                    {
+                        NodeID = nodeIDMap[editorNode]
+                    };
+                    ProcessDialogueNode(
+                        speechBubbleNode,
+                        runtimeSpeechBubble,
+                        nodeIDMap);
+                    ProcessSpeechBubbleNode(
+                        speechBubbleNode,
+                        runtimeSpeechBubble);
+                    runtimeNode = runtimeSpeechBubble;
                 }
                 else if (editorNode is SimpleDialogueNode dialogueNode)
                 {
@@ -253,6 +270,84 @@ namespace Novelify.Editor
 
             ctx.AddObjectToAsset("RuntimeData", runtimeGraph);
             ctx.SetMainObject(runtimeGraph);
+        }
+
+        private void ProcessSpeechBubbleNode(
+             SpeechBubbleNode node,
+             RuntimeSpeechBubbleNode runtimeNode)
+        {
+            runtimeNode.BubbleStyle = ReadBoxStyle(
+                node, NovelBoxStyle.BubbleDefault);
+            runtimeNode.MinimumWidth = Mathf.Max(120f, GetOptionValue(
+                node.GetNodeOptionByName("Minimum Width"), 180f));
+            runtimeNode.MaximumWidth = Mathf.Max(
+                runtimeNode.MinimumWidth,
+                GetOptionValue(
+                    node.GetNodeOptionByName("Maximum Width"), 520f));
+            runtimeNode.HorizontalPadding = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Horizontal Padding"), 24f));
+            runtimeNode.VerticalPadding = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Vertical Padding"), 18f));
+            runtimeNode.TailWidth = Mathf.Max(2f, GetOptionValue(
+                node.GetNodeOptionByName("Tail Width"), 34f));
+            runtimeNode.TailLength = Mathf.Max(2f, GetOptionValue(
+                node.GetNodeOptionByName("Tail Length"), 30f));
+            runtimeNode.TargetMargin = Mathf.Max(0f, GetOptionValue(
+                node.GetNodeOptionByName("Target Margin"), 18f));
+        }
+
+        private NovelBoxStyle ReadBoxStyle(
+            INode node,
+            NovelBoxStyle fallback)
+        {
+            return new NovelBoxStyle
+            {
+                FillColor = GetOptionValue(
+                                  node.GetNodeOptionByName("Fill Color"),
+                                  fallback.FillColor),
+                Opacity = Mathf.Clamp01(GetOptionValue(
+                     node.GetNodeOptionByName("Opacity"),
+                     fallback.Opacity)),
+                CornerRadius = Mathf.Max(0f, GetOptionValue(
+                     node.GetNodeOptionByName("Corner Radius"),
+                     fallback.CornerRadius)),
+                OutlineEnabled = GetOptionValue(
+                     node.GetNodeOptionByName("Outline"),
+                     fallback.OutlineEnabled),
+                OutlineColor = GetOptionValue(
+                     node.GetNodeOptionByName("Outline Color"),
+                     fallback.OutlineColor),
+                OutlineThickness = Mathf.Max(0f, GetOptionValue(
+                     node.GetNodeOptionByName("Outline Thickness"),
+                     fallback.OutlineThickness))
+            };
+        }
+
+        private RuntimeFadeNode CreateFadeRuntimeNode(
+             FadeAuthoringNode node,
+             bool fadeOut)
+        {
+            RuntimeFadeNode runtimeNode = fadeOut
+                ? new RuntimeFadeOutNode()
+                : new RuntimeFadeInNode();
+            IPort duration = node.GetInputPortByName(
+                FadeAuthoringNode.DurationPort);
+            IPort speed = node.GetInputPortByName(
+                FadeAuthoringNode.SpeedPort);
+            runtimeNode.Duration = Mathf.Max(0f, GetPortValue<float>(duration));
+            runtimeNode.DurationValue = BuildExpression(duration);
+            runtimeNode.Speed = Mathf.Max(0.001f, GetPortValue<float>(speed));
+            runtimeNode.SpeedValue = BuildExpression(speed);
+            runtimeNode.Color = GetOptionValue(
+                node.GetNodeOptionByName("Color"), Color.black);
+            runtimeNode.Easing = GetOptionValue(
+                node.GetNodeOptionByName("Easing"),
+                NovelFadeEasing.EaseInOut);
+            runtimeNode.WaitForCompletion = GetOptionValue(
+                node.GetNodeOptionByName("Wait For Completion"), true);
+            runtimeNode.BlockInput = GetOptionValue(
+                node.GetNodeOptionByName("Block Input"), true);
+            return runtimeNode;
         }
 
         private void ProcessDialogueNode(
@@ -684,6 +779,95 @@ namespace Novelify.Editor
                     else if (AssetDatabase.GetAssetPath(calledGraph) == _context?.assetPath)
                         _context?.LogImportWarning("Call Novel Page references its own graph. Runtime recursion is limited, but this is usually accidental.");
                     return new RuntimeCallNovelPageNode { Graph = calledGraph };
+
+                case CreateDialogueBoxNode _:
+                    return new RuntimeCreateDialogueBoxNode
+                    {
+                        Style = ReadBoxStyle(
+                                node, NovelBoxStyle.DialogueDefault),
+                        Height = Mathf.Max(80f, GetOptionValue(
+                                node.GetNodeOptionByName("Height"), 180f)),
+                                              BottomMargin = Mathf.Max(0f, GetOptionValue(
+                                node.GetNodeOptionByName("Bottom Margin"), 32f)),
+                                              HorizontalMargin = Mathf.Max(0f, GetOptionValue(
+                                node.GetNodeOptionByName("Horizontal Margin"), 48f)),
+                                              HorizontalPadding = Mathf.Max(0f, GetOptionValue(
+                                node.GetNodeOptionByName("Horizontal Padding"), 32f)),
+                        VerticalPadding = Mathf.Max(0f, GetOptionValue(
+                                node.GetNodeOptionByName("Vertical Padding"), 22f))
+
+                    };
+                case CreateDialogueSpeakerBoxNode _:
+                    return new RuntimeCreateDialogueSpeakerBoxNode
+                    {
+                        Style = ReadBoxStyle(
+                                         node, NovelBoxStyle.SpeakerDefault),
+                        Width = Mathf.Max(80f, GetOptionValue(
+                    node.GetNodeOptionByName("Width"), 260f)),
+                        Height = Mathf.Max(30f, GetOptionValue(
+                    node.GetNodeOptionByName("Height"), 54f)),
+                        HorizontalOffset = GetOptionValue(
+                    node.GetNodeOptionByName("Horizontal Offset"), 24f),
+                        VerticalOverlap = GetOptionValue(
+                    node.GetNodeOptionByName("Vertical Overlap"), 27f)
+
+                    };
+                case ChangeDialogueBackgroundStyleNode _:
+                    return new RuntimeChangeDialogueStyleNode
+                    {
+                        Target = GetOptionValue(
+                                node.GetNodeOptionByName("Target"),
+                                NovelBoxTarget.Both),
+                        Style = ReadBoxStyle(
+                    node, NovelBoxStyle.DialogueDefault)
+                    };
+                case ResetDialogueStyleNode _:
+                    return new RuntimeResetDialogueStyleNode
+                    {
+                        Target = GetOptionValue(
+                            node.GetNodeOptionByName("Target"),
+                            NovelBoxTarget.Both)
+                    };
+                case PlayMusicNode playMusic:
+                    {
+                        IPort clip = playMusic.GetInputPortByName(
+                            PlayMusicNode.ClipPort);
+                        IPort volume = playMusic.GetInputPortByName(
+                            PlayMusicNode.VolumePort);
+                        IPort pitch = playMusic.GetInputPortByName(
+                            PlayMusicNode.PitchPort);
+                        return new RuntimePlayMusicNode
+                        {
+                            Channel = GetOptionValue(
+                                  node.GetNodeOptionByName("Channel"),
+                                  NovelAudioChannel.Music),
+                            Clip = GetPortValue<AudioClip>(clip),
+                            ClipValue = BuildExpression(clip),
+                            Volume = GetPortValue<float>(volume),
+                            VolumeValue = BuildExpression(volume),
+                            Pitch = GetPortValue<float>(pitch),
+                            PitchValue = BuildExpression(pitch),
+                            Loop = GetOptionValue(
+                                node.GetNodeOptionByName("Loop"), true),
+                                                   ReplaceCurrent = GetOptionValue(
+                                node.GetNodeOptionByName("Replace Current"), true),
+                                                   Priority = Mathf.Clamp(GetOptionValue(
+                                node.GetNodeOptionByName("Priority"), 128), 0, 256)
+                        };
+                    }
+                case StopAudioChannelNode _:
+                    return new RuntimeStopAudioChannelNode
+                    {
+                        Channel = GetOptionValue(
+                            node.GetNodeOptionByName("Channel"),
+                            NovelAudioChannel.Music)
+                    };
+                case FadeInNode fadeIn:
+                    return CreateFadeRuntimeNode(fadeIn, false);
+                    
+                case FadeOutNode fadeOut:
+                    return CreateFadeRuntimeNode(fadeOut, true);
+
                 default: return new RuntimeNode();
             }
         }
@@ -1354,7 +1538,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(7, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(8, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

@@ -7,7 +7,7 @@ namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 4;
+        public const int CurrentSchemaVersion = 5;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
