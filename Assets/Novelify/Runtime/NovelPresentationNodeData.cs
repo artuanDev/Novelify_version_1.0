@@ -29,7 +29,7 @@ namespace Novelify
         Linear,
         EaseIn,
         EaseOut,
-        EasiInOut
+        EaseInOut
     }
 
     //Struct that will hold the novel boxes information available to edit
@@ -83,6 +83,16 @@ namespace Novelify
             OutlineColor = Color.white,
             OutlineThickness = 2f,
         };
+
+        public static NovelBoxStyle BubbleDefault => new NovelBoxStyle
+        {
+            FillColor = new Color(0.04f, 0.05f, 0.1f, 0.3f),
+            Opacity = 0.2f,
+            CornerRadius = 24f,
+            OutlineEnabled = false,
+            OutlineColor = Color.white,
+            OutlineThickness = 2f,
+        };
     }
 
     //Create a dialogue box in runtime
@@ -112,5 +122,67 @@ namespace Novelify
     {
         public NovelBoxTarget Target = NovelBoxTarget.Both;
         public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+    }
+
+    [Serializable]
+    public sealed class RuntimeResetDialogueStyleNode: RuntimeNode
+    {
+        public NovelBoxTarget Target = NovelBoxTarget.Both;
+    }
+
+    [Serializable]
+    public sealed class RuntimePlayMusicNode : RuntimeNode
+    {
+        public NovelAudioChannel Channel = NovelAudioChannel.Music;
+        public AudioClip Clip;
+        [SerializeReference] public RuntimeValueExpression ClipValue;
+        public float Volume = 1f;
+        [SerializeReference] public RuntimeValueExpression VolumeValue;
+        public float Pitch = 1f;
+        [SerializeReference] public RuntimeValueExpression PitchValue;
+        public bool Loop;
+        public bool ReplaceCurrent = true;
+        public int Priority = 128;
+    }
+
+    [Serializable]
+    public sealed class RuntimeStopAudioChannelNode: RuntimeNode
+    {
+        public NovelAudioChannel Channel = NovelAudioChannel.Music;
+    }
+
+    /*backbone class for any fade. since we want to reuse values from both fade in and out we make this class
+     * abstract and the fade in and out both inherit from this
+    //*/
+    [Serializable]
+    public abstract class RuntimeFadeNode : RuntimeNode
+    {
+        public float Duration = 1f;
+        [SerializeReference] public RuntimeValueExpression DurationValue;
+        public float Speed = 1f;
+        [SerializeReference] public RuntimeValueExpression SpeedValue;
+        public Color Color = Color.black;
+        public NovelFadeEasing Easing = NovelFadeEasing.EaseInOut;
+        public bool WaitForCompletion = true;
+        public bool BlockInput = true;
+    }
+
+    [Serializable]
+    public sealed class RuntimeFadeInNode : RuntimeFadeNode { }
+
+    [Serializable]
+    public sealed class RuntimeFadeOutNode : RuntimeFadeNode { }
+
+    [Serializable]
+    public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode
+    {
+        public NovelBoxStyle BubbleStyle = NovelBoxStyle.BubbleDefault;
+        public float MinimumWidth = 180f;
+        public float MaximumWidth = 520f;
+        public float HorizontalPadding = 24f;
+        public float VerticalPadding = 18f;
+        public float TailWidth = 34f;
+        public float TailLength = 30f;
+        public float TargetMargin = 18f;
     }
 }
