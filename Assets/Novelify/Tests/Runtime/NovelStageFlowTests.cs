@@ -1087,5 +1087,156 @@ namespace Novelify.Tests
                 if (Directory.Exists(directory)) Directory.Delete(directory, true);
             }
         }
+
+        [Test]
+        public void EmptyUiSetupCreatesDialogueAndSpeakerObjects()
+        {
+            Play(
+                new RuntimeCreateDialogueBoxNode
+                {
+                    NodeID = "create-dialogue",
+                    NextNodeID = "create-speaker",
+                    Height = 205f,
+                    Style = NovelBoxStyle.DialogueDefault
+                },
+                new RuntimeCreateDialogueSpeakerBoxNode
+                {
+                    NodeID = "create-speaker",
+                    NextNodeID = "line",
+                    Width = 315f,
+                    Style = NovelBoxStyle.SpeakerDefault
+                },
+                new RuntimeDialogueNode
+                {
+                    NodeID = "line",
+                    NovelCharacter = _character,
+                    DialogueText = "Generated UI works.",
+                    ShowTextImmediately = true
+                });
+
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+            Assert.That(_manager.DialoguePanel, Is.Not.Null);
+            Assert.That(_manager.DialogueText, Is.Not.Null);
+            Assert.That(_manager.NameBackground, Is.Not.Null);
+            Assert.That(_manager.SpeakerNameText, Is.Not.Null);
+            Assert.That(_manager.ChoiceButtonPrefab, Is.Not.Null);
+            Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator FadeOutWaitsThenContinuesToDialogue()
+        {
+            Play(
+                new RuntimeFadeOutNode
+                {
+                    NodeID = "fade",
+                    NextNodeID = "line",
+                    Duration = 0.1f,
+                    DurationValue = new RuntimeConstantExpression
+                    {
+                        Value = RuntimeValue.From(0.1f)
+                    },
+                    Speed = 1f,
+                    SpeedValue = new RuntimeConstantExpression
+                    {
+                        Value = RuntimeValue.From(1f)
+                    },
+                    WaitForCompletion = true,
+                    Color = Color.black
+                },
+                new RuntimeDialogueNode
+                {
+                    NodeID = "line",
+                    DialogueText = "After fade.",
+                    ShowTextImmediately = true
+                });
+
+            Assert.That(_manager.IsWaiting, Is.True);
+            yield return new WaitForSecondsRealtime(0.2f);
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+            CanvasGroup overlay = Object.FindObjectsByType<CanvasGroup>()
+                .Single(group => group.name == "Fade Overlay");
+            Assert.That(overlay.alpha, Is.EqualTo(1f).Within(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator SpeechBubbleUsesNormalDialogueAdvanceRules()
+        {
+            Play(new RuntimeSpeechBubbleNode
+            {
+                NodeID = "bubble",
+                NextNodeID = "after",
+                NovelCharacter = _character,
+                DialogueText = "This line is inside a bubble.",
+                ShowTextImmediately = true,
+                BubbleStyle = NovelBoxStyle.BubbleDefault
+            }, new RuntimeDialogueNode
+            {
+                NodeID = "after",
+                DialogueText = "Normal dialogue again.",
+                ShowTextImmediately = true
+            });
+
+            yield return null;
+            Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Speech Bubble"));
+            _manager.Advance();
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
+            Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Dialogue Panel"));
+        }
+
+        [UnityTest]
+        public IEnumerator StopAudioChannelDoesNotStopAnotherChannel()
+        {
+            AudioClip music = AudioClip.Create(
+                "Music", 44100, 1, 44100, false);
+            AudioClip ambience = AudioClip.Create(
+                "Ambience", 44100, 1, 44100, false);
+            try
+            {
+                Play(
+                    new RuntimePlayMusicNode
+                    {
+                        NodeID = "music",
+                        NextNodeID = "ambience",
+                        Channel = NovelAudioChannel.Music,
+                        Clip = music,
+                        Loop = true
+                    },
+                    new RuntimePlayMusicNode
+                    {
+                        NodeID = "ambience",
+                        NextNodeID = "stop-music",
+                        Channel = NovelAudioChannel.Ambience,
+                        Clip = ambience,
+                        Loop = true
+                    },
+                    new RuntimeStopAudioChannelNode
+                    {
+                        NodeID = "stop-music",
+                        NextNodeID = "line",
+                        Channel = NovelAudioChannel.Music
+                    },
+                    new RuntimeDialogueNode
+                    {
+                        NodeID = "line",
+                        ShowTextImmediately = true
+                    });
+
+                yield return null;
+                AudioSource musicSource = _manager.GetComponentsInChildren<
+                    AudioSource>(true).Single(source =>
+                        source.name == "Novelify Audio - Music");
+                AudioSource ambienceSource = _manager.GetComponentsInChildren<
+                    AudioSource>(true).Single(source =>
+                        source.name == "Novelify Audio - Ambience");
+                Assert.That(musicSource.isPlaying, Is.False);
+                Assert.That(ambienceSource.isPlaying, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(music);
+                Object.DestroyImmediate(ambience);
+            }
+        }
     }
 }

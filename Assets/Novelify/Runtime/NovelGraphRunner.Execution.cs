@@ -218,6 +218,34 @@ namespace Novelify
                             emotion.CharacterReferenceValue, emotion.CharacterValue, emotion.Character, emotion.InstanceID);
                         ShowCharacter(emotionTarget.Character, emotionTarget.InstanceID)?.SetEmotion(emotion.Emotion);
                         break;
+                    case RuntimeCreateDialogueBoxNode createDialogue:
+                        GeneratedPresentation.CreateDialogueBox(createDialogue);
+                        break;
+                        
+                    case RuntimeCreateDialogueSpeakerBoxNode createSpeaker:
+                        GeneratedPresentation.CreateSpeakerBox(createSpeaker);
+                        break;
+                        
+                    case RuntimeChangeDialogueStyleNode changeStyle:
+                        GeneratedPresentation.ChangeStyle(changeStyle);
+                        break;
+                        
+                    case RuntimeResetDialogueStyleNode resetStyle:
+                        GeneratedPresentation.ResetStyle(resetStyle);
+                        break;
+                        
+                    case RuntimePlayMusicNode music:
+                        ExecuteGeneratedPlayMusic(music);
+                        break;
+                        
+                    case RuntimeStopAudioChannelNode stopChannel:
+                        GeneratedPresentation.StopAudio(stopChannel.Channel);
+                        break;
+                        
+                    case RuntimeFadeNode fade:
+                        if (BeginGeneratedFade(fade, version))
+                            return;
+                        break;
                     case RuntimeWaitNode wait:
                         if (wait.Duration > 0f && !float.IsInfinity(wait.Duration))
                         {

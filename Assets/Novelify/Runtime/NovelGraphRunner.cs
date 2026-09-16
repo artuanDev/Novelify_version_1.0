@@ -18,8 +18,12 @@ namespace Novelify
                 if (presentationBehaviour is INovelPresentation presentation)
                     UsePresentation(presentation);
                 else
-                    Debug.LogError($"{presentationBehaviour.GetType().Name} must implement INovelPresentation.", this);
+                    Debug.LogError(
+                        presentationBehaviour.GetType().Name +
+                        " must implement INovelPresentation.", this);
             }
+
+            EnsureGeneratedPresentation(_customPresentation == null);
             InitializePresentation();
         }
         protected virtual void OnEnable() => SubscribeToStateStore();

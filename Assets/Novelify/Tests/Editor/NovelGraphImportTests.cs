@@ -569,5 +569,116 @@ namespace Novelify.Tests
             Assert.That(runtime.AllNodes.OfType<RuntimeDialogueEventNode>().Count(), Is.EqualTo(1));
             Assert.That(runtime.AllNodes.OfType<RuntimeStopSoundNode>().Count(), Is.EqualTo(1));
         }
+
+        [Test]
+        public void SpeechBubbleImportsAsItsSpecificRuntimeType()
+        {
+            StartNode start = Add<StartNode>();
+            SpeechBubbleNode bubble = Add<SpeechBubbleNode>();
+            EndNode end = Add<EndNode>();
+            bubble.GetInputPortByName("Speaker").TrySetValue(_character);
+            bubble.GetNodeOptionByName("Minimum Width").TrySetValue(211f);
+            bubble.GetNodeOptionByName("Maximum Width").TrySetValue(477f);
+            bubble.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
+            bubble.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
+            Connect(start, bubble);
+            Connect(bubble, end);
+
+            RuntimeSpeechBubbleNode runtime = Import().AllNodes
+                .OfType<RuntimeSpeechBubbleNode>()
+                .Single();
+
+            Assert.That(runtime.NovelCharacter, Is.EqualTo(_character));
+            Assert.That(runtime.MinimumWidth, Is.EqualTo(211f));
+            Assert.That(runtime.MaximumWidth, Is.EqualTo(477f));
+            Assert.That(runtime.BubbleStyle.CornerRadius, Is.EqualTo(31f));
+            Assert.That(runtime.BubbleStyle.Opacity, Is.EqualTo(0.43f));
+            Assert.That(runtime.NextNodeID, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void GeneratedDialogueNodesPreserveStyleAndFlow()
+        {
+            StartNode start = Add<StartNode>();
+            CreateDialogueBoxNode dialogue = Add<CreateDialogueBoxNode>();
+            CreateDialogueSpeakerBoxNode speaker =
+                Add<CreateDialogueSpeakerBoxNode>();
+            ChangeDialogueBackgroundStyleNode style =
+                Add<ChangeDialogueBackgroundStyleNode>();
+            EndNode end = Add<EndNode>();
+            dialogue.GetNodeOptionByName("Height").TrySetValue(205f);
+            speaker.GetNodeOptionByName("Width").TrySetValue(315f);
+            style.GetNodeOptionByName("Target")
+                .TrySetValue(NovelBoxTarget.Speaker);
+            style.GetNodeOptionByName("Outline").TrySetValue(true);
+            style.GetNodeOptionByName("Outline Thickness").TrySetValue(5f);
+            Connect(start, dialogue);
+            Connect(dialogue, speaker);
+            Connect(speaker, style);
+            Connect(style, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeCreateDialogueBoxNode dialogueRuntime = runtime.AllNodes
+                .OfType<RuntimeCreateDialogueBoxNode>().Single();
+            RuntimeCreateDialogueSpeakerBoxNode speakerRuntime = runtime.AllNodes
+                .OfType<RuntimeCreateDialogueSpeakerBoxNode>().Single();
+            RuntimeChangeDialogueStyleNode styleRuntime = runtime.AllNodes
+                .OfType<RuntimeChangeDialogueStyleNode>().Single();
+
+            Assert.That(dialogueRuntime.Height, Is.EqualTo(205f));
+            Assert.That(speakerRuntime.Width, Is.EqualTo(315f));
+            Assert.That(styleRuntime.Target, Is.EqualTo(NovelBoxTarget.Speaker));
+            Assert.That(styleRuntime.Style.OutlineEnabled, Is.True);
+            Assert.That(styleRuntime.Style.OutlineThickness, Is.EqualTo(5f));
+            Assert.That(dialogueRuntime.NextNodeID,
+                Is.EqualTo(speakerRuntime.NodeID));
+            Assert.That(speakerRuntime.NextNodeID,
+                Is.EqualTo(styleRuntime.NodeID));
+        }
+
+        [Test]
+        public void PlayMusicAndFadePortsCompileToRuntimeExpressions()
+        {
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                "Assets/Novelify/Samples/Music/1586421_FLOWER-MAN.mp3");
+            Assert.That(clip, Is.Not.Null);
+            StartNode start = Add<StartNode>();
+            PlayMusicNode music = Add<PlayMusicNode>();
+            FadeOutNode fade = Add<FadeOutNode>();
+            EndNode end = Add<EndNode>();
+            music.GetInputPortByName(PlayMusicNode.ClipPort)
+                .TrySetValue(clip);
+            music.GetInputPortByName(PlayMusicNode.VolumePort)
+                .TrySetValue(0.63f);
+            music.GetInputPortByName(PlayMusicNode.PitchPort)
+                .TrySetValue(1.17f);
+            music.GetNodeOptionByName("Channel")
+                .TrySetValue(NovelAudioChannel.Ambience);
+            fade.GetInputPortByName(FadeAuthoringNode.DurationPort)
+                .TrySetValue(2f);
+            fade.GetInputPortByName(FadeAuthoringNode.SpeedPort)
+                .TrySetValue(4f);
+            Connect(start, music);
+            Connect(music, fade);
+            Connect(fade, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimePlayMusicNode runtimeMusic = runtime.AllNodes
+                .OfType<RuntimePlayMusicNode>().Single();
+            RuntimeFadeOutNode runtimeFade = runtime.AllNodes
+                .OfType<RuntimeFadeOutNode>().Single();
+
+            Assert.That(runtimeMusic.Clip, Is.EqualTo(clip));
+            Assert.That(runtimeMusic.Volume, Is.EqualTo(0.63f));
+            Assert.That(runtimeMusic.Pitch, Is.EqualTo(1.17f));
+            Assert.That(runtimeMusic.Channel,
+                Is.EqualTo(NovelAudioChannel.Ambience));
+            Assert.That(runtimeMusic.ClipValue,
+                Is.TypeOf<RuntimeConstantExpression>());
+            Assert.That(runtimeFade.Duration, Is.EqualTo(2f));
+            Assert.That(runtimeFade.Speed, Is.EqualTo(4f));
+            Assert.That(runtimeFade.DurationValue,
+                Is.TypeOf<RuntimeConstantExpression>());
+        }
     }
 }

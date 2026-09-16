@@ -47,6 +47,7 @@ namespace Novelify
 
         private void ShowDialogueNode(RuntimeDialogueNode node)
         {
+            PrepareGeneratedDialogue(node);
             _choiceSelectionCommitted = false;
             _nodeEnteredFrame = Time.frameCount;
             NovelCharacterReference speakerReference = ResolveCharacterReference(
@@ -90,6 +91,7 @@ namespace Novelify
                 NodeSoundSource.Play();
             }
             _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
+            TrackGeneratedSpeechBubble(node);
             Stage.BringToFront(_speaker);
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
@@ -209,6 +211,7 @@ namespace Novelify
             CancelWait();
             StopNodePresentation();
             StopAudio(PlaySoundSource);
+            _generatedPresentation?.StopGraphEffects();
             _currentNode = null;
             HideDialoguePanel();
             if (HideCharactersOnEnd) _stage?.HideAll();
@@ -276,6 +279,7 @@ namespace Novelify
 
         private void StopNodePresentation()
         {
+            _generatedPresentation?.StopTrackingSpeechBubble();
             if (_customPresentation != null)
             {
                 _customPresentation.HideDialogue();
