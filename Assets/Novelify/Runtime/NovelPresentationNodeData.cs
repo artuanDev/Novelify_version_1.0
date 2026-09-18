@@ -29,6 +29,28 @@ namespace Novelify
         BottomRight
     }
 
+    //Alignment of the text inside the dialogue box
+    public enum NovelTextAlignment
+    {
+        TopLeft = 0,
+        TopCenter = 3,
+        TopRight = 2,
+        CenterLeft = 4,
+        CenterCenter = 1,
+        CenterRight = 5,
+        BottomLeft = 6,
+        BottomCenter = 7,
+        BottomRight = 8,
+
+
+        [Obsolete("Use TopLeft or CenterLeft.")]
+        Left = TopLeft,
+        [Obsolete("Use TopCenter or CenterCenter.")]
+        Center = CenterCenter,
+        [Obsolete("Use TopRight or CenterRight.")]
+        Right = TopRight
+    }
+
     //Changing the style of a dialogue box using a target so the logic can be reused
     public enum NovelBoxTarget
     {
@@ -114,7 +136,12 @@ namespace Novelify
     public sealed class RuntimeCreateDialogueBoxNode : RuntimeNode
     {
         public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+        public NovelTextAlignment TextAlignment = NovelTextAlignment.TopLeft;
         public NovelDialogueAnchor Anchor = NovelDialogueAnchor.BottomCenter;
+        public float BaseFontSize = 30f;
+        public bool AutoSize;
+        public float MinimumFontSize = 18f;
+        public float MaximumFontSize = 30f;
         public float Height = 180f;
         [Tooltip("0 = stretch")]
         public float Width; //0 means stretch

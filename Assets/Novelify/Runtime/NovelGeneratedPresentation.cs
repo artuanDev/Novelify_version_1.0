@@ -39,6 +39,9 @@ namespace Novelify
 
         private NovelBoxStyle _dialogueStyle = NovelBoxStyle.DialogueDefault;
         private NovelBoxStyle _speakerStyle = NovelBoxStyle.SpeakerDefault;
+
+        private NovelTextAlignment _dialogueTextAlignment =
+            NovelTextAlignment.TopLeft;
         private NovelDialogueAnchor _dialogueAnchor =
             NovelDialogueAnchor.BottomCenter;
         private float _dialogueHeight = 180f;
@@ -112,6 +115,7 @@ namespace Novelify
         {
             EnsureReady();
             _dialogueStyle = node.Style.Validated();
+            _dialogueTextAlignment = node.TextAlignment;
             _dialogueAnchor = node.Anchor;
             _dialogueHeight = Mathf.Max(80f, node.Height);
             _dialogueWidth = Mathf.Max(0f, node.Width);
@@ -121,6 +125,13 @@ namespace Novelify
             _dialogueVerticalPadding = Mathf.Max(0f, node.VerticalPadding);
             ApplyDialogueLayout();
             ApplyStyle(_standardPanel.gameObject, _dialogueStyle);
+            ApplyTextAlignment(_standardDialogueText, _dialogueTextAlignment);
+            ApplyTextSizing(
+                _standardDialogueText,
+                node.BaseFontSize,
+                node.AutoSize,
+                node.MinimumFontSize,
+                node.MaximumFontSize);
             BindStandardSurface();
         }
 
@@ -395,15 +406,45 @@ namespace Novelify
             if (_runner.CanvasDialogue == null)
                 _runner.CanvasDialogue = _standardPanel.gameObject;
         }
+        //since anchor is an enum, therefore an int, we can quickly change how these offsets behave depending on ranges
+        private static Vector2 DialogueAnchorPoint(NovelDialogueAnchor anchor)
+        {
+            int value = (int)anchor;
+            int column = value % 3;
+            int row = value / 3;
+            return new Vector2(column * 0.5f, 1f - row * 0.5f);
+        }
+        private static float EdgeOffset(float anchor, float margin)
+        {
+            if (anchor < 0.25f) return margin;
+            if (anchor > 0.75f) return -margin;
+            return 0f;
+        }
+
         private void ApplyDialogueLayout()
         {
-            _standardPanel.anchorMin = new Vector2(0f, 0f);
-            _standardPanel.anchorMax = new Vector2(1f, 0f);
-            _standardPanel.pivot = new Vector2(0.5f, 0f);
-            _standardPanel.anchoredPosition =
-                new Vector2(0f, _dialogueBottomMargin);
-            _standardPanel.sizeDelta = new Vector2(
-                -_dialogueHorizontalMargin * 2f, _dialogueHeight);
+            Vector2 anchor = DialogueAnchorPoint(_dialogueAnchor);
+            bool stretch = _dialogueWidth <= 0f;
+            _standardPanel.anchorMin = stretch
+                ? new Vector2(0f, anchor.y)
+                : anchor;
+            _standardPanel.anchorMax = stretch
+                ? new Vector2(1f, anchor.y)
+                : anchor;
+            _standardPanel.pivot = stretch
+                ? new Vector2(0.5f, anchor.y)
+                : anchor;
+
+            _standardPanel.anchoredPosition = new Vector2(
+                stretch
+                    ? 0f
+                    : EdgeOffset(anchor.x, _dialogueHorizontalMargin),
+                EdgeOffset(anchor.y, _dialogueBottomMargin));
+                    _standardPanel.sizeDelta = new Vector2(
+                        stretch
+                    ? -_dialogueHorizontalMargin * 2f
+                    : _dialogueWidth,
+                _dialogueHeight);
 
             if (_standardDialogueText != null)
             {
@@ -870,6 +911,45 @@ namespace Novelify
                     value * value * (3f - 2f * value),
                 _ => value
             };
+        }
+
+        private static void ApplyTextAlignment(
+            TextMeshProUGUI text,
+            NovelTextAlignment alignment)
+        {
+            if (text == null) return;
+
+            /*this allows setting or getting a value from a different enum using another as input
+             Basically we ask which value is alignment set to?  based on that set the text alignment to the corresponding one
+             */
+            text.alignment = alignment switch
+            {
+                NovelTextAlignment.TopCenter => TextAlignmentOptions.Top,
+                NovelTextAlignment.TopRight => TextAlignmentOptions.TopRight,
+                NovelTextAlignment.CenterLeft => TextAlignmentOptions.Left,
+                NovelTextAlignment.CenterCenter => TextAlignmentOptions.Center,
+                NovelTextAlignment.CenterRight => TextAlignmentOptions.Right,
+                NovelTextAlignment.BottomLeft => TextAlignmentOptions.BottomLeft,
+                NovelTextAlignment.BottomCenter => TextAlignmentOptions.Bottom,
+                NovelTextAlignment.BottomRight => TextAlignmentOptions.BottomRight,
+                _ => TextAlignmentOptions.TopLeft
+            };
+        }
+
+        private static void ApplyTextSizing(
+            TextMeshProUGUI text,
+            float baseFontSize,
+            bool autoSize,
+            float minimumFontSize,
+            float maximumFontSize)
+        {
+            if (text == null) return;
+            float minimum = Mathf.Max(1f, minimumFontSize);
+            float maximum = Mathf.Max(minimum, maximumFontSize);
+            text.fontSize = Mathf.Max(1f, baseFontSize);
+            text.enableAutoSizing = autoSize;
+            text.fontSizeMin = minimum;
+            text.fontSizeMax = maximum;
         }
 
         private static void ApplyStyle(GameObject target, NovelBoxStyle style)

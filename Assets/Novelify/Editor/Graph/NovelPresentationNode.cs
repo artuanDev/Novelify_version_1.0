@@ -24,6 +24,21 @@ namespace Novelify.Editor
             context.AddOption<Color>("Outline Color").WithDefaultValue(defaults.OutlineColor).Build();
             context.AddOption<float>("Outline Thickness").WithDefaultValue(defaults.OutlineThickness).Build();
         }
+        public static void AddTextSizing(
+            IOptionDefinitionContext context,
+            float baseSize,
+            float minimumSize,
+            float maximumSize)
+        {
+            context.AddOption<float>("Base Font Size")
+                .WithDefaultValue(baseSize).Build();
+            context.AddOption<bool>("Auto Size")
+                .WithDefaultValue(false).Build();
+            context.AddOption<float>("Minimum Font Size")
+                .WithDefaultValue(minimumSize).Build();
+            context.AddOption<float>("Maximum Font Size")
+                .WithDefaultValue(maximumSize).Build();
+        }
     }
 
     [Serializable]
@@ -34,11 +49,18 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
+
             NovelPresentationNodeOptions.AddStyle(
                 context, NovelBoxStyle.DialogueDefault);
 
+            context.AddOption<NovelTextAlignment>("Text Alignment")
+                .WithDefaultValue(NovelTextAlignment.TopLeft).Build();
+
             context.AddOption<NovelDialogueAnchor>("Anchor")
                 .WithDefaultValue(NovelDialogueAnchor.BottomCenter).Build();
+
+            NovelPresentationNodeOptions.AddTextSizing(
+                context, 30f, 18f, 30f);
 
             context.AddOption<float>("Height").WithDefaultValue(180f).Build();
             context.AddOption<float>("Width")

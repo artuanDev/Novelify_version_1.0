@@ -607,7 +607,15 @@ namespace Novelify.Tests
                 Add<ChangeDialogueBackgroundStyleNode>();
             EndNode end = Add<EndNode>();
             dialogue.GetNodeOptionByName("Height").TrySetValue(205f);
-            speaker.GetNodeOptionByName("Width").TrySetValue(315f);
+            dialogue.GetNodeOptionByName("Width").TrySetValue(920f);
+            dialogue.GetNodeOptionByName("Anchor")
+                .TrySetValue(NovelDialogueAnchor.TopRight);
+            dialogue.GetNodeOptionByName("Text Alignment")
+                .TrySetValue(NovelTextAlignment.BottomRight);
+            dialogue.GetNodeOptionByName("Base Font Size").TrySetValue(34f);
+            dialogue.GetNodeOptionByName("Auto Size").TrySetValue(true);
+            dialogue.GetNodeOptionByName("Minimum Font Size").TrySetValue(17f);
+            dialogue.GetNodeOptionByName("Maximum Font Size").TrySetValue(38f);
             style.GetNodeOptionByName("Target")
                 .TrySetValue(NovelBoxTarget.Speaker);
             style.GetNodeOptionByName("Outline").TrySetValue(true);
@@ -626,7 +634,15 @@ namespace Novelify.Tests
                 .OfType<RuntimeChangeDialogueStyleNode>().Single();
 
             Assert.That(dialogueRuntime.Height, Is.EqualTo(205f));
-            Assert.That(speakerRuntime.Width, Is.EqualTo(315f));
+            Assert.That(dialogueRuntime.Width, Is.EqualTo(920f));
+            Assert.That(dialogueRuntime.Anchor,
+                Is.EqualTo(NovelDialogueAnchor.TopRight));
+            Assert.That(dialogueRuntime.TextAlignment,
+                Is.EqualTo(NovelTextAlignment.BottomRight));
+            Assert.That(dialogueRuntime.BaseFontSize, Is.EqualTo(34f));
+            Assert.That(dialogueRuntime.AutoSize, Is.True);
+            Assert.That(dialogueRuntime.MinimumFontSize, Is.EqualTo(17f));
+            Assert.That(dialogueRuntime.MaximumFontSize, Is.EqualTo(38f));
             Assert.That(styleRuntime.Target, Is.EqualTo(NovelBoxTarget.Speaker));
             Assert.That(styleRuntime.Style.OutlineEnabled, Is.True);
             Assert.That(styleRuntime.Style.OutlineThickness, Is.EqualTo(5f));

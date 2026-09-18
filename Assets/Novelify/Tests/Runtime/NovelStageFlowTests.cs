@@ -1097,6 +1097,13 @@ namespace Novelify.Tests
                     NodeID = "create-dialogue",
                     NextNodeID = "create-speaker",
                     Height = 205f,
+                    Width = 920f,
+                    Anchor = NovelDialogueAnchor.TopRight,
+                    TextAlignment = NovelTextAlignment.BottomRight,
+                    BaseFontSize = 34f,
+                    AutoSize = true,
+                    MinimumFontSize = 17f,
+                    MaximumFontSize = 38f,
                     Style = NovelBoxStyle.DialogueDefault
                 },
                 new RuntimeCreateDialogueSpeakerBoxNode
@@ -1117,10 +1124,23 @@ namespace Novelify.Tests
             Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
             Assert.That(_manager.DialoguePanel, Is.Not.Null);
             Assert.That(_manager.DialogueText, Is.Not.Null);
+            Assert.That(_manager.DialogueText.alignment,
+                Is.EqualTo(TextAlignmentOptions.BottomRight));
+            Assert.That(_manager.DialogueText.enableAutoSizing, Is.True);
+            Assert.That(_manager.DialogueText.fontSizeMin, Is.EqualTo(17f));
+            Assert.That(_manager.DialogueText.fontSizeMax, Is.EqualTo(38f));
             Assert.That(_manager.NameBackground, Is.Not.Null);
             Assert.That(_manager.SpeakerNameText, Is.Not.Null);
             Assert.That(_manager.ChoiceButtonPrefab, Is.Not.Null);
             Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
+            RectTransform dialogueRect = _manager.DialoguePanel.GetComponent<RectTransform>();
+            Assert.That(dialogueRect.anchorMin,
+                Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(dialogueRect.anchorMax,
+                Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(dialogueRect.pivot,
+                Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(dialogueRect.sizeDelta.x, Is.EqualTo(920f));
         }
 
         [UnityTest]

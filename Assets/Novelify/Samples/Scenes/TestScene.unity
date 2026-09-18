@@ -506,7 +506,7 @@ MonoBehaviour:
   PortraitPrefab: {fileID: 8260414849546726027, guid: fe2f401b10de4204da126cb25895bee6, type: 3}
   CharacterContainer: {fileID: 0}
   HideCharactersOnEnd: 1
-  DialoguePanel: {fileID: 791819471}
+  DialoguePanel: {fileID: 0}
   CharacterPortrait: {fileID: 791819471}
   BackgroundChoicesPanel: {fileID: 1338701998}
   NameBackground: {fileID: 0}
