@@ -39,7 +39,10 @@ namespace Novelify
 
         private NovelBoxStyle _dialogueStyle = NovelBoxStyle.DialogueDefault;
         private NovelBoxStyle _speakerStyle = NovelBoxStyle.SpeakerDefault;
+        private NovelDialogueAnchor _dialogueAnchor =
+            NovelDialogueAnchor.BottomCenter;
         private float _dialogueHeight = 180f;
+        private float _dialogueWidth;
         private float _dialogueBottomMargin = 32f;
         private float _dialogueHorizontalMargin = 48f;
         private float _dialogueHorizontalPadding = 32f;
@@ -109,7 +112,9 @@ namespace Novelify
         {
             EnsureReady();
             _dialogueStyle = node.Style.Validated();
+            _dialogueAnchor = node.Anchor;
             _dialogueHeight = Mathf.Max(80f, node.Height);
+            _dialogueWidth = Mathf.Max(0f, node.Width);
             _dialogueBottomMargin = Mathf.Max(0f, node.BottomMargin);
             _dialogueHorizontalMargin = Mathf.Max(0f, node.HorizontalMargin);
             _dialogueHorizontalPadding = Mathf.Max(0f, node.HorizontalPadding);

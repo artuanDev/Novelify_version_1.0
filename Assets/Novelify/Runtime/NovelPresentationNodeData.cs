@@ -15,6 +15,20 @@ namespace Novelify
         UI
     }
 
+    //Screen position for the standard dialogue panel
+    public enum NovelDialogueAnchor
+    {
+        TopLeft,
+        TopCenter,
+        TopRight,
+        CenterLeft,
+        CenterCenter,
+        CenterRight,
+        BottomLeft,
+        BottomCenter,
+        BottomRight
+    }
+
     //Changing the style of a dialogue box using a target so the logic can be reused
     public enum NovelBoxTarget
     {
@@ -100,7 +114,10 @@ namespace Novelify
     public sealed class RuntimeCreateDialogueBoxNode : RuntimeNode
     {
         public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+        public NovelDialogueAnchor Anchor = NovelDialogueAnchor.BottomCenter;
         public float Height = 180f;
+        [Tooltip("0 = stretch")]
+        public float Width; //0 means stretch
         public float BottomMargin = 32f;
         public float HorizontalMargin = 48f;
         public float HorizontalPadding = 32f;

@@ -11,7 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(13, NovelGraph.AssetExtension)]
+    [ScriptedImporter(14, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -785,14 +785,26 @@ namespace Novelify.Editor
                     {
                         Style = ReadBoxStyle(
                                 node, NovelBoxStyle.DialogueDefault),
+
+                        Anchor = GetOptionValue(
+                                node.GetNodeOptionByName("Anchor"),
+                                NovelDialogueAnchor.BottomCenter),
+
                         Height = Mathf.Max(80f, GetOptionValue(
                                 node.GetNodeOptionByName("Height"), 180f)),
-                                              BottomMargin = Mathf.Max(0f, GetOptionValue(
+
+                        Width = Mathf.Max(0f, GetOptionValue(
+                                node.GetNodeOptionByName("Width"), 0f)),
+
+                        BottomMargin = Mathf.Max(0f, GetOptionValue(
                                 node.GetNodeOptionByName("Bottom Margin"), 32f)),
-                                              HorizontalMargin = Mathf.Max(0f, GetOptionValue(
+
+                        HorizontalMargin = Mathf.Max(0f, GetOptionValue(
                                 node.GetNodeOptionByName("Horizontal Margin"), 48f)),
-                                              HorizontalPadding = Mathf.Max(0f, GetOptionValue(
+
+                        HorizontalPadding = Mathf.Max(0f, GetOptionValue(
                                 node.GetNodeOptionByName("Horizontal Padding"), 32f)),
+
                         VerticalPadding = Mathf.Max(0f, GetOptionValue(
                                 node.GetNodeOptionByName("Vertical Padding"), 22f))
 
@@ -1538,7 +1550,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(8, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(9, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

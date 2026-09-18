@@ -34,9 +34,18 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
-            NovelPresentationNodeOptions.AddStyle(context, NovelBoxStyle.DialogueDefault);
+            NovelPresentationNodeOptions.AddStyle(
+                context, NovelBoxStyle.DialogueDefault);
+
+            context.AddOption<NovelDialogueAnchor>("Anchor")
+                .WithDefaultValue(NovelDialogueAnchor.BottomCenter).Build();
 
             context.AddOption<float>("Height").WithDefaultValue(180f).Build();
+            context.AddOption<float>("Width")
+                .WithDefaultValue(0f)
+                .WithTooltip("Set to 0 to stretch between the horizontal margins. " +
+                             "A positive value creates a fixed-width panel.")
+                .Build();
             context.AddOption<float>("Bottom Margin").WithDefaultValue(32f).Build();
             context.AddOption<float>("Horizontal Margin").WithDefaultValue(48f).Build();
             context.AddOption<float>("Horizontal Padding").WithDefaultValue(32f).Build();
