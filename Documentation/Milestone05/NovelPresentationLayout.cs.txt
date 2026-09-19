@@ -1,0 +1,196 @@
+using UnityEngine;
+
+namespace Novelify
+{
+    public readonly struct NovelRectLayout
+    {
+        public readonly Vector2 AnchorMin;
+        public readonly Vector2 AnchorMax;
+        public readonly Vector2 Pivot;
+        public readonly Vector2 AnchoredPosition;
+        public readonly Vector2 SizeDelta;
+
+        public NovelRectLayout(
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition,
+            Vector2 sizeDelta)
+        {
+            AnchorMin = anchorMin;
+            AnchorMax = anchorMax;
+            Pivot = pivot;
+            AnchoredPosition = anchoredPosition;
+            SizeDelta = sizeDelta;
+        }
+
+        public void Apply(RectTransform rect)
+        {
+            if (rect == null) return;
+            rect.anchorMin = AnchorMin;
+            rect.anchorMax = AnchorMax;
+            rect.pivot = Pivot;
+            rect.anchoredPosition = AnchoredPosition;
+            rect.sizeDelta = SizeDelta;
+        }
+    }
+
+    public static class NovelPresentationLayout
+    {
+        public static NovelRectLayout Dialogue(
+            NovelDialogueAnchor value,
+            float width,
+            float height,
+            float bottomMargin,
+            float horizontalMargin)
+        {
+            int index = (int)value;
+            int column = index % 3;
+            int row = index / 3;
+            Vector2 anchor = new Vector2(
+                column * 0.5f,
+                1f - row * 0.5f);
+
+            bool stretch = width <= 0f;
+            Vector2 anchorMin = stretch
+                ? new Vector2(0f, anchor.y)
+                : anchor;
+            Vector2 anchorMax = stretch
+                ? new Vector2(1f, anchor.y)
+                : anchor;
+            Vector2 pivot = stretch
+                ? new Vector2(0.5f, anchor.y)
+                : anchor;
+            Vector2 position = new Vector2(
+                stretch ? 0f : EdgeOffset(anchor.x, horizontalMargin),
+                EdgeOffset(anchor.y, bottomMargin));
+            Vector2 sizeDelta = new Vector2(
+                stretch ? -Mathf.Max(0f, horizontalMargin) * 2f : Mathf.Max(1f, width),
+                Mathf.Max(1f, height));
+
+            return new NovelRectLayout(
+                anchorMin,
+                anchorMax,
+                pivot,
+                position,
+                sizeDelta);
+        }
+
+        public static NovelRectLayout Speaker(
+            NovelSpeakerAnchor anchor,
+            float width,
+            float height,
+            float alongEdgeOffset,
+            float overlap)
+        {
+            width = Mathf.Max(1f, width);
+            height = Mathf.Max(1f, height);
+            Vector2 point;
+            Vector2 pivot;
+            Vector2 position;
+
+            switch (anchor)
+            {
+                case NovelSpeakerAnchor.TopCenter:
+                    point = new Vector2(0.5f, 1f);
+                    pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(
+                        alongEdgeOffset,
+                        height * 0.5f - overlap);
+                    break;
+                case NovelSpeakerAnchor.TopRight:
+                    point = new Vector2(1f, 1f);
+                    pivot = new Vector2(1f, 0.5f);
+                    position = new Vector2(
+                        -alongEdgeOffset,
+                        height * 0.5f - overlap);
+                    break;
+                case NovelSpeakerAnchor.LeftTop:
+                    point = new Vector2(0f, 1f);
+                    pivot = new Vector2(0.5f, 1f);
+                    position = new Vector2(
+                        -width * 0.5f + overlap,
+                        -alongEdgeOffset);
+                    break;
+                case NovelSpeakerAnchor.LeftCenter:
+                    point = new Vector2(0f, 0.5f);
+                    pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(
+                        -width * 0.5f + overlap,
+                        alongEdgeOffset);
+                    break;
+                case NovelSpeakerAnchor.LeftBottom:
+                    point = new Vector2(0f, 0f);
+                    pivot = new Vector2(0.5f, 0f);
+                    position = new Vector2(
+                        -width * 0.5f + overlap,
+                        alongEdgeOffset);
+                    break;
+                case NovelSpeakerAnchor.BottomLeft:
+                    point = new Vector2(0f, 0f);
+                    pivot = new Vector2(0f, 0.5f);
+                    position = new Vector2(
+                        alongEdgeOffset,
+                        -height * 0.5f + overlap);
+                    break;
+                case NovelSpeakerAnchor.BottomCenter:
+                    point = new Vector2(0.5f, 0f);
+                    pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(
+                        alongEdgeOffset,
+                        -height * 0.5f + overlap);
+                    break;
+                case NovelSpeakerAnchor.BottomRight:
+                    point = new Vector2(1f, 0f);
+                    pivot = new Vector2(1f, 0.5f);
+                    position = new Vector2(
+                        -alongEdgeOffset,
+                        -height * 0.5f + overlap);
+                    break;
+                case NovelSpeakerAnchor.RightBottom:
+                    point = new Vector2(1f, 0f);
+                    pivot = new Vector2(0.5f, 0f);
+                    position = new Vector2(
+                        width * 0.5f - overlap,
+                        alongEdgeOffset);
+                    break;
+                case NovelSpeakerAnchor.RightCenter:
+                    point = new Vector2(1f, 0.5f);
+                    pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(
+                        width * 0.5f - overlap,
+                        alongEdgeOffset);
+                    break;
+                case NovelSpeakerAnchor.RightTop:
+                    point = new Vector2(1f, 1f);
+                    pivot = new Vector2(0.5f, 1f);
+                    position = new Vector2(
+                        width * 0.5f - overlap,
+                        -alongEdgeOffset);
+                    break;
+                default:
+                    point = new Vector2(0f, 1f);
+                    pivot = new Vector2(0f, 0.5f);
+                    position = new Vector2(
+                        alongEdgeOffset,
+                        height * 0.5f - overlap);
+                    break;
+            }
+
+            return new NovelRectLayout(
+                point,
+                point,
+                pivot,
+                position,
+                new Vector2(width, height));
+        }
+
+        private static float EdgeOffset(float anchor, float margin)
+        {
+            margin = Mathf.Max(0f, margin);
+            if (anchor < 0.25f) return margin;
+            if (anchor > 0.75f) return -margin;
+            return 0f;
+        }
+    }
+}

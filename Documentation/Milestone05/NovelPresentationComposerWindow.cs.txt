@@ -1,0 +1,1082 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using Unity.GraphToolkit.Editor;
+using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace Novelify.Editor
+{
+    internal sealed class NovelPresentationComposerWindow : EditorWindow
+    {
+        private sealed class PresentationDraft
+        {
+            public DialogueDraft Dialogue = new DialogueDraft();
+            public SpeakerDraft Speaker = new SpeakerDraft();
+            public string SampleSpeaker = "Test Speaker";
+            public string SampleDialogue =
+                "This is sample dialogue for layout preview.";
+            public Vector2Int Resolution = new Vector2Int(1920, 1080);
+        }
+
+        private sealed class DialogueDraft
+        {
+            public NovelBoxStyle Style;
+            public NovelTextAlignment TextAlignment;
+            public NovelDialogueAnchor Anchor;
+            public float BaseFontSize;
+            public bool AutoSize;
+            public float MinimumFontSize;
+            public float MaximumFontSize;
+            public float Height;
+            public float Width;
+            public float BottomMargin;
+            public float HorizontalMargin;
+            public float HorizontalPadding;
+            public float VerticalPadding;
+        }
+
+        private sealed class SpeakerDraft
+        {
+            public NovelBoxStyle Style;
+            public NovelSpeakerAnchor Anchor;
+            public float FontSize;
+            public float HorizontalPadding;
+            public float VerticalPadding;
+            public float HorizontalOffset;
+            public float VerticalOverlap;
+        }
+
+        private static readonly string[] ResolutionNames =
+        {
+            "1920 × 1080",
+            "1600 × 900",
+            "1280 × 720",
+            "1440 × 900",
+            "1024 × 768",
+            "1080 × 1920"
+        };
+
+        private Graph _graph;
+        private readonly List<CreateDialogueBoxNode> _dialogueNodes =
+            new List<CreateDialogueBoxNode>();
+        private readonly List<CreateDialogueSpeakerBoxNode> _speakerNodes =
+            new List<CreateDialogueSpeakerBoxNode>();
+        private int _dialogueIndex;
+        private int _speakerIndex;
+        private PresentationDraft _draft;
+        private bool _draftDirty;
+        private bool _building;
+
+        private VisualElement _previewHost;
+        private VisualElement _stage;
+        private VisualElement _dialoguePreview;
+        private Label _dialogueLabel;
+        private VisualElement _speakerPreview;
+        private Label _speakerLabel;
+        private Label _status;
+        private Button _applyButton;
+
+        private GameObject _measurementObject;
+        private TextMeshProUGUI _measurementText;
+
+        private CreateDialogueBoxNode DialogueNode =>
+            _dialogueIndex >= 0 && _dialogueIndex < _dialogueNodes.Count
+                ? _dialogueNodes[_dialogueIndex]
+                : null;
+
+        private CreateDialogueSpeakerBoxNode SpeakerNode =>
+            _speakerIndex >= 0 && _speakerIndex < _speakerNodes.Count
+                ? _speakerNodes[_speakerIndex]
+                : null;
+
+        public static void Open(CreateDialogueBoxNode source)
+        {
+            if (source == null || source.Graph == null) return;
+            Open(source.Graph, source, null);
+        }
+
+        public static void Open(CreateDialogueSpeakerBoxNode source)
+        {
+            if (source == null || source.Graph == null) return;
+            Open(source.Graph, null, source);
+        }
+
+        private static void Open(
+            Graph graph,
+            CreateDialogueBoxNode dialogue,
+            CreateDialogueSpeakerBoxNode speaker)
+        {
+            NovelPresentationComposerWindow window =
+                GetWindow<NovelPresentationComposerWindow>();
+            window.titleContent = new GUIContent(
+                "Presentation Composer",
+                EditorGUIUtility.IconContent("Canvas Icon").image);
+            window.minSize = new Vector2(860f, 520f);
+            window.Bind(graph, dialogue, speaker);
+            window.Show();
+            window.Focus();
+        }
+
+        private void Bind(
+            Graph graph,
+            CreateDialogueBoxNode dialogue,
+            CreateDialogueSpeakerBoxNode speaker)
+        {
+            _graph = graph;
+            _dialogueNodes.Clear();
+            _speakerNodes.Clear();
+            _dialogueNodes.AddRange(
+                graph.GetNodes().OfType<CreateDialogueBoxNode>());
+            _speakerNodes.AddRange(
+                graph.GetNodes().OfType<CreateDialogueSpeakerBoxNode>());
+
+            _dialogueIndex = dialogue != null
+                ? Mathf.Max(0, _dialogueNodes.IndexOf(dialogue))
+                : 0;
+            _speakerIndex = speaker != null
+                ? Mathf.Max(0, _speakerNodes.IndexOf(speaker))
+                : 0;
+
+            if (DialogueNode != null && SpeakerNode != null)
+                LoadDraft();
+            else
+                _draft = null;
+
+            Rebuild();
+        }
+
+        private void OnEnable()
+        {
+            if (_graph == null)
+                ShowReconnectMessage();
+        }
+
+        private void OnDisable()
+        {
+            if (_measurementObject != null)
+                DestroyImmediate(_measurementObject);
+            _measurementObject = null;
+            _measurementText = null;
+        }
+
+        private void ShowReconnectMessage()
+        {
+            rootVisualElement.Clear();
+            rootVisualElement.style.backgroundColor =
+                (Color)new Color32(18, 27, 43, 255);
+            HelpBox box = new HelpBox(
+                "The graph was reloaded. Double-click a Create Dialogue Box " +
+                "or Create Dialogue Speaker Box node to reconnect the composer.",
+                HelpBoxMessageType.Info);
+            box.style.marginLeft = 16f;
+            box.style.marginRight = 16f;
+            box.style.marginTop = 16f;
+            rootVisualElement.Add(box);
+        }
+
+        private void LoadDraft()
+        {
+            string sampleSpeaker = _draft?.SampleSpeaker ?? "Test Speaker";
+            string sampleDialogue = _draft?.SampleDialogue ??
+                "This is sample dialogue for layout preview.";
+            Vector2Int resolution = _draft?.Resolution ??
+                new Vector2Int(1920, 1080);
+
+            _draft = new PresentationDraft
+            {
+                SampleSpeaker = sampleSpeaker,
+                SampleDialogue = sampleDialogue,
+                Resolution = resolution
+            };
+
+            _draft.Dialogue.Style = ReadStyle(
+                DialogueNode, NovelBoxStyle.DialogueDefault);
+            _draft.Dialogue.TextAlignment = Read(
+                DialogueNode, "Text Alignment", NovelTextAlignment.TopLeft);
+            _draft.Dialogue.Anchor = Read(
+                DialogueNode, "Anchor", NovelDialogueAnchor.BottomCenter);
+            _draft.Dialogue.BaseFontSize = Read(
+                DialogueNode, "Base Font Size", 30f);
+            _draft.Dialogue.AutoSize = Read(
+                DialogueNode, "Auto Size", false);
+            _draft.Dialogue.MinimumFontSize = Read(
+                DialogueNode, "Minimum Font Size", 18f);
+            _draft.Dialogue.MaximumFontSize = Read(
+                DialogueNode, "Maximum Font Size", 30f);
+            _draft.Dialogue.Height = Read(
+                DialogueNode, "Height", 180f);
+            _draft.Dialogue.Width = Read(
+                DialogueNode, "Width", 0f);
+            _draft.Dialogue.BottomMargin = Read(
+                DialogueNode, "Bottom Margin", 32f);
+            _draft.Dialogue.HorizontalMargin = Read(
+                DialogueNode, "Horizontal Margin", 48f);
+            _draft.Dialogue.HorizontalPadding = Read(
+                DialogueNode, "Horizontal Padding", 32f);
+            _draft.Dialogue.VerticalPadding = Read(
+                DialogueNode, "Vertical Padding", 22f);
+
+            _draft.Speaker.Style = ReadStyle(
+                SpeakerNode, NovelBoxStyle.SpeakerDefault);
+            _draft.Speaker.Anchor = Read(
+                SpeakerNode, "Anchor", NovelSpeakerAnchor.TopLeft);
+            _draft.Speaker.FontSize = Read(
+                SpeakerNode, "Font Size", 25f);
+            _draft.Speaker.HorizontalPadding = Read(
+                SpeakerNode, "Horizontal Padding", 16f);
+            _draft.Speaker.VerticalPadding = Read(
+                SpeakerNode, "Vertical Padding", 6f);
+            _draft.Speaker.HorizontalOffset = Read(
+                SpeakerNode, "Horizontal Offset", 24f);
+            _draft.Speaker.VerticalOverlap = Read(
+                SpeakerNode, "Vertical Overlap", 27f);
+
+            ValidateDraft();
+            _draftDirty = false;
+        }
+
+        private void Rebuild()
+        {
+            _building = true;
+            rootVisualElement.Clear();
+            rootVisualElement.style.backgroundColor =
+                (Color)new Color32(18, 27, 43, 255);
+            rootVisualElement.style.color =
+                (Color)new Color32(226, 232, 240, 255);
+            rootVisualElement.style.flexDirection = FlexDirection.Column;
+
+            rootVisualElement.Add(BuildToolbar());
+
+            if (_draft == null)
+            {
+                HelpBox missing = new HelpBox(
+                    MissingNodeMessage(), HelpBoxMessageType.Warning);
+                missing.style.marginLeft = 16f;
+                missing.style.marginRight = 16f;
+                missing.style.marginTop = 16f;
+                rootVisualElement.Add(missing);
+                _building = false;
+                return;
+            }
+
+            VisualElement body = new VisualElement();
+            body.style.flexDirection = FlexDirection.Row;
+            body.style.flexGrow = 1f;
+            body.style.minHeight = 0f;
+            body.Add(BuildPreviewHost());
+            body.Add(BuildInspector());
+            rootVisualElement.Add(body);
+            rootVisualElement.Add(BuildFooter());
+
+            _building = false;
+            RefreshPreview();
+        }
+
+        private VisualElement BuildToolbar()
+        {
+            VisualElement toolbar = new VisualElement();
+            toolbar.style.flexDirection = FlexDirection.Row;
+            toolbar.style.alignItems = Align.Center;
+            toolbar.style.paddingLeft = 10f;
+            toolbar.style.paddingRight = 10f;
+            toolbar.style.paddingTop = 6f;
+            toolbar.style.paddingBottom = 6f;
+            toolbar.style.backgroundColor =
+                (Color)new Color32(28, 40, 59, 255);
+
+            Label title = new Label("Presentation Composer");
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.marginRight = 12f;
+            toolbar.Add(title);
+
+            if (_dialogueNodes.Count > 0)
+            {
+                PopupField<string> dialogue = new PopupField<string>(
+                    "Dialogue node",
+                    NodeNames("Dialogue Box", _dialogueNodes.Count),
+                    Mathf.Clamp(_dialogueIndex, 0, _dialogueNodes.Count - 1));
+                dialogue.style.width = 205f;
+                dialogue.RegisterValueChangedCallback(_ =>
+                    SelectDialogue(dialogue.index));
+                toolbar.Add(dialogue);
+            }
+
+            if (_speakerNodes.Count > 0)
+            {
+                PopupField<string> speaker = new PopupField<string>(
+                    "Speaker node",
+                    NodeNames("Speaker Box", _speakerNodes.Count),
+                    Mathf.Clamp(_speakerIndex, 0, _speakerNodes.Count - 1));
+                speaker.style.width = 205f;
+                speaker.RegisterValueChangedCallback(_ =>
+                    SelectSpeaker(speaker.index));
+                toolbar.Add(speaker);
+            }
+
+            VisualElement spacer = new VisualElement();
+            spacer.style.flexGrow = 1f;
+            toolbar.Add(spacer);
+
+            if (_draft != null)
+            {
+                int resolutionIndex = ResolutionIndex(_draft.Resolution);
+                DropdownField resolution = new DropdownField(
+                    "Resolution",
+                    ResolutionNames.ToList(),
+                    resolutionIndex);
+                resolution.style.width = 185f;
+                resolution.RegisterValueChangedCallback(_ =>
+                {
+                    _draft.Resolution = ResolutionAt(resolution.index);
+                    RefreshPreview();
+                });
+                toolbar.Add(resolution);
+            }
+
+            return toolbar;
+        }
+
+        private VisualElement BuildPreviewHost()
+        {
+            _previewHost = new VisualElement();
+            _previewHost.style.flexGrow = 1f;
+            _previewHost.style.minWidth = 420f;
+            _previewHost.style.position = Position.Relative;
+            _previewHost.style.overflow = Overflow.Hidden;
+            _previewHost.style.backgroundColor =
+                (Color)new Color32(9, 14, 24, 255);
+            _previewHost.RegisterCallback<GeometryChangedEvent>(_ =>
+                RefreshPreview());
+
+            _stage = new VisualElement();
+            _stage.style.position = Position.Absolute;
+            _stage.style.backgroundColor =
+                (Color)new Color32(20, 31, 50, 255);
+            SetBorder(_stage, 1f, new Color32(91, 111, 138, 255));
+            _previewHost.Add(_stage);
+
+            _dialoguePreview = new VisualElement();
+            _dialoguePreview.style.position = Position.Absolute;
+            _dialoguePreview.style.overflow = Overflow.Hidden;
+            _stage.Add(_dialoguePreview);
+
+            _dialogueLabel = new Label();
+            _dialogueLabel.style.position = Position.Absolute;
+            _dialogueLabel.style.whiteSpace = WhiteSpace.Normal;
+            _dialogueLabel.style.color = Color.white;
+            _dialoguePreview.Add(_dialogueLabel);
+
+            _speakerPreview = new VisualElement();
+            _speakerPreview.style.position = Position.Absolute;
+            _speakerPreview.style.overflow = Overflow.Hidden;
+            _stage.Add(_speakerPreview);
+
+            _speakerLabel = new Label();
+            _speakerLabel.style.position = Position.Absolute;
+            _speakerLabel.style.left = 0f;
+            _speakerLabel.style.right = 0f;
+            _speakerLabel.style.top = 0f;
+            _speakerLabel.style.bottom = 0f;
+            _speakerLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _speakerLabel.style.color = Color.white;
+            _speakerPreview.Add(_speakerLabel);
+
+            Label badge = new Label("EDITOR PREVIEW");
+            badge.style.position = Position.Absolute;
+            badge.style.left = 10f;
+            badge.style.top = 8f;
+            badge.style.fontSize = 9f;
+            badge.style.color =
+                (Color)new Color32(148, 163, 184, 255);
+            _previewHost.Add(badge);
+            return _previewHost;
+        }
+
+        private VisualElement BuildInspector()
+        {
+            ScrollView inspector = new ScrollView(ScrollViewMode.Vertical);
+            inspector.style.width = 355f;
+            inspector.style.flexShrink = 0f;
+            inspector.style.paddingLeft = 10f;
+            inspector.style.paddingRight = 10f;
+            inspector.style.backgroundColor =
+                (Color)new Color32(24, 35, 52, 255);
+
+            Foldout samples = NewFoldout("Preview Content");
+            AddText(samples, "Speaker Name", _draft.SampleSpeaker, false,
+                value => _draft.SampleSpeaker = value);
+            AddText(samples, "Dialogue", _draft.SampleDialogue, true,
+                value => _draft.SampleDialogue = value);
+            inspector.Add(samples);
+
+            Foldout dialogue = NewFoldout("Dialogue Box");
+            AddEnum(dialogue, "Anchor", _draft.Dialogue.Anchor,
+                value => _draft.Dialogue.Anchor = value);
+            AddEnum(dialogue, "Text Alignment", _draft.Dialogue.TextAlignment,
+                value => _draft.Dialogue.TextAlignment = value);
+            AddFloat(dialogue, "Height", _draft.Dialogue.Height,
+                value => _draft.Dialogue.Height = Mathf.Max(80f, value));
+            AddFloat(dialogue, "Width (0 = Stretch)", _draft.Dialogue.Width,
+                value => _draft.Dialogue.Width = Mathf.Max(0f, value));
+            AddFloat(dialogue, "Bottom Margin", _draft.Dialogue.BottomMargin,
+                value => _draft.Dialogue.BottomMargin = Mathf.Max(0f, value));
+            AddFloat(dialogue, "Horizontal Margin",
+                _draft.Dialogue.HorizontalMargin,
+                value => _draft.Dialogue.HorizontalMargin = Mathf.Max(0f, value));
+            AddFloat(dialogue, "Horizontal Padding",
+                _draft.Dialogue.HorizontalPadding,
+                value => _draft.Dialogue.HorizontalPadding = Mathf.Max(0f, value));
+            AddFloat(dialogue, "Vertical Padding",
+                _draft.Dialogue.VerticalPadding,
+                value => _draft.Dialogue.VerticalPadding = Mathf.Max(0f, value));
+            AddFloat(dialogue, "Base Font Size", _draft.Dialogue.BaseFontSize,
+                value => _draft.Dialogue.BaseFontSize = Mathf.Max(1f, value));
+            AddToggle(dialogue, "Auto Size", _draft.Dialogue.AutoSize,
+                value => _draft.Dialogue.AutoSize = value);
+            AddFloat(dialogue, "Minimum Font Size",
+                _draft.Dialogue.MinimumFontSize,
+                value => _draft.Dialogue.MinimumFontSize = Mathf.Max(1f, value));
+            AddFloat(dialogue, "Maximum Font Size",
+                _draft.Dialogue.MaximumFontSize,
+                value => _draft.Dialogue.MaximumFontSize = Mathf.Max(1f, value));
+            AddStyleFields(
+                dialogue,
+                () => _draft.Dialogue.Style,
+                value => _draft.Dialogue.Style = value,
+                NovelBoxStyle.DialogueDefault);
+            inspector.Add(dialogue);
+
+            Foldout speaker = NewFoldout("Speaker Box");
+            AddEnum(speaker, "Anchor", _draft.Speaker.Anchor,
+                value => _draft.Speaker.Anchor = value);
+            AddFloat(speaker, "Font Size", _draft.Speaker.FontSize,
+                value => _draft.Speaker.FontSize = Mathf.Max(1f, value));
+            AddFloat(speaker, "Horizontal Padding",
+                _draft.Speaker.HorizontalPadding,
+                value => _draft.Speaker.HorizontalPadding = Mathf.Max(0f, value));
+            AddFloat(speaker, "Vertical Padding",
+                _draft.Speaker.VerticalPadding,
+                value => _draft.Speaker.VerticalPadding = Mathf.Max(0f, value));
+            AddFloat(speaker, "Horizontal Offset",
+                _draft.Speaker.HorizontalOffset,
+                value => _draft.Speaker.HorizontalOffset = value);
+            AddFloat(speaker, "Vertical Overlap",
+                _draft.Speaker.VerticalOverlap,
+                value => _draft.Speaker.VerticalOverlap = value);
+            AddStyleFields(
+                speaker,
+                () => _draft.Speaker.Style,
+                value => _draft.Speaker.Style = value,
+                NovelBoxStyle.SpeakerDefault);
+            inspector.Add(speaker);
+
+            return inspector;
+        }
+
+        private VisualElement BuildFooter()
+        {
+            VisualElement footer = new VisualElement();
+            footer.style.flexDirection = FlexDirection.Row;
+            footer.style.alignItems = Align.Center;
+            footer.style.paddingLeft = 10f;
+            footer.style.paddingRight = 10f;
+            footer.style.paddingTop = 7f;
+            footer.style.paddingBottom = 7f;
+            footer.style.backgroundColor =
+                (Color)new Color32(28, 40, 59, 255);
+
+            _status = new Label("Previewing saved graph values.");
+            _status.style.flexGrow = 1f;
+            _status.style.color =
+                (Color)new Color32(148, 163, 184, 255);
+            footer.Add(_status);
+
+            Button revert = new Button(Revert) { text = "Revert" };
+            revert.style.width = 90f;
+            revert.style.marginRight = 6f;
+            footer.Add(revert);
+
+            _applyButton = new Button(ApplyToGraph)
+            {
+                text = "Apply to Graph"
+            };
+            _applyButton.style.width = 125f;
+            footer.Add(_applyButton);
+            return footer;
+        }
+
+        private static Foldout NewFoldout(string text)
+        {
+            Foldout foldout = new Foldout { text = text, value = true };
+            foldout.style.marginTop = 6f;
+            foldout.style.marginBottom = 4f;
+            return foldout;
+        }
+
+        private void AddText(
+            VisualElement parent,
+            string label,
+            string value,
+            bool multiline,
+            Action<string> setter)
+        {
+            TextField field = new TextField(label)
+            {
+                value = value ?? string.Empty,
+                multiline = multiline
+            };
+            if (multiline) field.style.minHeight = 58f;
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                setter(evt.newValue ?? string.Empty);
+                DraftChanged();
+            });
+            parent.Add(field);
+        }
+
+        private void AddFloat(
+            VisualElement parent,
+            string label,
+            float value,
+            Action<float> setter)
+        {
+            FloatField field = new FloatField(label) { value = value };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                setter(evt.newValue);
+                DraftChanged();
+            });
+            parent.Add(field);
+        }
+
+        private void AddToggle(
+            VisualElement parent,
+            string label,
+            bool value,
+            Action<bool> setter)
+        {
+            Toggle field = new Toggle(label) { value = value };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                setter(evt.newValue);
+                DraftChanged();
+            });
+            parent.Add(field);
+        }
+
+        private void AddEnum<T>(
+            VisualElement parent,
+            string label,
+            T value,
+            Action<T> setter)
+            where T : Enum
+        {
+            EnumField field = new EnumField(label, value);
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                setter((T)evt.newValue);
+                DraftChanged();
+            });
+            parent.Add(field);
+        }
+
+        private void AddStyleFields(
+            VisualElement parent,
+            Func<NovelBoxStyle> getter,
+            Action<NovelBoxStyle> setter,
+            NovelBoxStyle defaults)
+        {
+            Foldout styleFoldout = new Foldout
+            {
+                text = "Style",
+                value = false
+            };
+
+            ColorField fill = new ColorField("Fill Color")
+                { value = getter().FillColor };
+            fill.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.FillColor = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(fill);
+
+            AddFloat(styleFoldout, "Opacity", getter().Opacity, value =>
+            {
+                NovelBoxStyle style = getter();
+                style.Opacity = Mathf.Clamp01(value);
+                setter(style);
+            });
+            AddFloat(styleFoldout, "Corner Radius", getter().CornerRadius, value =>
+            {
+                NovelBoxStyle style = getter();
+                style.CornerRadius = Mathf.Max(0f, value);
+                setter(style);
+            });
+            AddToggle(styleFoldout, "Outline", getter().OutlineEnabled, value =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineEnabled = value;
+                setter(style);
+            });
+
+            ColorField outline = new ColorField("Outline Color")
+                { value = getter().OutlineColor };
+            outline.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineColor = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(outline);
+
+            AddFloat(styleFoldout, "Outline Thickness",
+                getter().OutlineThickness, value =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineThickness = Mathf.Max(0f, value);
+                setter(style);
+            });
+
+            Button reset = new Button(() =>
+            {
+                setter(defaults);
+                _draftDirty = true;
+                Rebuild();
+                SetStatus("Style reset in the draft. Apply to save.", false);
+            }) { text = "Reset Style" };
+            styleFoldout.Add(reset);
+            parent.Add(styleFoldout);
+        }
+
+        private void DraftChanged()
+        {
+            ValidateDraft();
+            _draftDirty = true;
+            RefreshPreview();
+            SetStatus("Draft changed. Apply to save it to the graph.", false);
+        }
+
+        private void RefreshPreview()
+        {
+            if (_building || _draft == null || _previewHost == null ||
+                _stage == null || _dialoguePreview == null ||
+                _speakerPreview == null)
+                return;
+
+            float hostWidth = _previewHost.resolvedStyle.width;
+            float hostHeight = _previewHost.resolvedStyle.height;
+            if (hostWidth <= 1f || hostHeight <= 1f ||
+                float.IsNaN(hostWidth) || float.IsNaN(hostHeight))
+                return;
+
+            Vector2 canvasSize = new Vector2(
+                Mathf.Max(1, _draft.Resolution.x),
+                Mathf.Max(1, _draft.Resolution.y));
+            float scale = Mathf.Min(
+                (hostWidth - 36f) / canvasSize.x,
+                (hostHeight - 36f) / canvasSize.y);
+            scale = Mathf.Max(0.01f, scale);
+            float stageWidth = canvasSize.x * scale;
+            float stageHeight = canvasSize.y * scale;
+
+            _stage.style.left = (hostWidth - stageWidth) * 0.5f;
+            _stage.style.top = (hostHeight - stageHeight) * 0.5f;
+            _stage.style.width = stageWidth;
+            _stage.style.height = stageHeight;
+
+            NovelRectLayout dialogueLayout = NovelPresentationLayout.Dialogue(
+                _draft.Dialogue.Anchor,
+                _draft.Dialogue.Width,
+                _draft.Dialogue.Height,
+                _draft.Dialogue.BottomMargin,
+                _draft.Dialogue.HorizontalMargin);
+            Rect dialogueRect = ResolveRect(canvasSize, dialogueLayout);
+            Place(_dialoguePreview, dialogueRect, canvasSize.y, scale);
+            ApplyBoxStyle(
+                _dialoguePreview, _draft.Dialogue.Style, scale);
+
+            float horizontalPadding =
+                Mathf.Max(0f, _draft.Dialogue.HorizontalPadding) * scale;
+            float verticalPadding =
+                Mathf.Max(0f, _draft.Dialogue.VerticalPadding) * scale;
+            _dialogueLabel.text = _draft.SampleDialogue ?? string.Empty;
+            _dialogueLabel.style.left = horizontalPadding;
+            _dialogueLabel.style.right = horizontalPadding;
+            _dialogueLabel.style.top = verticalPadding;
+            _dialogueLabel.style.bottom = verticalPadding;
+            _dialogueLabel.style.unityTextAlign =
+                ToTextAnchor(_draft.Dialogue.TextAlignment);
+            _dialogueLabel.style.fontSize = Mathf.Max(
+                6f, PreviewDialogueFontSize() * scale);
+
+            Vector2 preferred = MeasureSpeaker(
+                _draft.SampleSpeaker,
+                _draft.Speaker.FontSize);
+            float speakerWidth = preferred.x +
+                Mathf.Max(0f, _draft.Speaker.HorizontalPadding) * 2f;
+            float speakerHeight = preferred.y +
+                Mathf.Max(0f, _draft.Speaker.VerticalPadding) * 2f;
+
+            NovelRectLayout speakerLayout = NovelPresentationLayout.Speaker(
+                _draft.Speaker.Anchor,
+                speakerWidth,
+                speakerHeight,
+                _draft.Speaker.HorizontalOffset,
+                _draft.Speaker.VerticalOverlap);
+            Rect speakerLocal = ResolveRect(dialogueRect.size, speakerLayout);
+            Rect speakerRect = new Rect(
+                dialogueRect.position + speakerLocal.position,
+                speakerLocal.size);
+            Place(_speakerPreview, speakerRect, canvasSize.y, scale);
+            ApplyBoxStyle(
+                _speakerPreview, _draft.Speaker.Style, scale);
+            _speakerLabel.text = _draft.SampleSpeaker ?? string.Empty;
+            _speakerLabel.style.fontSize = Mathf.Max(
+                6f, _draft.Speaker.FontSize * scale);
+        }
+
+        private float PreviewDialogueFontSize()
+        {
+            float minimum = Mathf.Max(1f, _draft.Dialogue.MinimumFontSize);
+            float maximum = Mathf.Max(
+                minimum, _draft.Dialogue.MaximumFontSize);
+            float baseSize = Mathf.Max(1f, _draft.Dialogue.BaseFontSize);
+            return _draft.Dialogue.AutoSize
+                ? Mathf.Clamp(baseSize, minimum, maximum)
+                : baseSize;
+        }
+
+        private Vector2 MeasureSpeaker(string value, float fontSize)
+        {
+            if (_measurementText == null)
+            {
+                _measurementObject = new GameObject(
+                    "Novelify Preview Text",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(TextMeshProUGUI));
+                _measurementObject.hideFlags = HideFlags.HideAndDontSave;
+                _measurementText =
+                    _measurementObject.GetComponent<TextMeshProUGUI>();
+                _measurementText.font = TMP_Settings.defaultFontAsset;
+                _measurementText.enableAutoSizing = false;
+                _measurementText.textWrappingMode = TextWrappingModes.NoWrap;
+                _measurementText.richText = true;
+            }
+
+            _measurementText.fontSize = Mathf.Max(1f, fontSize);
+            return _measurementText.GetPreferredValues(
+                value ?? string.Empty, 10000f, 10000f);
+        }
+
+        private static Rect ResolveRect(
+            Vector2 parentSize,
+            NovelRectLayout layout)
+        {
+            Vector2 anchorSpan = layout.AnchorMax - layout.AnchorMin;
+            Vector2 size = Vector2.Scale(parentSize, anchorSpan) +
+                layout.SizeDelta;
+            Vector2 anchor = Vector2.Scale(
+                parentSize,
+                (layout.AnchorMin + layout.AnchorMax) * 0.5f);
+            Vector2 minimum = anchor + layout.AnchoredPosition -
+                Vector2.Scale(size, layout.Pivot);
+            return new Rect(minimum, size);
+        }
+
+        private static void Place(
+            VisualElement target,
+            Rect pixels,
+            float canvasHeight,
+            float scale)
+        {
+            target.style.left = pixels.x * scale;
+            target.style.top = (canvasHeight - pixels.yMax) * scale;
+            target.style.width = pixels.width * scale;
+            target.style.height = pixels.height * scale;
+        }
+
+        private static void ApplyBoxStyle(
+            VisualElement target,
+            NovelBoxStyle source,
+            float scale)
+        {
+            NovelBoxStyle style = source.Validated();
+            Color fill = style.FillColor;
+            fill.a *= style.Opacity;
+            target.style.backgroundColor = fill;
+
+            float radius = style.CornerRadius * scale;
+            target.style.borderTopLeftRadius = radius;
+            target.style.borderTopRightRadius = radius;
+            target.style.borderBottomLeftRadius = radius;
+            target.style.borderBottomRightRadius = radius;
+
+            float border = style.OutlineEnabled
+                ? style.OutlineThickness * scale
+                : 0f;
+            SetBorder(target, border, style.OutlineColor);
+        }
+
+        private static void SetBorder(
+            VisualElement target,
+            float width,
+            Color color)
+        {
+            target.style.borderLeftWidth = width;
+            target.style.borderRightWidth = width;
+            target.style.borderTopWidth = width;
+            target.style.borderBottomWidth = width;
+            target.style.borderLeftColor = color;
+            target.style.borderRightColor = color;
+            target.style.borderTopColor = color;
+            target.style.borderBottomColor = color;
+        }
+
+        private static TextAnchor ToTextAnchor(
+            NovelTextAlignment alignment)
+        {
+            return alignment switch
+            {
+                NovelTextAlignment.TopCenter => TextAnchor.UpperCenter,
+                NovelTextAlignment.TopRight => TextAnchor.UpperRight,
+                NovelTextAlignment.CenterLeft => TextAnchor.MiddleLeft,
+                NovelTextAlignment.CenterCenter => TextAnchor.MiddleCenter,
+                NovelTextAlignment.CenterRight => TextAnchor.MiddleRight,
+                NovelTextAlignment.BottomLeft => TextAnchor.LowerLeft,
+                NovelTextAlignment.BottomCenter => TextAnchor.LowerCenter,
+                NovelTextAlignment.BottomRight => TextAnchor.LowerRight,
+                _ => TextAnchor.UpperLeft
+            };
+        }
+
+        private void ApplyToGraph()
+        {
+            if (_graph == null || DialogueNode == null || SpeakerNode == null)
+                return;
+
+            ValidateDraft();
+            _graph.UndoBeginRecordGraph("Compose Dialogue Presentation");
+            WriteDialogueOptions(DialogueNode, _draft.Dialogue);
+            WriteSpeakerOptions(SpeakerNode, _draft.Speaker);
+            _draftDirty = false;
+            SetStatus("Dialogue and speaker presentation saved.", false);
+        }
+
+        private void Revert()
+        {
+            if (!_draftDirty || EditorUtility.DisplayDialog(
+                    "Revert presentation draft?",
+                    "Discard the unapplied changes in this composer?",
+                    "Revert",
+                    "Keep Editing"))
+            {
+                LoadDraft();
+                Rebuild();
+                SetStatus("Draft restored from the graph.", false);
+            }
+        }
+
+        private void SelectDialogue(int index)
+        {
+            if (index == _dialogueIndex) return;
+            if (!ConfirmDiscard())
+            {
+                Rebuild();
+                return;
+            }
+            _dialogueIndex = Mathf.Clamp(index, 0, _dialogueNodes.Count - 1);
+            LoadDraft();
+            Rebuild();
+        }
+
+        private void SelectSpeaker(int index)
+        {
+            if (index == _speakerIndex) return;
+            if (!ConfirmDiscard())
+            {
+                Rebuild();
+                return;
+            }
+            _speakerIndex = Mathf.Clamp(index, 0, _speakerNodes.Count - 1);
+            LoadDraft();
+            Rebuild();
+        }
+
+        private bool ConfirmDiscard()
+        {
+            return !_draftDirty || EditorUtility.DisplayDialog(
+                "Discard presentation draft?",
+                "Changing the selected nodes discards unapplied changes.",
+                "Discard",
+                "Keep Editing");
+        }
+
+        private void ValidateDraft()
+        {
+            if (_draft == null) return;
+            _draft.Dialogue.Style = _draft.Dialogue.Style.Validated();
+            _draft.Dialogue.Height = Mathf.Max(80f, _draft.Dialogue.Height);
+            _draft.Dialogue.Width = Mathf.Max(0f, _draft.Dialogue.Width);
+            _draft.Dialogue.BottomMargin =
+                Mathf.Max(0f, _draft.Dialogue.BottomMargin);
+            _draft.Dialogue.HorizontalMargin =
+                Mathf.Max(0f, _draft.Dialogue.HorizontalMargin);
+            _draft.Dialogue.HorizontalPadding =
+                Mathf.Max(0f, _draft.Dialogue.HorizontalPadding);
+            _draft.Dialogue.VerticalPadding =
+                Mathf.Max(0f, _draft.Dialogue.VerticalPadding);
+            _draft.Dialogue.BaseFontSize =
+                Mathf.Max(1f, _draft.Dialogue.BaseFontSize);
+            _draft.Dialogue.MinimumFontSize =
+                Mathf.Max(1f, _draft.Dialogue.MinimumFontSize);
+            _draft.Dialogue.MaximumFontSize = Mathf.Max(
+                _draft.Dialogue.MinimumFontSize,
+                _draft.Dialogue.MaximumFontSize);
+
+            _draft.Speaker.Style = _draft.Speaker.Style.Validated();
+            _draft.Speaker.FontSize =
+                Mathf.Max(1f, _draft.Speaker.FontSize);
+            _draft.Speaker.HorizontalPadding =
+                Mathf.Max(0f, _draft.Speaker.HorizontalPadding);
+            _draft.Speaker.VerticalPadding =
+                Mathf.Max(0f, _draft.Speaker.VerticalPadding);
+        }
+
+        private static void WriteDialogueOptions(
+            INode node,
+            DialogueDraft draft)
+        {
+            WriteStyle(node, draft.Style);
+            Write(node, "Text Alignment", draft.TextAlignment);
+            Write(node, "Anchor", draft.Anchor);
+            Write(node, "Base Font Size", draft.BaseFontSize);
+            Write(node, "Auto Size", draft.AutoSize);
+            Write(node, "Minimum Font Size", draft.MinimumFontSize);
+            Write(node, "Maximum Font Size", draft.MaximumFontSize);
+            Write(node, "Height", draft.Height);
+            Write(node, "Width", draft.Width);
+            Write(node, "Bottom Margin", draft.BottomMargin);
+            Write(node, "Horizontal Margin", draft.HorizontalMargin);
+            Write(node, "Horizontal Padding", draft.HorizontalPadding);
+            Write(node, "Vertical Padding", draft.VerticalPadding);
+        }
+
+        private static void WriteSpeakerOptions(
+            INode node,
+            SpeakerDraft draft)
+        {
+            WriteStyle(node, draft.Style);
+            Write(node, "Anchor", draft.Anchor);
+            Write(node, "Font Size", draft.FontSize);
+            Write(node, "Horizontal Padding", draft.HorizontalPadding);
+            Write(node, "Vertical Padding", draft.VerticalPadding);
+            Write(node, "Horizontal Offset", draft.HorizontalOffset);
+            Write(node, "Vertical Overlap", draft.VerticalOverlap);
+        }
+
+        private static NovelBoxStyle ReadStyle(
+            INode node,
+            NovelBoxStyle fallback)
+        {
+            return new NovelBoxStyle
+            {
+                FillColor = Read(node, "Fill Color", fallback.FillColor),
+                Opacity = Read(node, "Opacity", fallback.Opacity),
+                CornerRadius = Read(
+                    node, "Corner Radius", fallback.CornerRadius),
+                OutlineEnabled = Read(
+                    node, "Outline", fallback.OutlineEnabled),
+                OutlineColor = Read(
+                    node, "Outline Color", fallback.OutlineColor),
+                OutlineThickness = Read(
+                    node, "Outline Thickness", fallback.OutlineThickness)
+            }.Validated();
+        }
+
+        private static void WriteStyle(INode node, NovelBoxStyle style)
+        {
+            style = style.Validated();
+            Write(node, "Fill Color", style.FillColor);
+            Write(node, "Opacity", style.Opacity);
+            Write(node, "Corner Radius", style.CornerRadius);
+            Write(node, "Outline", style.OutlineEnabled);
+            Write(node, "Outline Color", style.OutlineColor);
+            Write(node, "Outline Thickness", style.OutlineThickness);
+        }
+
+        private static T Read<T>(INode node, string name, T fallback)
+        {
+            INodeOption option = node?.GetNodeOptionByName(name);
+            return option != null && option.TryGetValue(out T value)
+                ? value
+                : fallback;
+        }
+
+        private static void Write<T>(INode node, string name, T value)
+        {
+            node?.GetNodeOptionByName(name)?.TrySetValue(value);
+        }
+
+        private void SetStatus(string message, bool error)
+        {
+            if (_status == null) return;
+            _status.text = message;
+            _status.style.color = error
+                ? (Color)new Color32(248, 113, 113, 255)
+                : (Color)new Color32(148, 163, 184, 255);
+        }
+
+        private string MissingNodeMessage()
+        {
+            if (_dialogueNodes.Count == 0 && _speakerNodes.Count == 0)
+                return "Add a Create Dialogue Box node and a Create Dialogue " +
+                       "Speaker Box node, then open the composer again.";
+            if (_dialogueNodes.Count == 0)
+                return "Add a Create Dialogue Box node, then open the " +
+                       "composer again.";
+            return "Add a Create Dialogue Speaker Box node, then open the " +
+                   "composer again.";
+        }
+
+        private static List<string> NodeNames(string prefix, int count)
+        {
+            List<string> names = new List<string>(count);
+            for (int index = 0; index < count; index++)
+                names.Add($"{prefix} {index + 1}");
+            return names;
+        }
+
+        private static int ResolutionIndex(Vector2Int value)
+        {
+            for (int index = 0; index < ResolutionNames.Length; index++)
+                if (ResolutionAt(index) == value) return index;
+            return 0;
+        }
+
+        private static Vector2Int ResolutionAt(int index)
+        {
+            return index switch
+            {
+                1 => new Vector2Int(1600, 900),
+                2 => new Vector2Int(1280, 720),
+                3 => new Vector2Int(1440, 900),
+                4 => new Vector2Int(1024, 768),
+                5 => new Vector2Int(1080, 1920),
+                _ => new Vector2Int(1920, 1080)
+            };
+        }
+    }
+}
