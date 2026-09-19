@@ -63,11 +63,22 @@ namespace Novelify.Editor
                                          ReferenceEquals(node, _lastClickedNode) && now - _lastClickTime <= 0.45d;
                     _lastClickedNode = node;
                     _lastClickTime = now;
-                    if (isDoubleClick && node is TransformSpeakerPortraitNode transform)
+                    if (!isDoubleClick) return;
+                    switch (node)
                     {
-                        TransformPortraitVisualEditor.Open(transform);
-                        evt.StopImmediatePropagation();
+                        case TransformSpeakerPortraitNode transform:
+                            TransformPortraitVisualEditor.Open(transform);
+                            break;
+                        case CreateDialogueBoxNode dialogue:
+                            NovelPresentationComposerWindow.Open(dialogue);
+                            break;
+                        case CreateDialogueSpeakerBoxNode speaker:
+                            NovelPresentationComposerWindow.Open(speaker);
+                            break;
+                        default:
+                            return;
                     }
+                    evt.StopImmediatePropagation();
                     return;
                 }
                 element = element.parent;
