@@ -51,6 +51,10 @@ namespace Novelify
         private float _dialogueHorizontalPadding = 32f;
         private float _dialogueVerticalPadding = 22f;
 
+        private NovelSpeakerAnchor _speakerAnchor = NovelSpeakerAnchor.TopLeft;
+        private float _speakerAlongEdgeOffset = 24f;
+        private float _speakerOverlap = 27f;
+
         private RectTransform _bubbleWrapper;
         private RectTransform _bubbleBody;
         private NovelRoundedGraphic _bubbleGraphic;
@@ -138,18 +142,27 @@ namespace Novelify
         public void CreateSpeakerBox(RuntimeCreateDialogueSpeakerBoxNode node)
         {
             EnsureReady();
+
             _speakerStyle = node.Style.Validated();
-            ApplyStyle(_standardSpeakerBox, _speakerStyle);
-            RectTransform rect = _standardSpeakerBox.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 0.5f);
+
+            _speakerAnchor = node.Anchor;
+
+            _speakerAlongEdgeOffset = node.HorizontalOffset;
+
+            _speakerOverlap = node.VerticalOverlap;
+
+            RectTransform rect =
+                _standardSpeakerBox.GetComponent<RectTransform>();
+
             rect.sizeDelta = new Vector2(
                 Mathf.Max(80f, node.Width),
                 Mathf.Max(30f, node.Height));
-            rect.anchoredPosition = new Vector2(
-                node.HorizontalOffset,
-                rect.sizeDelta.y * 0.5f - node.VerticalOverlap);
+
+            ApplySpeakerLayout(rect, _speakerAnchor,
+                _speakerAlongEdgeOffset, _speakerOverlap);
+
+            ApplyStyle(_standardSpeakerBox, _speakerStyle);
+
             BindStandardSurface();
         }
 
@@ -446,6 +459,7 @@ namespace Novelify
                     : _dialogueWidth,
                 _dialogueHeight);
 
+            //If it is given a custom dialogue panel, then use that dialogue box
             if (_standardDialogueText != null)
             {
                 RectTransform textRect = _standardDialogueText.rectTransform;
@@ -454,6 +468,69 @@ namespace Novelify
                 textRect.offsetMax = new Vector2(
                     -_dialogueHorizontalPadding, -_dialogueVerticalPadding);
             }
+            //If it is given a custom speaker panel, then use that dialogue box
+            if (_standardSpeakerBox != null)
+            {
+                RectTransform speakerRect =
+                    _standardSpeakerBox.GetComponent<RectTransform>();
+                ApplySpeakerLayout(speakerRect, _speakerAnchor,
+                    _speakerAlongEdgeOffset, _speakerOverlap);
+            }
+        }
+
+        private static void ApplySpeakerLayout(
+            RectTransform rect, NovelSpeakerAnchor anchor,
+            float alongEdgeOffset, float overlap)
+        {
+            if (rect == null) return;
+            float width = rect.sizeDelta.x;
+            float height = rect.sizeDelta.y;
+            Vector2 point;
+            Vector2 pivot;
+            Vector2 position;
+            switch (anchor)
+            {
+                case NovelSpeakerAnchor.TopCenter:
+                    point = new Vector2(0.5f, 1f); pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(alongEdgeOffset, height * 0.5f - overlap); break;
+                case NovelSpeakerAnchor.TopRight:
+                    point = new Vector2(1f, 1f); pivot = new Vector2(1f, 0.5f);
+                    position = new Vector2(-alongEdgeOffset, height * 0.5f - overlap); break;
+                case NovelSpeakerAnchor.LeftTop:
+                    point = new Vector2(0f, 1f); pivot = new Vector2(0.5f, 1f);
+                    position = new Vector2(-width * 0.5f + overlap, -alongEdgeOffset); break;
+                case NovelSpeakerAnchor.LeftCenter:
+                    point = new Vector2(0f, 0.5f); pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(-width * 0.5f + overlap, alongEdgeOffset); break;
+                case NovelSpeakerAnchor.LeftBottom:
+                    point = new Vector2(0f, 0f); pivot = new Vector2(0.5f, 0f);
+                    position = new Vector2(-width * 0.5f + overlap, alongEdgeOffset); break;
+                case NovelSpeakerAnchor.BottomLeft:
+                    point = new Vector2(0f, 0f); pivot = new Vector2(0f, 0.5f);
+                    position = new Vector2(alongEdgeOffset, -height * 0.5f + overlap); break;
+                case NovelSpeakerAnchor.BottomCenter:
+                    point = new Vector2(0.5f, 0f); pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(alongEdgeOffset, -height * 0.5f + overlap); break;
+                case NovelSpeakerAnchor.BottomRight:
+                    point = new Vector2(1f, 0f); pivot = new Vector2(1f, 0.5f);
+                    position = new Vector2(-alongEdgeOffset, -height * 0.5f + overlap); break;
+                case NovelSpeakerAnchor.RightBottom:
+                    point = new Vector2(1f, 0f); pivot = new Vector2(0.5f, 0f);
+                    position = new Vector2(width * 0.5f - overlap, alongEdgeOffset); break;
+                case NovelSpeakerAnchor.RightCenter:
+                    point = new Vector2(1f, 0.5f); pivot = new Vector2(0.5f, 0.5f);
+                    position = new Vector2(width * 0.5f - overlap, alongEdgeOffset); break;
+                case NovelSpeakerAnchor.RightTop:
+                    point = new Vector2(1f, 1f); pivot = new Vector2(0.5f, 1f);
+                    position = new Vector2(width * 0.5f - overlap, -alongEdgeOffset); break;
+                default: // TopLeft
+                    point = new Vector2(0f, 1f); pivot = new Vector2(0f, 0.5f);
+                    position = new Vector2(alongEdgeOffset, height * 0.5f - overlap); break;
+            }
+            rect.anchorMin = point;
+            rect.anchorMax = point;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
         }
 
         private void EnsureSpeakerBox()
@@ -464,13 +541,8 @@ namespace Novelify
                     "Speaker Box", _standardPanel);
                 _standardSpeakerBox = rect.gameObject;
                 _standardSpeakerBox.AddComponent<NovelRoundedGraphic>();
-                rect.anchorMin = new Vector2(0f, 1f);
-                rect.anchorMax = new Vector2(0f, 1f);
-                rect.pivot = new Vector2(0f, 0.5f);
                 rect.sizeDelta = new Vector2(260f, 54f);
-                rect.anchoredPosition = new Vector2(24f, 0f);
             }
-
             if (_standardSpeakerText == null)
             {
                 RectTransform textRect = CreateRect(
@@ -479,9 +551,12 @@ namespace Novelify
                 textRect.offsetMin = new Vector2(16f, 6f);
                 textRect.offsetMax = new Vector2(-16f, -6f);
                 _standardSpeakerText = CreateText(
-                    textRect.gameObject, 25f, TextAlignmentOptions.Center);
+                    textRect.gameObject, 25f,
+                    TextAlignmentOptions.Center);
             }
-
+            ApplySpeakerLayout(
+                _standardSpeakerBox.GetComponent<RectTransform>(),
+                _speakerAnchor, _speakerAlongEdgeOffset, _speakerOverlap);
             ApplyStyle(_standardSpeakerBox, _speakerStyle);
         }
 

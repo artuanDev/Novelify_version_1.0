@@ -11,7 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(15, NovelGraph.AssetExtension)]
+    [ScriptedImporter(16, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -830,14 +830,15 @@ namespace Novelify.Editor
                     {
                         Style = ReadBoxStyle(
                                          node, NovelBoxStyle.SpeakerDefault),
+                        Anchor = GetOptionValue(node.GetNodeOptionByName("Anchor"), NovelSpeakerAnchor.TopLeft),
                         Width = Mathf.Max(80f, GetOptionValue(
-                    node.GetNodeOptionByName("Width"), 260f)),
+                            node.GetNodeOptionByName("Width"), 260f)),
                         Height = Mathf.Max(30f, GetOptionValue(
-                    node.GetNodeOptionByName("Height"), 54f)),
+                            node.GetNodeOptionByName("Height"), 54f)),
                         HorizontalOffset = GetOptionValue(
-                    node.GetNodeOptionByName("Horizontal Offset"), 24f),
+                            node.GetNodeOptionByName("Horizontal Offset"), 24f),
                         VerticalOverlap = GetOptionValue(
-                    node.GetNodeOptionByName("Vertical Overlap"), 27f)
+                            node.GetNodeOptionByName("Vertical Overlap"), 27f)
 
                     };
                 case ChangeDialogueBackgroundStyleNode _:

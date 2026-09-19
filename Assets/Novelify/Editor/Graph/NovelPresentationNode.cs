@@ -82,8 +82,14 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
+
             NovelPresentationNodeOptions.AddStyle(
                 context, NovelBoxStyle.SpeakerDefault);
+
+            context.AddOption<NovelSpeakerAnchor>("Anchor")
+                .WithDefaultValue(NovelSpeakerAnchor.TopLeft)
+                .Build();
+
             context.AddOption<float>("Width").WithDefaultValue(260f).Build();
             context.AddOption<float>("Height").WithDefaultValue(54f).Build();
             context.AddOption<float>("Horizontal Offset").WithDefaultValue(24f).Build();

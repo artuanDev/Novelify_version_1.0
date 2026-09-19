@@ -1111,6 +1111,7 @@ namespace Novelify.Tests
                     NodeID = "create-speaker",
                     NextNodeID = "line",
                     Width = 315f,
+                    Anchor = NovelSpeakerAnchor.RightCenter,
                     Style = NovelBoxStyle.SpeakerDefault
                 },
                 new RuntimeDialogueNode
@@ -1141,6 +1142,19 @@ namespace Novelify.Tests
             Assert.That(dialogueRect.pivot,
                 Is.EqualTo(new Vector2(1f, 1f)));
             Assert.That(dialogueRect.sizeDelta.x, Is.EqualTo(920f));
+
+            RectTransform speakerRect =
+                _manager.NameBackground.GetComponent<RectTransform>();
+            Assert.That(speakerRect.anchorMin,
+                Is.EqualTo(new Vector2(1f, 0.5f)));
+            Assert.That(speakerRect.anchorMax,
+                Is.EqualTo(new Vector2(1f, 0.5f)));
+            Assert.That(speakerRect.pivot,
+                Is.EqualTo(new Vector2(0.5f, 0.5f)));
+            Assert.That(speakerRect.anchoredPosition.x,
+                Is.EqualTo(130.5f).Within(0.001f));
+            Assert.That(speakerRect.anchoredPosition.y,
+                Is.EqualTo(24f).Within(0.001f));
         }
 
         [UnityTest]

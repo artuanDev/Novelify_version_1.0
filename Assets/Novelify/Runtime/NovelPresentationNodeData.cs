@@ -51,6 +51,24 @@ namespace Novelify
         Right = TopRight
     }
 
+    // Position of the speaker box around the dialogue panel's edges.
+    //This is for the box itself, not the text inside
+    public enum NovelSpeakerAnchor
+    {
+        TopLeft,
+        TopCenter,
+        TopRight,
+        LeftTop,
+        LeftCenter,
+        LeftBottom,
+        BottomLeft,
+        BottomCenter,
+        BottomRight,
+        RightBottom,
+        RightCenter,
+        RightTop
+    }
+
     //Changing the style of a dialogue box using a target so the logic can be reused
     public enum NovelBoxTarget
     {
@@ -155,6 +173,7 @@ namespace Novelify
     public sealed class RuntimeCreateDialogueSpeakerBoxNode : RuntimeNode
     {
         public NovelBoxStyle Style = NovelBoxStyle.SpeakerDefault;
+        public NovelSpeakerAnchor Anchor = NovelSpeakerAnchor.TopLeft;
         public float Width = 260f;
         public float Height = 54f;
         public float HorizontalOffset = 24f;

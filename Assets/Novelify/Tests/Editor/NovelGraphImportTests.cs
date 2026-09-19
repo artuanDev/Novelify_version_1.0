@@ -616,6 +616,9 @@ namespace Novelify.Tests
             dialogue.GetNodeOptionByName("Auto Size").TrySetValue(true);
             dialogue.GetNodeOptionByName("Minimum Font Size").TrySetValue(17f);
             dialogue.GetNodeOptionByName("Maximum Font Size").TrySetValue(38f);
+            speaker.GetNodeOptionByName("Width").TrySetValue(315f);
+            speaker.GetNodeOptionByName("Anchor")
+                .TrySetValue(NovelSpeakerAnchor.RightCenter);
             style.GetNodeOptionByName("Target")
                 .TrySetValue(NovelBoxTarget.Speaker);
             style.GetNodeOptionByName("Outline").TrySetValue(true);
@@ -643,6 +646,9 @@ namespace Novelify.Tests
             Assert.That(dialogueRuntime.AutoSize, Is.True);
             Assert.That(dialogueRuntime.MinimumFontSize, Is.EqualTo(17f));
             Assert.That(dialogueRuntime.MaximumFontSize, Is.EqualTo(38f));
+            Assert.That(speakerRuntime.Width, Is.EqualTo(315f));
+            Assert.That(speakerRuntime.Anchor,
+                Is.EqualTo(NovelSpeakerAnchor.RightCenter));
             Assert.That(styleRuntime.Target, Is.EqualTo(NovelBoxTarget.Speaker));
             Assert.That(styleRuntime.Style.OutlineEnabled, Is.True);
             Assert.That(styleRuntime.Style.OutlineThickness, Is.EqualTo(5f));
