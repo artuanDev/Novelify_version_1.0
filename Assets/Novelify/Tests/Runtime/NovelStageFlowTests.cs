@@ -1091,6 +1091,7 @@ namespace Novelify.Tests
         [Test]
         public void EmptyUiSetupCreatesDialogueAndSpeakerObjects()
         {
+            _character.SpeakerName = "Test Speaker";
             Play(
                 new RuntimeCreateDialogueBoxNode
                 {
@@ -1110,8 +1111,10 @@ namespace Novelify.Tests
                 {
                     NodeID = "create-speaker",
                     NextNodeID = "line",
-                    Width = 315f,
                     Anchor = NovelSpeakerAnchor.RightCenter,
+                    FontSize = 31f,
+                    HorizontalPadding = 22f,
+                    VerticalPadding = 9f,
                     Style = NovelBoxStyle.SpeakerDefault
                 },
                 new RuntimeDialogueNode
@@ -1151,8 +1154,21 @@ namespace Novelify.Tests
                 Is.EqualTo(new Vector2(1f, 0.5f)));
             Assert.That(speakerRect.pivot,
                 Is.EqualTo(new Vector2(0.5f, 0.5f)));
+            Assert.That(_manager.SpeakerNameText.alignment,
+                Is.EqualTo(TextAlignmentOptions.Center));
+            Assert.That(_manager.SpeakerNameText.fontSize,
+                Is.EqualTo(31f));
+            Assert.That(_manager.SpeakerNameText.enableAutoSizing,
+                Is.False);
+            Vector2 preferred = _manager.SpeakerNameText.GetPreferredValues(
+                "Test Speaker", 10000f, 10000f);
+            Assert.That(speakerRect.sizeDelta.x,
+                Is.EqualTo(preferred.x + 44f).Within(0.01f));
+            Assert.That(speakerRect.sizeDelta.y,
+                Is.EqualTo(preferred.y + 18f).Within(0.01f));
             Assert.That(speakerRect.anchoredPosition.x,
-                Is.EqualTo(130.5f).Within(0.001f));
+                Is.EqualTo(speakerRect.sizeDelta.x * 0.5f - 27f)
+                    .Within(0.01f));
             Assert.That(speakerRect.anchoredPosition.y,
                 Is.EqualTo(24f).Within(0.001f));
         }

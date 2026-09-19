@@ -680,7 +680,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: fb7be1ff4b67210482127ac5a6c69065
         m_Version: 2
-        m_Position: {x: -1753.4393, y: 628.5051}
+        m_Position: {x: -1767.4314, y: 700.2144}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -694,11 +694,11 @@ MonoBehaviour:
           - __option_Outline
           - __option_Outline Color
           - __option_Outline Thickness
-          - __option_Anchor
-          - __option_Width
-          - __option_Height
           - __option_Horizontal Offset
           - __option_Vertical Overlap
+          - __option_Font Size
+          - __option_Horizontal Padding
+          - __option_Vertical Padding
           m_ValueList:
           - rid: 8564938716683960651
           - rid: 8564938716683960652
@@ -706,11 +706,11 @@ MonoBehaviour:
           - rid: 8564938716683960654
           - rid: 8564938716683960655
           - rid: 8564938716683960656
-          - rid: 8564938716683960657
-          - rid: 8564938716683960658
-          - rid: 8564938716683960659
           - rid: 8564938716683960660
           - rid: 8564938716683960661
+          - rid: 8564938738466291843
+          - rid: 8564938738466291844
+          - rid: 8564938738466291845
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -782,23 +782,6 @@ MonoBehaviour:
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 2
-    - rid: 8564938716683960657
-      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value:
-          m_EnumType:
-            m_Identification: Novelify.NovelSpeakerAnchor, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-          m_Value: 1
-        m_EnumType:
-          m_Identification: Novelify.NovelSpeakerAnchor, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-    - rid: 8564938716683960658
-      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 260
-    - rid: 8564938716683960659
-      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 54
     - rid: 8564938716683960660
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -842,3 +825,15 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: Enter
+    - rid: 8564938738466291843
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 60
+    - rid: 8564938738466291844
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 40
+    - rid: 8564938738466291845
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 20

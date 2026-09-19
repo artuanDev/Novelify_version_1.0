@@ -174,8 +174,9 @@ namespace Novelify
     {
         public NovelBoxStyle Style = NovelBoxStyle.SpeakerDefault;
         public NovelSpeakerAnchor Anchor = NovelSpeakerAnchor.TopLeft;
-        public float Width = 260f;
-        public float Height = 54f;
+        public float FontSize = 25f;
+        public float HorizontalPadding = 16f;
+        public float VerticalPadding = 6f;
         public float HorizontalOffset = 24f;
         public float VerticalOverlap = 27f;
     }

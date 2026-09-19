@@ -54,6 +54,8 @@ namespace Novelify
         private NovelSpeakerAnchor _speakerAnchor = NovelSpeakerAnchor.TopLeft;
         private float _speakerAlongEdgeOffset = 24f;
         private float _speakerOverlap = 27f;
+        private float _speakerHorizontalPadding = 16f;
+        private float _speakerVerticalPadding = 6f;
 
         private RectTransform _bubbleWrapper;
         private RectTransform _bubbleBody;
@@ -142,28 +144,52 @@ namespace Novelify
         public void CreateSpeakerBox(RuntimeCreateDialogueSpeakerBoxNode node)
         {
             EnsureReady();
-
             _speakerStyle = node.Style.Validated();
-
             _speakerAnchor = node.Anchor;
-
             _speakerAlongEdgeOffset = node.HorizontalOffset;
-
             _speakerOverlap = node.VerticalOverlap;
-
-            RectTransform rect =
-                _standardSpeakerBox.GetComponent<RectTransform>();
-
-            rect.sizeDelta = new Vector2(
-                Mathf.Max(80f, node.Width),
-                Mathf.Max(30f, node.Height));
-
-            ApplySpeakerLayout(rect, _speakerAnchor,
-                _speakerAlongEdgeOffset, _speakerOverlap);
-
+            _speakerHorizontalPadding =
+                Mathf.Max(0f, node.HorizontalPadding);
+            _speakerVerticalPadding =
+                Mathf.Max(0f, node.VerticalPadding);
+            _standardSpeakerText.fontSize =
+                Mathf.Max(1f, node.FontSize);
+            _standardSpeakerText.enableAutoSizing = false;
+            _standardSpeakerText.alignment =
+                TextAlignmentOptions.Center;
             ApplyStyle(_standardSpeakerBox, _speakerStyle);
-
+            if (!string.IsNullOrEmpty(_standardSpeakerText.text))
+                RefreshSpeakerNameLayout();
             BindStandardSurface();
+        }
+
+        public void RefreshSpeakerNameLayout()
+        {
+            if (_standardSpeakerBox == null ||
+                _standardSpeakerText == null)
+                return;
+            float horizontal = Mathf.Max(
+                0f, _speakerHorizontalPadding);
+            float vertical = Mathf.Max(
+                0f, _speakerVerticalPadding);
+            _standardSpeakerText.alignment =
+                TextAlignmentOptions.Center;
+            _standardSpeakerText.enableAutoSizing = false;
+            RectTransform textRect =
+                _standardSpeakerText.rectTransform;
+            textRect.offsetMin = new Vector2(horizontal, vertical);
+            textRect.offsetMax = new Vector2(-horizontal, -vertical);
+            string value = _standardSpeakerText.text ?? string.Empty;
+            Vector2 preferred = _standardSpeakerText.GetPreferredValues(
+                value, 10000f, 10000f);
+            RectTransform boxRect =
+                _standardSpeakerBox.GetComponent<RectTransform>();
+            boxRect.sizeDelta = new Vector2(
+                Mathf.Max(1f, preferred.x + horizontal * 2f),
+                Mathf.Max(1f, preferred.y + vertical * 2f));
+            ApplySpeakerLayout(
+                boxRect, _speakerAnchor,
+                _speakerAlongEdgeOffset, _speakerOverlap);
         }
 
         public void ChangeStyle(RuntimeChangeDialogueStyleNode node)

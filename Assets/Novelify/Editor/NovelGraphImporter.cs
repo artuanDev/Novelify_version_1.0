@@ -11,7 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(16, NovelGraph.AssetExtension)]
+    [ScriptedImporter(17, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -830,13 +830,20 @@ namespace Novelify.Editor
                     {
                         Style = ReadBoxStyle(
                                          node, NovelBoxStyle.SpeakerDefault),
+
                         Anchor = GetOptionValue(node.GetNodeOptionByName("Anchor"), NovelSpeakerAnchor.TopLeft),
-                        Width = Mathf.Max(80f, GetOptionValue(
-                            node.GetNodeOptionByName("Width"), 260f)),
-                        Height = Mathf.Max(30f, GetOptionValue(
-                            node.GetNodeOptionByName("Height"), 54f)),
+
+                        FontSize = Mathf.Max(1f, GetOptionValue(
+                            node.GetNodeOptionByName("Font Size"), 25f)),
+                        HorizontalPadding = Mathf.Max(0f, GetOptionValue(
+                            node.GetNodeOptionByName("Horizontal Padding"), 16f)),
+
+                        VerticalPadding = Mathf.Max(0f, GetOptionValue(
+                            node.GetNodeOptionByName("Vertical Padding"), 6f)),
+
                         HorizontalOffset = GetOptionValue(
                             node.GetNodeOptionByName("Horizontal Offset"), 24f),
+
                         VerticalOverlap = GetOptionValue(
                             node.GetNodeOptionByName("Vertical Overlap"), 27f)
 

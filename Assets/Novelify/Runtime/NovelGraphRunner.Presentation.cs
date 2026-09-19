@@ -79,8 +79,14 @@ namespace Novelify
             }
 
             SetPanelVisible(DialoguePanel, true);
-            if (SpeakerNameText != null) SpeakerNameText.SetText(speakerName);
-            if (NameBackground != null) NameBackground.SetActive(!string.IsNullOrEmpty(speakerName));
+
+            if (SpeakerNameText != null)
+                SpeakerNameText.SetText(speakerName);
+            if (node is not RuntimeSpeechBubbleNode)
+                GeneratedPresentation.RefreshSpeakerNameLayout();
+            if (NameBackground != null)
+                NameBackground.SetActive(!string.IsNullOrEmpty(speakerName));
+
             if (BackgroundChoicesPanel != null) BackgroundChoicesPanel.SetActive(false);
             StopAudio(NodeSoundSource);
             AudioClip nodeClip = AsObject(Evaluate(node.PlaySoundValue), node.PlaySound);
@@ -91,6 +97,7 @@ namespace Novelify
                 NodeSoundSource.Play();
             }
             _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
+
             TrackGeneratedSpeechBubble(node);
             Stage.BringToFront(_speaker);
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
@@ -98,6 +105,7 @@ namespace Novelify
             if (_speaker != null && node.Appearance != CharacterTransitionMode.Instant)
                 _speaker.TransitionIn(node.Appearance, node.AppearanceDirection,
                     Mathf.Max(0f, node.AppearanceDuration), node.SlideOffset, node.AppearanceEasing);
+
             if (DialogueText != null)
             {
                 ApplyDialogueFonts(node);

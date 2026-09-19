@@ -86,14 +86,20 @@ namespace Novelify.Editor
             NovelPresentationNodeOptions.AddStyle(
                 context, NovelBoxStyle.SpeakerDefault);
 
-            context.AddOption<NovelSpeakerAnchor>("Anchor")
-                .WithDefaultValue(NovelSpeakerAnchor.TopLeft)
-                .Build();
+            context.AddOption<float>("Font Size")
+                .WithDefaultValue(25f).Build();
 
-            context.AddOption<float>("Width").WithDefaultValue(260f).Build();
-            context.AddOption<float>("Height").WithDefaultValue(54f).Build();
-            context.AddOption<float>("Horizontal Offset").WithDefaultValue(24f).Build();
-            context.AddOption<float>("Vertical Overlap").WithDefaultValue(27f).Build();
+            context.AddOption<float>("Horizontal Padding")
+                .WithDefaultValue(16f).Build();
+
+            context.AddOption<float>("Vertical Padding")
+                .WithDefaultValue(6f).Build();
+
+            context.AddOption<float>("Horizontal Offset")
+                .WithDefaultValue(24f).Build();
+
+            context.AddOption<float>("Vertical Overlap")
+                .WithDefaultValue(27f).Build();
         }
     }
 
