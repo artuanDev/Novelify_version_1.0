@@ -55,8 +55,8 @@ MonoBehaviour:
           serializedVersion: 2
           x: -2464
           y: -220
-          width: 1357
-          height: 552
+          width: 1372
+          height: 1121
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 214124395814895384
@@ -273,6 +273,12 @@ MonoBehaviour:
           - __option_Animate Blinking
           - Sound
           - Speaker
+          - __option_Character Appearance
+          - __option_Appear From
+          - __option_Slide Offset
+          - __option_Appearance Duration
+          - __option_Appearance Easing
+          - Speaker Reference
           m_ValueList:
           - rid: 8564938444482281474
           - rid: 8564938444482281475
@@ -284,6 +290,12 @@ MonoBehaviour:
           - rid: 8564938444482281481
           - rid: 8564938444482281482
           - rid: 8564938444482281483
+          - rid: 8564938763525947452
+          - rid: 8564938763525947453
+          - rid: 8564938763525947454
+          - rid: 8564938763525947455
+          - rid: 8564938763525947456
+          - rid: 8564938763525947457
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -304,11 +316,14 @@ MonoBehaviour:
       data:
         m_Value:
           Character: {fileID: 11400000, guid: bd23349f89344024fb67558f8c6108b9, type: 2}
+          Emotion: 0
     - rid: 8564938444482281475
       type: {class: 'Constant`1[[Novelify.Editor.RichDialogueText, Novelify.Editor]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value:
           Text: "I don\xB4t want to go there actually"
+          DefaultFont: {fileID: 0}
+          FontAssets: []
     - rid: 8564938444482281476
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -497,7 +512,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 34fab701b7ed42796d4e8aa906865891
         m_Version: 2
-        m_Position: {x: -1758.03, y: 162.916}
+        m_Position: {x: -1655.1945, y: 341.3659}
         m_Title: 
         m_Tooltip: NovelFunctionTest
         m_NodePreviewModel:
@@ -722,3 +737,44 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: Finish
+    - rid: 8564938763525947452
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionMode, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938763525947453
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 0
+        m_EnumType:
+          m_Identification: Novelify.CharacterTransitionDirection, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938763525947454
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.45
+    - rid: 8564938763525947455
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.35
+    - rid: 8564938763525947456
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 2
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938763525947457
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 

@@ -4,26 +4,34 @@
     width: 520px;
     min-width: 520px;
     max-width: 520px;
-    background-color: #21172f;
-    border-left-color: #75449c;
-    border-right-color: #75449c;
-    border-top-color: #75449c;
-    border-bottom-color: #75449c;
+    background-color: #221634;
+    border-left-color: #6f4499;
+    border-right-color: #6f4499;
+    border-bottom-color: #58367a;
+    border-top-color: #c084fc;
     --minimap-color: #c084fc;
 }
 
 .ge-node #title-container {
-    background-color: #35204d;
-    border-bottom-color: #8251a8;
+    background-color: #331f4d;
+    border-bottom-color: #6f4499;
+}
+
+.ge-node #title-container #subtitle {
+    color: #d9b0ff;
 }
 
 .ge-node:checked {
-    border-left-color: #d8b4fe;
-    border-right-color: #d8b4fe;
-    border-top-color: #d8b4fe;
-    border-bottom-color: #d8b4fe;
+    border-left-color: #d9b0ff;
+    border-right-color: #d9b0ff;
+    border-bottom-color: #d9b0ff;
 }
 
+.ge-node .ge-port {
+    --port-color: #c084fc;
+}
+
+/* Branch outputs stay amber: the fan-out is the point of the node. */
 .ge-node .ge-port--direction-output {
     --port-color: #fbbf24;
 }

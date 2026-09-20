@@ -233,14 +233,14 @@ namespace Novelify.Editor
                     Vector2.LerpUnclamped(from.Scale, to.Scale, t));
         }
 
-        private static readonly Color Background = new Color32(12, 19, 32, 255);
-        private static readonly Color Panel = new Color32(24, 33, 48, 255);
-        private static readonly Color PanelRaised = new Color32(31, 43, 61, 255);
-        private static readonly Color Border = new Color32(71, 85, 105, 255);
-        private static readonly Color Text = new Color32(226, 232, 240, 255);
-        private static readonly Color Muted = new Color32(148, 163, 184, 255);
-        private static readonly Color Accent = new Color32(56, 189, 248, 255);
-        private static readonly Color StartAccent = new Color32(167, 139, 250, 255);
+        private static readonly Color Background = new Color32(6, 13, 24, 255);
+        private static readonly Color Panel = new Color32(14, 30, 49, 255);
+        private static readonly Color PanelRaised = new Color32(20, 42, 65, 255);
+        private static readonly Color Border = new Color32(52, 82, 108, 255);
+        private static readonly Color Text = new Color32(246, 244, 239, 255);
+        private static readonly Color Muted = new Color32(151, 175, 198, 255);
+        private static readonly Color Accent = new Color32(71, 190, 241, 255);
+        private static readonly Color StartAccent = new Color32(157, 133, 247, 255);
         private static readonly Color SafeAccent = new Color32(52, 211, 153, 190);
         private const string UIPreviewSourcePrefsPrefix =
             "Novelify.TransformPortraitVisualEditor.GlobalUIPreviewSource.";
@@ -536,8 +536,30 @@ namespace Novelify.Editor
             header.style.paddingLeft = 18f;
             header.style.paddingRight = 18f;
             header.style.backgroundColor = Panel;
+            header.style.borderTopWidth = 3f;
+            header.style.borderTopColor = Accent;
             header.style.borderBottomWidth = 1f;
             header.style.borderBottomColor = Border;
+
+            VisualElement mark = new VisualElement();
+            mark.style.width = 34f;
+            mark.style.height = 34f;
+            mark.style.marginRight = 11f;
+            mark.style.backgroundColor = new Color(Accent.r, Accent.g, Accent.b, 0.22f);
+            mark.style.borderLeftWidth = mark.style.borderRightWidth = 1f;
+            mark.style.borderTopWidth = mark.style.borderBottomWidth = 1f;
+            mark.style.borderLeftColor = mark.style.borderRightColor = Accent;
+            mark.style.borderTopColor = mark.style.borderBottomColor = Accent;
+            mark.style.borderTopLeftRadius = mark.style.borderTopRightRadius = 9f;
+            mark.style.borderBottomLeftRadius = mark.style.borderBottomRightRadius = 9f;
+            Label markText = new Label("↗");
+            markText.style.flexGrow = 1f;
+            markText.style.unityTextAlign = TextAnchor.MiddleCenter;
+            markText.style.unityFontStyleAndWeight = FontStyle.Bold;
+            markText.style.fontSize = 18f;
+            markText.style.color = Accent;
+            mark.Add(markText);
+            header.Add(mark);
 
             VisualElement titles = new VisualElement();
             titles.style.flexGrow = 1f;

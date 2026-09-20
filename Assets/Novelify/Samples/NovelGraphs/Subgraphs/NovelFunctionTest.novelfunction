@@ -55,8 +55,8 @@ MonoBehaviour:
           serializedVersion: 2
           x: 163
           y: -25
-          width: 317
-          height: 351
+          width: 401
+          height: 530
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 1199835129914412235
@@ -239,7 +239,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 274a2ce7b9ce3768f1195750189e04c5
         m_Version: 2
-        m_Position: {x: 14.059341, y: 171.53264}
+        m_Position: {x: -249.41893, y: 200.22829}
         m_Title: Enter
         m_Tooltip: 
         m_NodePreviewModel:
@@ -276,7 +276,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 962ac7400ca48c63b9dc7cf2ba2fe7d5
         m_Version: 2
-        m_Position: {x: 542.25, y: 174.75002}
+        m_Position: {x: 723.11957, y: 188.66306}
         m_Title: Continue
         m_Tooltip: 
         m_NodePreviewModel:
@@ -313,7 +313,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 2b85b7a82b2fb2ff41d71f29c67dc449
         m_Version: 2
-        m_Position: {x: -7.8273163, y: 235.89644}
+        m_Position: {x: -271.3056, y: 264.5921}
         m_Title: Character
         m_Tooltip: 
         m_NodePreviewModel:
@@ -426,6 +426,12 @@ MonoBehaviour:
           - Rotation
           - Scale
           - Margin
+          - __option_Coordinate Space
+          - __option_Animate Transparency
+          - __option_Easing
+          - __option_Custom Easing Curve
+          - Character Reference
+          - Opacity
           m_ValueList:
           - rid: 8564938447134916780
           - rid: 8564938447134916781
@@ -443,6 +449,12 @@ MonoBehaviour:
           - rid: 8564938447134916793
           - rid: 8564938447134916794
           - rid: 8564938447134916795
+          - rid: 8564938763525947392
+          - rid: 8564938763525947393
+          - rid: 8564938763525947394
+          - rid: 8564938763525947395
+          - rid: 8564938763525947396
+          - rid: 8564938763525947397
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -631,7 +643,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 9388be79c97c4d36d06efe6479fdff45
         m_Version: 2
-        m_Position: {x: 554, y: 242}
+        m_Position: {x: 734.86957, y: 255.91304}
         m_Title: CharacterPortrait (1)
         m_Tooltip: 
         m_NodePreviewModel:
@@ -690,3 +702,62 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: MainPortName
+    - rid: 8564938763525947392
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 1
+        m_EnumType:
+          m_Identification: Novelify.CharacterPositionSpace, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938763525947393
+      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0
+    - rid: 8564938763525947394
+      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          m_EnumType:
+            m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_Value: 3
+        m_EnumType:
+          m_Identification: Novelify.PortraitTweenEasing, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - rid: 8564938763525947395
+      type: {class: 'Constant`1[[UnityEngine.AnimationCurve, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 8564938763525947396
+      type: {class: 'Constant`1[[Novelify.NovelCharacterReference, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value:
+          Character: {fileID: 0}
+          InstanceID: 
+    - rid: 8564938763525947397
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1

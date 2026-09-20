@@ -57,9 +57,9 @@ MonoBehaviour:
         m_LastKnownBounds:
           serializedVersion: 2
           x: -730
-          y: -344
-          width: 2312
-          height: 1469
+          y: -359
+          width: 2327
+          height: 1601
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 13473657899483121740
@@ -463,7 +463,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: e0b917362ec4e9248ca017ffceb48bab
         m_Version: 2
-        m_Position: {x: 464.20496, y: -343.61746}
+        m_Position: {x: 502.2268, y: -358.8262}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -970,7 +970,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: add16b2b6c378345df544322495c1987
         m_Version: 2
-        m_Position: {x: 1011.8529, y: 443.9544}
+        m_Position: {x: 1069.6461, y: 386.16116}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1189,11 +1189,11 @@ MonoBehaviour:
     - rid: 8564938761126805728
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 180
+        m_Value: 740
     - rid: 8564938761126805729
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 520
+        m_Value: 740
     - rid: 8564938761126805730
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -1205,11 +1205,11 @@ MonoBehaviour:
     - rid: 8564938761126805732
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 35.1
+        m_Value: 21.2
     - rid: 8564938761126805733
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 10
+        m_Value: 15.63
     - rid: 8564938761126805734
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:

@@ -4,22 +4,29 @@
     width: 500px;
     min-width: 500px;
     max-width: 500px;
-    background-color: #111d32;
-    border-left-color: #28769a;
-    border-right-color: #28769a;
-    border-top-color: #28769a;
-    border-bottom-color: #28769a;
-    --minimap-color: #38bdf8;
+    background-color: #0e2439;
+    border-left-color: #2d6d94;
+    border-right-color: #2d6d94;
+    border-bottom-color: #245876;
+    border-top-color: #45c8ff;
+    --minimap-color: #45c8ff;
 }
 
 .ge-node #title-container {
-    background-color: #12314c;
-    border-bottom-color: #2a81a8;
+    background-color: #123a58;
+    border-bottom-color: #2d6d94;
+}
+
+.ge-node #title-container #subtitle {
+    color: #85d2f7;
 }
 
 .ge-node:checked {
-    border-left-color: #7dd3fc;
-    border-right-color: #7dd3fc;
-    border-top-color: #7dd3fc;
-    border-bottom-color: #7dd3fc;
+    border-left-color: #85d2f7;
+    border-right-color: #85d2f7;
+    border-bottom-color: #85d2f7;
+}
+
+.ge-node .ge-port {
+    --port-color: #45c8ff;
 }

@@ -1,64 +1,538 @@
-/* Window-wide Novelify theme. Attached only to Graph Toolkit windows displaying NovelGraph. */
+/* Novelify's window-wide editorial theme. Visual only: no graph data is modified. */
 .novelify-graph-window {
-    background-color: #080d19;
-    --selected-element-color: #7dd3fc;
-    --highlighted-element-color: #c084fc;
+    color: #eef5ff;
+    background-color: #050c16;
+    --selected-element-color: #7cd4ff;
+    --highlighted-element-color: #c4e6ff;
 }
 
-.novelify-graph-window .ge-graph-view,
-.novelify-graph-window #graph-view-container,
-.novelify-graph-window #content-view-container {
-    background-color: #080d19;
+.novelify-function-graph {
+    background-color: #140c06;
+    --selected-element-color: #ffb45e;
+    --highlighted-element-color: #ffd9a3;
 }
 
-.novelify-graph-window GridBackground {
-    background-color: #080d19;
-    --spacing: 28;
+/* Only the layers BEHIND GridBackground get a ground colour.
+   #content-view-container holds the nodes and is sized to their bounding box,
+   so painting it opaque blanks the grid inside exactly that rectangle. It stays
+   transparent and lets the grid read through. */
+.novelify-story-graph .ge-graph-view,
+.novelify-story-graph #graph-view-container {
+    background-color: #050c16;
+}
+
+.novelify-story-graph #content-view-container {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.novelify-function-graph .ge-graph-view,
+.novelify-function-graph #graph-view-container {
+    background-color: #140c06;
+}
+
+.novelify-function-graph #content-view-container {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.novelify-story-graph GridBackground {
+    background-color: #050c16;
+    --spacing: 30;
     --thick-lines: 5;
-    --line-color: #24324f;
-    --thick-line-color: #3b4c72;
+    --line-color: #102338;
+    --thick-line-color: #1f4366;
 }
 
-.novelify-graph-window .ge-wire {
-    --wire-width: 3;
-    --wire-color: #94a3b8;
+.novelify-function-graph GridBackground {
+    background-color: #140c06;
+    --spacing: 30;
+    --thick-lines: 5;
+    --line-color: #341f10;
+    --thick-line-color: #6b4425;
 }
 
-.novelify-graph-window .ge-wire:hover {
-    --wire-width: 4;
-    --wire-color: #f8fafc;
+/* Quiet brand marker: makes graph type obvious without obscuring the canvas. */
+.novelify-graph-identity {
+    position: absolute;
+    right: 22px;
+    bottom: 20px;
+    min-width: 174px;
+    padding-left: 17px;
+    padding-right: 17px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+    background-color: rgba(9, 25, 44, 0.92);
+    border-left-width: 3px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: #42b9ff;
+    border-right-color: #2b5075;
+    border-top-color: #2b5075;
+    border-bottom-color: #2b5075;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
 }
+
+.novelify-graph-identity.is-function {
+    background-color: rgba(40, 23, 10, 0.93);
+    border-left-color: #ff9b3d;
+    border-right-color: #70451f;
+    border-top-color: #70451f;
+    border-bottom-color: #70451f;
+}
+
+#novelify-graph-eyebrow {
+    color: #62c6ff;
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+}
+
+.is-function #novelify-graph-eyebrow { color: #ffad52; }
+
+#novelify-graph-title {
+    margin-top: 2px;
+    color: #f4f8ff;
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+/* Tool chrome */
+.novelify-story-graph .unity-toolbar {
+    min-height: 32px;
+    background-color: #0c1c31;
+    border-bottom-color: #2a5479;
+    border-bottom-width: 1px;
+}
+
+.novelify-function-graph .unity-toolbar {
+    min-height: 32px;
+    background-color: #26170c;
+    border-bottom-color: #6d421e;
+    border-bottom-width: 1px;
+}
+
+.novelify-graph-window .unity-toolbar-button {
+    margin-left: 2px;
+    margin-right: 2px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.novelify-story-graph .unity-toolbar-button:hover { background-color: #1d3d5c; }
+.novelify-function-graph .unity-toolbar-button:hover { background-color: #58351a; }
 
 .novelify-graph-window .ge-blackboard {
-    background-color: #101827;
-    border-left-color: #334155;
-    border-right-color: #334155;
-    border-top-color: #334155;
-    border-bottom-color: #334155;
+    background-color: rgba(11, 22, 39, 0.97);
+    border-left-color: #385473;
+    border-right-color: #385473;
+    border-top-color: #385473;
+    border-bottom-color: #385473;
     border-left-width: 1px;
     border-right-width: 1px;
     border-top-width: 1px;
     border-bottom-width: 1px;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
-.novelify-graph-window .unity-toolbar {
-    background-color: #0f172a;
-    border-bottom-color: #26344f;
+.novelify-function-graph .ge-blackboard {
+    background-color: rgba(39, 24, 13, 0.97);
+    border-left-color: #754a27;
+    border-right-color: #754a27;
+    border-top-color: #754a27;
+    border-bottom-color: #754a27;
+}
+
+/* ---------------------------------------------------------------------------
+   Manuscript cards.
+   The card sits clearly above the canvas, carries a 4px family accent along the
+   top edge, and every family repaints the body, border and ports as well as the
+   header - a stripe alone reads as one uniform grid of grey boxes.
+   --------------------------------------------------------------------------- */
+.novelify-graph-window .ge-node {
+    min-width: 255px;
+    background-color: #142338;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 4px;
     border-bottom-width: 1px;
+    border-left-color: #395b7c;
+    border-right-color: #395b7c;
+    border-top-color: #4ebaf4;
+    border-bottom-color: #2a4762;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    --minimap-color: #4ebaf4;
 }
 
-.novelify-graph-window .unity-toolbar-button:hover {
-    background-color: #263553;
+.novelify-function-graph .ge-node {
+    background-color: #2a1b10;
+    border-left-color: #744c2b;
+    border-right-color: #744c2b;
+    border-top-color: #f39a43;
+    border-bottom-color: #563623;
+    --minimap-color: #f39a43;
 }
 
-.novelify-graph-window .ge-port:hover {
-    --port-color: #f8fafc;
+.novelify-graph-window .ge-node:hover {
+    border-left-color: #8bd6ff;
+    border-right-color: #8bd6ff;
+    border-bottom-color: #8bd6ff;
 }
 
-.novelify-graph-window .ge-placemat {
-    --placemat-border-color: #475569;
+.novelify-function-graph .ge-node:hover {
+    border-left-color: #ffc06f;
+    border-right-color: #ffc06f;
+    border-bottom-color: #ffc06f;
 }
+
+.novelify-graph-window .ge-node:checked {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 5px;
+    border-bottom-width: 2px;
+}
+
+.novelify-graph-window .ge-node #title-container {
+    min-height: 58px;
+    padding-left: 14px;
+    padding-right: 12px;
+    padding-top: 9px;
+    padding-bottom: 8px;
+    background-color: #1b3350;
+    border-bottom-color: #2f5a7d;
+    border-bottom-width: 2px;
+}
+
+.novelify-function-graph .ge-node #title-container {
+    background-color: #402816;
+    border-bottom-color: #7a4d29;
+}
+
+.novelify-graph-window .ge-node #title-container #title {
+    color: #ffffff;
+    font-size: 16px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+/* The subtitle carries the family colour: it is the fastest read on the card. */
+.novelify-graph-window .ge-node #title-container #subtitle {
+    color: #93b8d6;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+}
+
+.novelify-function-graph .ge-node #title-container #subtitle { color: #d8b28a; }
+
+.novelify-graph-window .ge-node #node-options {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 11px;
+    padding-bottom: 12px;
+}
+
+.novelify-graph-window .ge-node #port-container {
+    padding-top: 8px;
+    padding-bottom: 9px;
+}
+
+/* --- Property rows ------------------------------------------------------ */
+
+.novelify-graph-window .ge-node .unity-base-field {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.novelify-graph-window .ge-node .unity-base-field__label {
+    color: #c6d8ea;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.novelify-function-graph .ge-node .unity-base-field__label { color: #e2c2a0; }
+
+.novelify-graph-window .ge-node .unity-base-field__input,
+.novelify-graph-window .ge-node .unity-base-text-field__input,
+.novelify-graph-window .ge-node .unity-popup-field__input,
+.novelify-graph-window .ge-node .unity-enum-field__input,
+.novelify-graph-window .ge-node .unity-object-field__input {
+    background-color: #060e1a;
+    border-left-color: #3a5c7e;
+    border-right-color: #3a5c7e;
+    border-top-color: #3a5c7e;
+    border-bottom-color: #3a5c7e;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.novelify-function-graph .ge-node .unity-base-field__input,
+.novelify-function-graph .ge-node .unity-base-text-field__input,
+.novelify-function-graph .ge-node .unity-popup-field__input,
+.novelify-function-graph .ge-node .unity-enum-field__input,
+.novelify-function-graph .ge-node .unity-object-field__input {
+    background-color: #140c07;
+    border-left-color: #714c2b;
+    border-right-color: #714c2b;
+    border-top-color: #714c2b;
+    border-bottom-color: #714c2b;
+}
+
+.novelify-story-graph .ge-node .unity-base-text-field__input:focus {
+    border-left-color: #7cd4ff;
+    border-right-color: #7cd4ff;
+    border-top-color: #7cd4ff;
+    border-bottom-color: #7cd4ff;
+}
+
+.novelify-function-graph .ge-node .unity-base-text-field__input:focus {
+    border-left-color: #ffad52;
+    border-right-color: #ffad52;
+    border-top-color: #ffad52;
+    border-bottom-color: #ffad52;
+}
+
+.novelify-graph-window .ge-node .ge-port #label {
+    color: #dce9f5;
+    font-size: 10px;
+    letter-spacing: 0.2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Family ribbons keep large stories scannable at a glance. Each family owns a
+   body tint, a border, a header, a subtitle tone and a port colour.
+   --------------------------------------------------------------------------- */
+
+/* Start - emerald */
+.novelify-story-graph .ge-node.novelify-node-start {
+    min-width: 205px;
+    background-color: #0d2722;
+    border-left-color: #2a7d67;
+    border-right-color: #2a7d67;
+    border-bottom-color: #21624f;
+    border-top-color: #34d399;
+    --minimap-color: #34d399;
+}
+.novelify-story-graph .ge-node.novelify-node-start #title-container {
+    background-color: #103a31;
+    border-bottom-color: #2a7d67;
+}
+.novelify-story-graph .ge-node.novelify-node-start #title-container #subtitle { color: #6fe0b9; }
+.novelify-story-graph .ge-node.novelify-node-start .ge-port { --port-color: #34d399; }
+
+/* End - rose */
+.novelify-story-graph .ge-node.novelify-node-end {
+    min-width: 205px;
+    background-color: #2d1620;
+    border-left-color: #8e4358;
+    border-right-color: #8e4358;
+    border-bottom-color: #6f3546;
+    border-top-color: #fb7185;
+    --minimap-color: #fb7185;
+}
+.novelify-story-graph .ge-node.novelify-node-end #title-container {
+    background-color: #43202f;
+    border-bottom-color: #8e4358;
+}
+.novelify-story-graph .ge-node.novelify-node-end #title-container #subtitle { color: #ffa3b1; }
+.novelify-story-graph .ge-node.novelify-node-end .ge-port { --port-color: #fb7185; }
+
+/* Story - sky. The most common card, so it stays closest to the base blue. */
+.novelify-story-graph .ge-node.novelify-node-story {
+    background-color: #0e2439;
+    border-left-color: #2d6d94;
+    border-right-color: #2d6d94;
+    border-bottom-color: #245876;
+    border-top-color: #45c8ff;
+    --minimap-color: #45c8ff;
+}
+.novelify-story-graph .ge-node.novelify-node-story #title-container {
+    background-color: #123a58;
+    border-bottom-color: #2d6d94;
+}
+.novelify-story-graph .ge-node.novelify-node-story #title-container #subtitle { color: #85d2f7; }
+.novelify-story-graph .ge-node.novelify-node-story .ge-port { --port-color: #45c8ff; }
+
+/* Choice - violet, with amber outputs so the fan-out reads instantly. */
+.novelify-story-graph .ge-node.novelify-node-choice {
+    background-color: #221634;
+    border-left-color: #6f4499;
+    border-right-color: #6f4499;
+    border-bottom-color: #58367a;
+    border-top-color: #c084fc;
+    --minimap-color: #c084fc;
+}
+.novelify-story-graph .ge-node.novelify-node-choice #title-container {
+    background-color: #331f4d;
+    border-bottom-color: #6f4499;
+}
+.novelify-story-graph .ge-node.novelify-node-choice #title-container #subtitle { color: #d9b0ff; }
+.novelify-story-graph .ge-node.novelify-node-choice .ge-port { --port-color: #c084fc; }
+.novelify-story-graph .ge-node.novelify-node-choice .ge-port--direction-output { --port-color: #fbbf24; }
+
+/* Character - teal */
+.novelify-story-graph .ge-node.novelify-node-character {
+    background-color: #0d2628;
+    border-left-color: #257f7c;
+    border-right-color: #257f7c;
+    border-bottom-color: #1d6563;
+    border-top-color: #2dd4bf;
+    --minimap-color: #2dd4bf;
+}
+.novelify-story-graph .ge-node.novelify-node-character #title-container {
+    background-color: #10393a;
+    border-bottom-color: #257f7c;
+}
+.novelify-story-graph .ge-node.novelify-node-character #title-container #subtitle { color: #71e5d6; }
+.novelify-story-graph .ge-node.novelify-node-character .ge-port { --port-color: #2dd4bf; }
+
+/* Presentation - indigo */
+.novelify-story-graph .ge-node.novelify-node-presentation {
+    background-color: #191c3c;
+    border-left-color: #4c519e;
+    border-right-color: #4c519e;
+    border-bottom-color: #3c4080;
+    border-top-color: #8b94ff;
+    --minimap-color: #8b94ff;
+}
+.novelify-story-graph .ge-node.novelify-node-presentation #title-container {
+    background-color: #252a5e;
+    border-bottom-color: #4c519e;
+}
+.novelify-story-graph .ge-node.novelify-node-presentation #title-container #subtitle { color: #b0b6ff; }
+.novelify-story-graph .ge-node.novelify-node-presentation .ge-port { --port-color: #8b94ff; }
+
+/* Audio - pink */
+.novelify-story-graph .ge-node.novelify-node-audio {
+    background-color: #2c1527;
+    border-left-color: #8f4076;
+    border-right-color: #8f4076;
+    border-bottom-color: #71335e;
+    border-top-color: #f472b6;
+    --minimap-color: #f472b6;
+}
+.novelify-story-graph .ge-node.novelify-node-audio #title-container {
+    background-color: #421f38;
+    border-bottom-color: #8f4076;
+}
+.novelify-story-graph .ge-node.novelify-node-audio #title-container #subtitle { color: #ffa1d2; }
+.novelify-story-graph .ge-node.novelify-node-audio .ge-port { --port-color: #f472b6; }
+
+/* Transition - cyan */
+.novelify-story-graph .ge-node.novelify-node-transition {
+    background-color: #0c2429;
+    border-left-color: #2a7c88;
+    border-right-color: #2a7c88;
+    border-bottom-color: #21626c;
+    border-top-color: #5fdde8;
+    --minimap-color: #5fdde8;
+}
+.novelify-story-graph .ge-node.novelify-node-transition #title-container {
+    background-color: #10373f;
+    border-bottom-color: #2a7c88;
+}
+.novelify-story-graph .ge-node.novelify-node-transition #title-container #subtitle { color: #96ecf4; }
+.novelify-story-graph .ge-node.novelify-node-transition .ge-port { --port-color: #5fdde8; }
+
+/* Logic - amber */
+.novelify-story-graph .ge-node.novelify-node-logic {
+    background-color: #281f0e;
+    border-left-color: #8a6a23;
+    border-right-color: #8a6a23;
+    border-bottom-color: #6d541c;
+    border-top-color: #fbbf24;
+    --minimap-color: #fbbf24;
+}
+.novelify-story-graph .ge-node.novelify-node-logic #title-container {
+    background-color: #3d2f14;
+    border-bottom-color: #8a6a23;
+}
+.novelify-story-graph .ge-node.novelify-node-logic #title-container #subtitle { color: #fad484; }
+.novelify-story-graph .ge-node.novelify-node-logic .ge-port { --port-color: #fbbf24; }
+
+/* Flow - steel */
+.novelify-story-graph .ge-node.novelify-node-flow {
+    background-color: #141f2c;
+    border-left-color: #3f6285;
+    border-right-color: #3f6285;
+    border-bottom-color: #334e6a;
+    border-top-color: #8fb0d4;
+    --minimap-color: #8fb0d4;
+}
+.novelify-story-graph .ge-node.novelify-node-flow #title-container {
+    background-color: #1d2d40;
+    border-bottom-color: #3f6285;
+}
+.novelify-story-graph .ge-node.novelify-node-flow #title-container #subtitle { color: #b6cee6; }
+.novelify-story-graph .ge-node.novelify-node-flow .ge-port { --port-color: #8fb0d4; }
+
+/* Utility - slate. Deliberately the quietest card on the canvas. */
+.novelify-story-graph .ge-node.novelify-node-utility {
+    background-color: #151b24;
+    border-left-color: #414f61;
+    border-right-color: #414f61;
+    border-bottom-color: #343f4e;
+    border-top-color: #94a3b8;
+    --minimap-color: #94a3b8;
+}
+.novelify-story-graph .ge-node.novelify-node-utility #title-container {
+    background-color: #1e2733;
+    border-bottom-color: #414f61;
+}
+.novelify-story-graph .ge-node.novelify-node-utility #title-container #subtitle { color: #aebbcb; }
+.novelify-story-graph .ge-node.novelify-node-utility .ge-port { --port-color: #94a3b8; }
+
+/* --- Function nodes deliberately stay within an amber/copper family ------ */
+
+.novelify-function-graph .ge-node.novelify-node-start {
+    min-width: 205px; background-color: #2e2410; border-top-color: #ffd071;
+    border-left-color: #8a6a2b; border-right-color: #8a6a2b; --minimap-color: #ffd071;
+}
+.novelify-function-graph .ge-node.novelify-node-start #title-container { background-color: #49351b; border-bottom-color: #8a6a2b; }
+.novelify-function-graph .ge-node.novelify-node-end {
+    min-width: 205px; background-color: #2e1610; border-top-color: #e9784e;
+    border-left-color: #8a452b; border-right-color: #8a452b; --minimap-color: #e9784e;
+}
+.novelify-function-graph .ge-node.novelify-node-end #title-container { background-color: #48231a; border-bottom-color: #8a452b; }
+.novelify-function-graph .ge-node.novelify-node-story { background-color: #2f1f0d; border-top-color: #ffb15a; --minimap-color: #ffb15a; }
+.novelify-function-graph .ge-node.novelify-node-choice { background-color: #2f1a0f; border-top-color: #ff875f; --minimap-color: #ff875f; }
+.novelify-function-graph .ge-node.novelify-node-character { background-color: #2c2410; border-top-color: #f2c46d; --minimap-color: #f2c46d; }
+.novelify-function-graph .ge-node.novelify-node-presentation { background-color: #2f1e0c; border-top-color: #ff9b4a; --minimap-color: #ff9b4a; }
+.novelify-function-graph .ge-node.novelify-node-audio { background-color: #2d1a13; border-top-color: #e98464; --minimap-color: #e98464; }
+.novelify-function-graph .ge-node.novelify-node-transition { background-color: #2d2411; border-top-color: #ffd07a; --minimap-color: #ffd07a; }
+.novelify-function-graph .ge-node.novelify-node-logic { background-color: #2c200c; border-top-color: #ffb347; --minimap-color: #ffb347; }
+.novelify-function-graph .ge-node.novelify-node-flow { background-color: #26190d; border-top-color: #d98b42; --minimap-color: #d98b42; }
+.novelify-function-graph .ge-node.novelify-node-utility { background-color: #211810; border-top-color: #b79068; --minimap-color: #b79068; }
+
+/* --- Wires and ports ---------------------------------------------------- */
+
+.novelify-graph-window .ge-wire {
+    --wire-width: 3;
+    --wire-color: #9db8cf;
+}
+
+.novelify-function-graph .ge-wire { --wire-color: #c89562; }
+.novelify-graph-window .ge-wire:hover { --wire-width: 5; --wire-color: #ffffff; }
+.novelify-function-graph .ge-wire:hover { --wire-color: #ffe2b5; }
+.novelify-graph-window .ge-wire:checked { --wire-width: 5; --wire-color: #7cd4ff; }
+.novelify-function-graph .ge-wire:checked { --wire-color: #ffb45e; }
+.novelify-graph-window .ge-port:hover { --port-color: #ffffff; }
+
+.novelify-story-graph .ge-placemat { --placemat-border-color: #42698c; }
+.novelify-function-graph .ge-placemat { --placemat-border-color: #8b5a2e; }

@@ -68,15 +68,15 @@ namespace Novelify.Editor
             public string SampleDialogue;
         }
 
-        private static readonly Color WindowColor = new Color32(10, 15, 28, 255);
-        private static readonly Color ToolbarColor = new Color32(19, 27, 45, 255);
-        private static readonly Color PanelColor = new Color32(23, 33, 53, 255);
-        private static readonly Color CardColor = new Color32(30, 42, 66, 255);
-        private static readonly Color StageColor = new Color32(16, 25, 43, 255);
-        private static readonly Color AccentColor = new Color32(99, 102, 241, 255);
-        private static readonly Color AccentBrightColor = new Color32(129, 140, 248, 255);
-        private static readonly Color TextColor = new Color32(241, 245, 249, 255);
-        private static readonly Color MutedTextColor = new Color32(148, 163, 184, 255);
+        private static readonly Color WindowColor = new Color32(6, 13, 24, 255);
+        private static readonly Color ToolbarColor = new Color32(13, 26, 45, 255);
+        private static readonly Color PanelColor = new Color32(15, 31, 52, 255);
+        private static readonly Color CardColor = new Color32(22, 43, 69, 255);
+        private static readonly Color StageColor = new Color32(8, 22, 39, 255);
+        private static readonly Color AccentColor = new Color32(67, 105, 224, 255);
+        private static readonly Color AccentBrightColor = new Color32(113, 190, 255, 255);
+        private static readonly Color TextColor = new Color32(246, 244, 239, 255);
+        private static readonly Color MutedTextColor = new Color32(155, 178, 201, 255);
         private const string InspectorWidthPrefsKey =
             "Novelify.PresentationComposer.InspectorWidth";
         private const float DefaultInspectorWidth = 370f;
@@ -453,6 +453,8 @@ namespace Novelify.Editor
             toolbar.style.paddingTop = 12f;
             toolbar.style.paddingBottom = 10f;
             toolbar.style.backgroundColor = ToolbarColor;
+            toolbar.style.borderTopWidth = 3f;
+            toolbar.style.borderTopColor = AccentColor;
             toolbar.style.borderBottomWidth = 1f;
             toolbar.style.borderBottomColor = (Color)new Color32(49, 63, 88, 255);
 
@@ -547,7 +549,7 @@ namespace Novelify.Editor
             previewPanel.style.paddingTop = 12f;
             previewPanel.style.paddingBottom = 12f;
             previewPanel.style.backgroundColor = PanelColor;
-            SetRadius(previewPanel, 12f);
+            SetRadius(previewPanel, 14f);
             SetBorder(previewPanel, 1f, new Color32(45, 58, 83, 255));
 
             VisualElement previewHeader = new VisualElement();
@@ -683,7 +685,7 @@ namespace Novelify.Editor
             panel.style.minWidth = MinimumInspectorWidth;
             panel.style.flexShrink = 0f;
             panel.style.backgroundColor = PanelColor;
-            SetRadius(panel, 12f);
+            SetRadius(panel, 14f);
             SetBorder(panel, 1f, new Color32(45, 58, 83, 255));
 
             VisualElement inspectorHeader = new VisualElement();
@@ -892,7 +894,7 @@ namespace Novelify.Editor
             foldout.style.paddingBottom = 9f;
             foldout.style.backgroundColor = CardColor;
             foldout.style.color = TextColor;
-            SetRadius(foldout, 8f);
+            SetRadius(foldout, 10f);
             SetBorder(foldout, 1f, new Color32(49, 63, 88, 255));
             return foldout;
         }

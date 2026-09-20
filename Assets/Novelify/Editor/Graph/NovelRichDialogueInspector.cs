@@ -100,7 +100,16 @@ namespace Novelify.Editor
             root.style.paddingBottom = 8f;
             root.style.paddingLeft = 6f;
             root.style.paddingRight = 6f;
-            root.style.backgroundColor = (Color)new Color32(11, 18, 32, 255);
+            root.style.backgroundColor = (Color)new Color32(10, 23, 39, 255);
+            root.style.borderTopWidth = 3f;
+            root.style.borderTopColor = (Color)new Color32(66, 181, 235, 255);
+            root.style.borderLeftWidth = root.style.borderRightWidth = 1f;
+            root.style.borderBottomWidth = 1f;
+            root.style.borderLeftColor = root.style.borderRightColor =
+                (Color)new Color32(43, 73, 100, 255);
+            root.style.borderBottomColor = (Color)new Color32(43, 73, 100, 255);
+            root.style.borderTopLeftRadius = root.style.borderTopRightRadius = 8f;
+            root.style.borderBottomLeftRadius = root.style.borderBottomRightRadius = 8f;
 
             var header = new VisualElement();
             header.style.flexDirection = FlexDirection.Row;
@@ -203,7 +212,13 @@ namespace Novelify.Editor
             toolbar.style.paddingTop = 4f;
             toolbar.style.paddingBottom = 4f;
             toolbar.style.marginBottom = 3f;
-            toolbar.style.backgroundColor = (Color)new Color32(21, 31, 49, 255);
+            toolbar.style.backgroundColor = (Color)new Color32(19, 40, 63, 255);
+            toolbar.style.borderLeftWidth = toolbar.style.borderRightWidth = 1f;
+            toolbar.style.borderTopWidth = toolbar.style.borderBottomWidth = 1f;
+            toolbar.style.borderLeftColor = toolbar.style.borderRightColor =
+                (Color)new Color32(46, 78, 105, 255);
+            toolbar.style.borderTopColor = toolbar.style.borderBottomColor =
+                (Color)new Color32(46, 78, 105, 255);
             toolbar.style.borderTopLeftRadius = 4f;
             toolbar.style.borderTopRightRadius = 4f;
             toolbar.style.borderBottomLeftRadius = 4f;
@@ -745,7 +760,15 @@ namespace Novelify.Editor
             preview.style.paddingRight = 7f;
             preview.style.paddingTop = 5f;
             preview.style.paddingBottom = 5f;
-            preview.style.backgroundColor = (Color)new Color32(7, 12, 22, 255);
+            preview.style.backgroundColor = (Color)new Color32(6, 16, 29, 255);
+            preview.style.borderLeftWidth = preview.style.borderRightWidth = 1f;
+            preview.style.borderTopWidth = preview.style.borderBottomWidth = 1f;
+            preview.style.borderLeftColor = preview.style.borderRightColor =
+                (Color)new Color32(42, 76, 103, 255);
+            preview.style.borderTopColor = preview.style.borderBottomColor =
+                (Color)new Color32(42, 76, 103, 255);
+            preview.style.borderTopLeftRadius = preview.style.borderTopRightRadius = 6f;
+            preview.style.borderBottomLeftRadius = preview.style.borderBottomRightRadius = 6f;
             SetMouseCursor(preview, MouseCursor.Text);
 
             var textFlow = new VisualElement
@@ -1438,6 +1461,10 @@ namespace Novelify.Editor
             button.style.marginRight = 3f;
             button.style.paddingLeft = 7f;
             button.style.paddingRight = 7f;
+            button.style.backgroundColor = (Color)new Color32(27, 53, 80, 255);
+            button.style.color = (Color)new Color32(232, 240, 247, 255);
+            button.style.borderTopLeftRadius = button.style.borderTopRightRadius = 4f;
+            button.style.borderBottomLeftRadius = button.style.borderBottomRightRadius = 4f;
         }
 
         private static void SetFeedback(Label feedback, string message, bool isWarning)

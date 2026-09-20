@@ -38,23 +38,23 @@ namespace Novelify.Editor
         }
 
         private static readonly Color WindowColor =
-            new Color32(9, 15, 27, 255);
+            new Color32(6, 14, 24, 255);
         private static readonly Color ToolbarColor =
-            new Color32(17, 26, 44, 255);
+            new Color32(12, 29, 44, 255);
         private static readonly Color PanelColor =
-            new Color32(23, 34, 55, 255);
+            new Color32(14, 35, 53, 255);
         private static readonly Color CardColor =
-            new Color32(31, 45, 70, 255);
+            new Color32(20, 48, 69, 255);
         private static readonly Color StageColor =
-            new Color32(14, 24, 41, 255);
+            new Color32(7, 23, 36, 255);
         private static readonly Color AccentColor =
-            new Color32(14, 165, 164, 255);
+            new Color32(12, 150, 145, 255);
         private static readonly Color AccentBrightColor =
-            new Color32(94, 234, 212, 255);
+            new Color32(94, 231, 203, 255);
         private static readonly Color TextColor =
-            new Color32(241, 245, 249, 255);
+            new Color32(246, 244, 239, 255);
         private static readonly Color MutedTextColor =
-            new Color32(148, 163, 184, 255);
+            new Color32(151, 180, 196, 255);
 
         private const string InspectorWidthKey =
             "Novelify.SpeechBubbleComposer.InspectorWidth";
@@ -325,6 +325,8 @@ namespace Novelify.Editor
             toolbar.style.paddingTop = 12f;
             toolbar.style.paddingBottom = 12f;
             toolbar.style.backgroundColor = ToolbarColor;
+            toolbar.style.borderTopWidth = 3f;
+            toolbar.style.borderTopColor = AccentColor;
             toolbar.style.borderBottomWidth = 1f;
             toolbar.style.borderBottomColor =
                 (Color)new Color32(48, 63, 88, 255);
@@ -1062,11 +1064,14 @@ namespace Novelify.Editor
         {
             Foldout foldout = new Foldout { text = title, value = true };
             foldout.style.marginTop = 8f;
+            foldout.style.marginBottom = 2f;
             foldout.style.paddingLeft = 10f;
             foldout.style.paddingRight = 10f;
+            foldout.style.paddingTop = 7f;
             foldout.style.paddingBottom = 10f;
             foldout.style.backgroundColor = CardColor;
-            SetRadius(foldout, 8f);
+            SetRadius(foldout, 10f);
+            SetBorder(foldout, 1f, new Color32(43, 79, 98, 255));
             return foldout;
         }
 
@@ -1074,8 +1079,8 @@ namespace Novelify.Editor
         {
             VisualElement panel = new VisualElement();
             panel.style.backgroundColor = PanelColor;
-            SetRadius(panel, 12f);
-            SetBorder(panel, 1f, new Color32(45, 59, 84, 255));
+            SetRadius(panel, 14f);
+            SetBorder(panel, 1f, new Color32(43, 79, 98, 255));
             return panel;
         }
 

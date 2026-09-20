@@ -99,6 +99,11 @@ namespace Novelify.Editor
     {
         private enum EntryFilter { All, StoryGraphs, Functions, Problems }
 
+        private static readonly Color WindowInk = new Color32(7, 14, 24, 255);
+        private static readonly Color HeaderInk = new Color32(13, 27, 45, 255);
+        private static readonly Color StoryBlue = new Color32(67, 174, 232, 255);
+        private static readonly Color FunctionOrange = new Color32(239, 148, 65, 255);
+
         [SerializeField] private NovelGraphCatalog _catalog;
         [SerializeField] private string _search = string.Empty;
         [SerializeField] private EntryFilter _filter;
@@ -109,9 +114,13 @@ namespace Novelify.Editor
 
         private GUIStyle _entryStyle;
         private GUIStyle _selectedEntryStyle;
+        private GUIStyle _functionEntryStyle;
+        private GUIStyle _selectedFunctionEntryStyle;
         private GUIStyle _nodeStyle;
         private GUIStyle _selectedNodeStyle;
         private GUIStyle _wrappedMiniLabel;
+        private GUIStyle _brandTitleStyle;
+        private GUIStyle _brandSubtitleStyle;
 
         [MenuItem("Window/Novelify/Graph Catalogue")]
         public static void OpenWindow() => Open(
@@ -157,6 +166,8 @@ namespace Novelify.Editor
         private void OnGUI()
         {
             EnsureStyles();
+            EditorGUI.DrawRect(new Rect(0f, 0f, position.width, position.height), WindowInk);
+            DrawBrandHeader();
             DrawToolbar();
 
             if (_catalog == null)
@@ -180,6 +191,37 @@ namespace Novelify.Editor
                 using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)))
                     DrawSelectedGraph();
             }
+        }
+
+        private void DrawBrandHeader()
+        {
+            Rect header = GUILayoutUtility.GetRect(1f, 62f, GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(header, HeaderInk);
+            EditorGUI.DrawRect(new Rect(header.x, header.y, header.width, 3f), StoryBlue);
+
+            Rect mark = new Rect(header.x + 15f, header.y + 14f, 34f, 34f);
+            EditorGUI.DrawRect(mark, new Color32(32, 99, 140, 255));
+            GUI.Label(mark, "N", new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 17,
+                normal = { textColor = Color.white }
+            });
+            GUI.Label(new Rect(header.x + 61f, header.y + 10f, 320f, 24f),
+                "Graph Catalogue", _brandTitleStyle);
+            GUI.Label(new Rect(header.x + 61f, header.y + 33f, 500f, 18f),
+                "Inspect compiled stories, reusable functions, and runtime integrity.",
+                _brandSubtitleStyle);
+
+            Rect storyKey = new Rect(header.xMax - 210f, header.y + 20f, 88f, 23f);
+            Rect functionKey = new Rect(header.xMax - 114f, header.y + 20f, 100f, 23f);
+            EditorGUI.DrawRect(storyKey, new Color32(19, 57, 83, 255));
+            EditorGUI.DrawRect(functionKey, new Color32(74, 43, 20, 255));
+            GUI.Label(storyKey, "●  STORY", _brandSubtitleStyle);
+            GUI.Label(functionKey, "●  FUNCTION", new GUIStyle(_brandSubtitleStyle)
+            {
+                normal = { textColor = FunctionOrange }
+            });
         }
 
         private void DrawToolbar()
@@ -266,8 +308,14 @@ namespace Novelify.Editor
             string subtitle = $"{kind}  ·  {graph.AllNodes?.Count ?? 0} nodes" + (issues > 0 ? $"  ·  {issues} issue(s)" : string.Empty);
             bool selected = string.Equals(_selectedGraphID, entry.GraphID, StringComparison.Ordinal);
             GUIContent content = new GUIContent(title + "\n" + subtitle, GraphIcon(graph), path);
-            Rect row = GUILayoutUtility.GetRect(content, selected ? _selectedEntryStyle : _entryStyle, GUILayout.Height(48f), GUILayout.ExpandWidth(true));
-            if (GUI.Button(row, content, selected ? _selectedEntryStyle : _entryStyle))
+            bool function = graph is RuntimeNovelFunction;
+            GUIStyle style = function
+                ? selected ? _selectedFunctionEntryStyle : _functionEntryStyle
+                : selected ? _selectedEntryStyle : _entryStyle;
+            Rect row = GUILayoutUtility.GetRect(content, style, GUILayout.Height(50f), GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(new Rect(row.x, row.y + 3f, 3f, row.height - 6f),
+                function ? FunctionOrange : StoryBlue);
+            if (GUI.Button(row, content, style))
             {
                 if (selected && Event.current.clickCount == 2) OpenGraph(graph);
                 _selectedGraphID = entry.GraphID;
@@ -662,15 +710,49 @@ namespace Novelify.Editor
         private void EnsureStyles()
         {
             if (_entryStyle != null) return;
-            _entryStyle = new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft, padding = new RectOffset(10, 6, 5, 5), fontSize = 11 };
+            _entryStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(14, 7, 6, 6),
+                fontSize = 11
+            };
+            _entryStyle.normal.background = MakeTexture(new Color32(15, 31, 51, 255));
+            _entryStyle.normal.textColor = new Color32(224, 235, 245, 255);
             _selectedEntryStyle = new GUIStyle(_entryStyle);
-            _selectedEntryStyle.normal.background = MakeTexture(new Color(0.18f, 0.38f, 0.58f, 0.72f));
+            _selectedEntryStyle.normal.background = MakeTexture(new Color32(26, 75, 108, 255));
             _selectedEntryStyle.normal.textColor = Color.white;
-            _nodeStyle = new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft, padding = new RectOffset(10, 8, 6, 6), wordWrap = true };
+            _functionEntryStyle = new GUIStyle(_entryStyle);
+            _functionEntryStyle.normal.background = MakeTexture(new Color32(38, 26, 17, 255));
+            _functionEntryStyle.normal.textColor = new Color32(237, 218, 197, 255);
+            _selectedFunctionEntryStyle = new GUIStyle(_functionEntryStyle);
+            _selectedFunctionEntryStyle.normal.background = MakeTexture(new Color32(91, 54, 25, 255));
+            _selectedFunctionEntryStyle.normal.textColor = Color.white;
+            _nodeStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(12, 9, 7, 7),
+                wordWrap = true
+            };
+            _nodeStyle.normal.background = MakeTexture(new Color32(16, 34, 54, 255));
+            _nodeStyle.normal.textColor = new Color32(224, 235, 245, 255);
             _selectedNodeStyle = new GUIStyle(_nodeStyle);
-            _selectedNodeStyle.normal.background = MakeTexture(new Color(0.2f, 0.42f, 0.34f, 0.72f));
+            _selectedNodeStyle.normal.background = MakeTexture(new Color32(26, 92, 82, 255));
             _selectedNodeStyle.normal.textColor = Color.white;
-            _wrappedMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+            _wrappedMiniLabel = new GUIStyle(EditorStyles.miniLabel)
+            {
+                wordWrap = true,
+                normal = { textColor = new Color32(145, 170, 194, 255) }
+            };
+            _brandTitleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 17,
+                normal = { textColor = new Color32(245, 244, 240, 255) }
+            };
+            _brandSubtitleStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color32(129, 198, 235, 255) }
+            };
         }
 
         private static Texture2D MakeTexture(Color color)

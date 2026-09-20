@@ -2,22 +2,29 @@
 
 .ge-node {
     min-width: 190px;
-    background-color: #25151d;
-    border-left-color: #93465a;
-    border-right-color: #93465a;
-    border-top-color: #93465a;
-    border-bottom-color: #93465a;
+    background-color: #2d1620;
+    border-left-color: #8e4358;
+    border-right-color: #8e4358;
+    border-bottom-color: #6f3546;
+    border-top-color: #fb7185;
     --minimap-color: #fb7185;
 }
 
 .ge-node #title-container {
-    background-color: #3b1c29;
-    border-bottom-color: #9f4b61;
+    background-color: #43202f;
+    border-bottom-color: #8e4358;
+}
+
+.ge-node #title-container #subtitle {
+    color: #ffa3b1;
 }
 
 .ge-node:checked {
-    border-left-color: #fda4af;
-    border-right-color: #fda4af;
-    border-top-color: #fda4af;
-    border-bottom-color: #fda4af;
+    border-left-color: #ffa3b1;
+    border-right-color: #ffa3b1;
+    border-bottom-color: #ffa3b1;
+}
+
+.ge-node .ge-port {
+    --port-color: #fb7185;
 }
