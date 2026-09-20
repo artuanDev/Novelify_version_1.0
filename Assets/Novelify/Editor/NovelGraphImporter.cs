@@ -852,10 +852,10 @@ namespace Novelify.Editor
                     return new RuntimeChangeDialogueStyleNode
                     {
                         Target = GetOptionValue(
-                                node.GetNodeOptionByName("Target"),
+                            node.GetNodeOptionByName("Target"),
                                 NovelBoxTarget.Both),
                         Style = ReadBoxStyle(
-                    node, NovelBoxStyle.DialogueDefault)
+                            node, NovelBoxStyle.DialogueDefault)
                     };
                 case ResetDialogueStyleNode _:
                     return new RuntimeResetDialogueStyleNode
