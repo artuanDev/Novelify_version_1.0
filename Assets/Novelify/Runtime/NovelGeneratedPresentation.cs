@@ -69,6 +69,14 @@ namespace Novelify
         private NovelTriangleGraphic _tailFill;
         private RuntimeSpeechBubbleNode _trackedBubble;
         private CharacterInfo _trackedCharacter;
+        private NovelBoxStyle _bubbleStyle = NovelBoxStyle.BubbleDefault;
+        private float _bubbleMinimumWidth = 180f;
+        private float _bubbleMaximumWidth = 520f;
+        private float _bubbleHorizontalPadding = 24f;
+        private float _bubbleVerticalPadding = 18f;
+        private float _bubbleTailWidth = 34f;
+        private float _bubbleTailLength = 30f;
+        private float _bubbleTargetMargin = 18f;
 
         private RectTransform _fadeRect;
         private Image _fadeImage;
@@ -161,6 +169,41 @@ namespace Novelify
             if (!string.IsNullOrEmpty(_standardSpeakerText.text))
                 RefreshSpeakerNameLayout();
             BindStandardSurface();
+        }
+
+        public void CreateSpeechBubble(RuntimeCreateSpeechBubbleNode node)
+        {
+            ApplySpeechBubblePresentation(node);
+        }
+
+        public void ChangeSpeechBubble(RuntimeChangeSpeechBubbleNode node)
+        {
+            ApplySpeechBubblePresentation(node);
+        }
+
+        private void ApplySpeechBubblePresentation(
+            RuntimeSpeechBubblePresentationNode node)
+        {
+            if (node == null)
+                return;
+            EnsureReady();
+            _bubbleStyle = node.BubbleStyle.Validated();
+            _bubbleMinimumWidth = Mathf.Max(120f, node.MinimumWidth);
+            _bubbleMaximumWidth = Mathf.Max(
+                _bubbleMinimumWidth, node.MaximumWidth);
+            _bubbleHorizontalPadding = Mathf.Max(
+                0f, node.HorizontalPadding);
+            _bubbleVerticalPadding = Mathf.Max(
+                0f, node.VerticalPadding);
+            _bubbleTailWidth = Mathf.Max(2f, node.TailWidth);
+            _bubbleTailLength = Mathf.Max(2f, node.TailLength);
+            _bubbleTargetMargin = Mathf.Max(0f, node.TargetMargin);
+            EnsureBubble();
+            if (_trackedBubble != null)
+            {
+                ConfigureBubble(_trackedBubble);
+                UpdateBubblePosition();
+            }
         }
 
         public void RefreshSpeakerNameLayout()
@@ -667,15 +710,15 @@ namespace Novelify
 
         private void ConfigureBubble(RuntimeSpeechBubbleNode node)
         {
-            NovelBoxStyle style = node.BubbleStyle.Validated();
+            NovelBoxStyle style = _bubbleStyle.Validated();
             _bubbleGraphic.Apply(style);
             _bubbleDialogueText.SetText(node.DialogueText ?? string.Empty);
             _bubbleDialogueText.ForceMeshUpdate();
 
-            float horizontal = Mathf.Max(0f, node.HorizontalPadding);
-            float vertical = Mathf.Max(0f, node.VerticalPadding);
-            float minimum = Mathf.Max(120f, node.MinimumWidth);
-            float maximum = Mathf.Max(minimum, node.MaximumWidth);
+            float horizontal = _bubbleHorizontalPadding;
+            float vertical = _bubbleVerticalPadding;
+            float minimum = _bubbleMinimumWidth;
+            float maximum = _bubbleMaximumWidth;
             float width = Mathf.Clamp(
                 _bubbleDialogueText.preferredWidth + horizontal * 2f,
                 minimum, maximum);
@@ -710,11 +753,11 @@ namespace Novelify
                 : style.EffectiveFillColor;
             _tailFill.color = style.EffectiveFillColor;
             _tailOutlineRect.sizeDelta = new Vector2(
-                Mathf.Max(4f, node.TailWidth + outline * 2f),
-                Mathf.Max(4f, node.TailLength + outline * 2f));
+                Mathf.Max(4f, _bubbleTailWidth + outline * 2f),
+                Mathf.Max(4f, _bubbleTailLength + outline * 2f));
             _tailFillRect.sizeDelta = new Vector2(
-                Mathf.Max(2f, node.TailWidth),
-                Mathf.Max(2f, node.TailLength));
+                _bubbleTailWidth,
+                _bubbleTailLength);
         }
 
         private void BindStandardSurface()
@@ -762,8 +805,8 @@ namespace Novelify
 
             Rect safe = _bubbleLayer.rect;
             Vector2 size = _bubbleWrapper.rect.size;
-            float margin = Mathf.Max(8f, _trackedBubble.TargetMargin);
-            float tailLength = Mathf.Max(2f, _trackedBubble.TailLength);
+            float margin = Mathf.Max(8f, _bubbleTargetMargin);
+            float tailLength = _bubbleTailLength;
             Vector2 desired = new Vector2(
                 target.x,
                 target.y + margin + tailLength + size.y * 0.5f);
@@ -782,20 +825,19 @@ namespace Novelify
                 safe.yMin + size.y * 0.5f + margin,
                 safe.yMax - size.y * 0.5f - margin);
             _bubbleWrapper.anchoredPosition = desired;
-            PositionTail(target - desired, size, _trackedBubble);
+            PositionTail(target - desired, size);
         }
 
         private void PositionTail(
             Vector2 targetFromBubble,
-            Vector2 bubbleSize,
-            RuntimeSpeechBubbleNode node)
+            Vector2 bubbleSize)
         {
             SetTailVisible(true);
             float halfWidth = bubbleSize.x * 0.5f;
             float halfHeight = bubbleSize.y * 0.5f;
-            float tailLength = Mathf.Max(2f, node.TailLength);
-            float safeCorner = node.BubbleStyle.CornerRadius +
-                node.TailWidth * 0.5f;
+            float tailLength = _bubbleTailLength;
+            float safeCorner = _bubbleStyle.CornerRadius +
+                _bubbleTailWidth * 0.5f;
             Vector2 position;
             float rotation;
 

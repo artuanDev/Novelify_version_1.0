@@ -241,7 +241,15 @@ namespace Novelify
                     case RuntimeStopAudioChannelNode stopChannel:
                         GeneratedPresentation.StopAudio(stopChannel.Channel);
                         break;
-                        
+
+                    case RuntimeCreateSpeechBubbleNode createBubble:
+                        GeneratedPresentation.CreateSpeechBubble(createBubble);
+                        break;
+
+                    case RuntimeChangeSpeechBubbleNode changeBubble:
+                        GeneratedPresentation.ChangeSpeechBubble(changeBubble);
+                        break;
+
                     case RuntimeFadeNode fade:
                         if (BeginGeneratedFade(fade, version))
                             return;

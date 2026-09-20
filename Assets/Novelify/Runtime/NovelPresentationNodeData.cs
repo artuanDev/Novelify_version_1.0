@@ -215,6 +215,27 @@ namespace Novelify
         public NovelAudioChannel Channel = NovelAudioChannel.Music;
     }
 
+    [Serializable]
+    public abstract class RuntimeSpeechBubblePresentationNode : RuntimeNode
+    {
+        public NovelBoxStyle BubbleStyle = NovelBoxStyle.BubbleDefault;
+        public float MinimumWidth = 180f;
+        public float MaximumWidth = 520f;
+        public float HorizontalPadding = 24f;
+        public float VerticalPadding = 18f;
+        public float TailWidth = 34f;
+        public float TailLength = 30f;
+        public float TargetMargin = 18f;
+    }
+
+    [Serializable]
+    public sealed class RuntimeCreateSpeechBubbleNode :
+        RuntimeSpeechBubblePresentationNode { }
+
+    [Serializable]
+    public sealed class RuntimeChangeSpeechBubbleNode :
+        RuntimeSpeechBubblePresentationNode { }
+
     /*backbone class for any fade. since we want to reuse values from both fade in and out we make this class
      * abstract and the fade in and out both inherit from this
     //*/
@@ -238,15 +259,5 @@ namespace Novelify
     public sealed class RuntimeFadeOutNode : RuntimeFadeNode { }
 
     [Serializable]
-    public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode
-    {
-        public NovelBoxStyle BubbleStyle = NovelBoxStyle.BubbleDefault;
-        public float MinimumWidth = 180f;
-        public float MaximumWidth = 520f;
-        public float HorizontalPadding = 24f;
-        public float VerticalPadding = 18f;
-        public float TailWidth = 34f;
-        public float TailLength = 30f;
-        public float TargetMargin = 18f;
-    }
+    public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode { }
 }

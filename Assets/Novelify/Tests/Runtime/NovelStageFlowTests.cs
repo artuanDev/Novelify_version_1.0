@@ -1212,14 +1212,18 @@ namespace Novelify.Tests
         [UnityTest]
         public IEnumerator SpeechBubbleUsesNormalDialogueAdvanceRules()
         {
-            Play(new RuntimeSpeechBubbleNode
+            Play(new RuntimeCreateSpeechBubbleNode
+            {
+                NodeID = "create-bubble",
+                NextNodeID = "bubble",
+                BubbleStyle = NovelBoxStyle.BubbleDefault
+            }, new RuntimeSpeechBubbleNode
             {
                 NodeID = "bubble",
                 NextNodeID = "after",
                 NovelCharacter = _character,
                 DialogueText = "This line is inside a bubble.",
-                ShowTextImmediately = true,
-                BubbleStyle = NovelBoxStyle.BubbleDefault
+                ShowTextImmediately = true
             }, new RuntimeDialogueNode
             {
                 NodeID = "after",
@@ -1232,6 +1236,63 @@ namespace Novelify.Tests
             _manager.Advance();
             Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
             Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Dialogue Panel"));
+        }
+
+        [UnityTest]
+        public IEnumerator ChangeSpeechBubbleUpdatesTheNextBubblePresentation()
+        {
+            NovelBoxStyle initial = NovelBoxStyle.BubbleDefault;
+            initial.FillColor = Color.red;
+            initial.Opacity = 1f;
+            NovelBoxStyle changed = NovelBoxStyle.BubbleDefault;
+            changed.FillColor = Color.green;
+            changed.Opacity = 1f;
+
+            Play(
+                new RuntimeCreateSpeechBubbleNode
+                {
+                    NodeID = "create",
+                    NextNodeID = "first",
+                    BubbleStyle = initial,
+                    MinimumWidth = 220f,
+                    MaximumWidth = 220f
+                },
+                new RuntimeSpeechBubbleNode
+                {
+                    NodeID = "first",
+                    NextNodeID = "change",
+                    DialogueText = "First bubble.",
+                    ShowTextImmediately = true
+                },
+                new RuntimeChangeSpeechBubbleNode
+                {
+                    NodeID = "change",
+                    NextNodeID = "second",
+                    BubbleStyle = changed,
+                    MinimumWidth = 410f,
+                    MaximumWidth = 410f
+                },
+                new RuntimeSpeechBubbleNode
+                {
+                    NodeID = "second",
+                    DialogueText = "Second bubble.",
+                    ShowTextImmediately = true
+                });
+
+            yield return null;
+            NovelRoundedGraphic graphic = _manager.DialoguePanel
+                .GetComponentInChildren<NovelRoundedGraphic>();
+            Assert.That(graphic.color,
+                Is.EqualTo(initial.EffectiveFillColor));
+
+            _manager.Advance();
+
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("second"));
+            Assert.That(graphic.color,
+                Is.EqualTo(changed.EffectiveFillColor));
+            Assert.That(_manager.DialoguePanel
+                .GetComponent<RectTransform>().sizeDelta.x,
+                Is.EqualTo(410f).Within(0.01f));
         }
 
         [UnityTest]

@@ -571,29 +571,45 @@ namespace Novelify.Tests
         }
 
         [Test]
-        public void SpeechBubbleImportsAsItsSpecificRuntimeType()
+        public void SpeechBubblePresentationAndDialogueImportSeparately()
         {
             StartNode start = Add<StartNode>();
+            CreateSpeechBubbleNode create = Add<CreateSpeechBubbleNode>();
             SpeechBubbleNode bubble = Add<SpeechBubbleNode>();
+            ChangeSpeechBubbleNode change = Add<ChangeSpeechBubbleNode>();
             EndNode end = Add<EndNode>();
             bubble.GetInputPortByName("Speaker").TrySetValue(_character);
-            bubble.GetNodeOptionByName("Minimum Width").TrySetValue(211f);
-            bubble.GetNodeOptionByName("Maximum Width").TrySetValue(477f);
-            bubble.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
-            bubble.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
-            Connect(start, bubble);
-            Connect(bubble, end);
+            create.GetNodeOptionByName("Minimum Width").TrySetValue(211f);
+            create.GetNodeOptionByName("Maximum Width").TrySetValue(477f);
+            create.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
+            create.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
+            change.GetNodeOptionByName("Tail Length").TrySetValue(42f);
+            Connect(start, create);
+            Connect(create, bubble);
+            Connect(bubble, change);
+            Connect(change, end);
 
-            RuntimeSpeechBubbleNode runtime = Import().AllNodes
+            RuntimeNovelGraph graph = Import();
+            RuntimeCreateSpeechBubbleNode runtimeCreate = graph.AllNodes
+                .OfType<RuntimeCreateSpeechBubbleNode>()
+                .Single();
+            RuntimeSpeechBubbleNode runtimeDialogue = graph.AllNodes
                 .OfType<RuntimeSpeechBubbleNode>()
                 .Single();
+            RuntimeChangeSpeechBubbleNode runtimeChange = graph.AllNodes
+                .OfType<RuntimeChangeSpeechBubbleNode>()
+                .Single();
 
-            Assert.That(runtime.NovelCharacter, Is.EqualTo(_character));
-            Assert.That(runtime.MinimumWidth, Is.EqualTo(211f));
-            Assert.That(runtime.MaximumWidth, Is.EqualTo(477f));
-            Assert.That(runtime.BubbleStyle.CornerRadius, Is.EqualTo(31f));
-            Assert.That(runtime.BubbleStyle.Opacity, Is.EqualTo(0.43f));
-            Assert.That(runtime.NextNodeID, Is.Not.Null.And.Not.Empty);
+            Assert.That(runtimeDialogue.NovelCharacter, Is.EqualTo(_character));
+            Assert.That(runtimeCreate.MinimumWidth, Is.EqualTo(211f));
+            Assert.That(runtimeCreate.MaximumWidth, Is.EqualTo(477f));
+            Assert.That(runtimeCreate.BubbleStyle.CornerRadius, Is.EqualTo(31f));
+            Assert.That(runtimeCreate.BubbleStyle.Opacity, Is.EqualTo(0.43f));
+            Assert.That(runtimeChange.TailLength, Is.EqualTo(42f));
+            Assert.That(runtimeCreate.NextNodeID,
+                Is.EqualTo(runtimeDialogue.NodeID));
+            Assert.That(runtimeDialogue.NextNodeID,
+                Is.EqualTo(runtimeChange.NodeID));
         }
 
         [Test]

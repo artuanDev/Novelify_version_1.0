@@ -171,6 +171,44 @@ namespace Novelify.Editor
         }
     }
 
+    [Serializable]
+    public abstract class SpeechBubblePresentationNode : ActionNode
+    {
+        protected override void OnDefineOptions(
+            IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            NovelPresentationNodeOptions.AddStyle(
+                context, NovelBoxStyle.BubbleDefault);
+            context.AddOption<float>("Minimum Width")
+                .WithDefaultValue(180f).Build();
+            context.AddOption<float>("Maximum Width")
+                .WithDefaultValue(520f).Build();
+            context.AddOption<float>("Horizontal Padding")
+                .WithDefaultValue(24f).Build();
+            context.AddOption<float>("Vertical Padding")
+                .WithDefaultValue(18f).Build();
+            context.AddOption<float>("Tail Width")
+                .WithDefaultValue(34f).Build();
+            context.AddOption<float>("Tail Length")
+                .WithDefaultValue(30f).Build();
+            context.AddOption<float>("Target Margin")
+                .WithDefaultValue(18f).Build();
+        }
+    }
+
+    [Serializable]
+    [Node("Novelify/Presentation", null, "Create Speech Bubble")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class CreateSpeechBubbleNode :
+        SpeechBubblePresentationNode { }
+
+    [Serializable]
+    [Node("Novelify/Presentation", null, "Change Speech Bubble")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class ChangeSpeechBubbleNode :
+        SpeechBubblePresentationNode { }
+
     //Non instantiated node because we need these ports to be shared for fade in and out.
     [Serializable]
     public abstract class FadeAuthoringNode : ActionNode
@@ -214,27 +252,5 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Story", null, "Speech Bubble")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
-    public sealed class SpeechBubbleNode : DialogueNode
-    {
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            base.OnDefineOptions(context);
-            NovelPresentationNodeOptions.AddStyle(
-                context, NovelBoxStyle.BubbleDefault);
-            context.AddOption<float>("Minimum Width")
-                .WithDefaultValue(180f).Build();
-            context.AddOption<float>("Maximum Width")
-                .WithDefaultValue(520f).Build();
-            context.AddOption<float>("Horizontal Padding")
-                .WithDefaultValue(24f).Build();
-            context.AddOption<float>("Vertical Padding")
-                .WithDefaultValue(18f).Build();
-            context.AddOption<float>("Tail Width")
-                .WithDefaultValue(34f).Build();
-            context.AddOption<float>("Tail Length")
-                .WithDefaultValue(30f).Build();
-            context.AddOption<float>("Target Margin")
-                .WithDefaultValue(18f).Build();
-        }
-    }
+    public sealed class SpeechBubbleNode : DialogueNode { }
 }

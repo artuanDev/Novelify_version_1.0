@@ -75,6 +75,12 @@ namespace Novelify.Editor
                         case CreateDialogueSpeakerBoxNode speaker:
                             NovelPresentationComposerWindow.Open(speaker);
                             break;
+                        case CreateSpeechBubbleNode createBubble:
+                            NovelSpeechBubbleComposerWindow.Open(createBubble);
+                            break;
+                        case ChangeSpeechBubbleNode changeBubble:
+                            NovelSpeechBubbleComposerWindow.Open(changeBubble);
+                            break;
                         default:
                             return;
                     }

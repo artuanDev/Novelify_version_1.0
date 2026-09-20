@@ -129,9 +129,6 @@ namespace Novelify.Editor
                         speechBubbleNode,
                         runtimeSpeechBubble,
                         nodeIDMap);
-                    ProcessSpeechBubbleNode(
-                        speechBubbleNode,
-                        runtimeSpeechBubble);
                     runtimeNode = runtimeSpeechBubble;
                 }
                 else if (editorNode is SimpleDialogueNode dialogueNode)
@@ -272,10 +269,14 @@ namespace Novelify.Editor
             ctx.SetMainObject(runtimeGraph);
         }
 
-        private void ProcessSpeechBubbleNode(
-             SpeechBubbleNode node,
-             RuntimeSpeechBubbleNode runtimeNode)
+        private RuntimeSpeechBubblePresentationNode
+            CreateSpeechBubblePresentationRuntimeNode(
+                SpeechBubblePresentationNode node,
+                bool change)
         {
+            RuntimeSpeechBubblePresentationNode runtimeNode = change
+                ? new RuntimeChangeSpeechBubbleNode()
+                : new RuntimeCreateSpeechBubbleNode();
             runtimeNode.BubbleStyle = ReadBoxStyle(
                 node, NovelBoxStyle.BubbleDefault);
             runtimeNode.MinimumWidth = Mathf.Max(120f, GetOptionValue(
@@ -294,6 +295,7 @@ namespace Novelify.Editor
                 node.GetNodeOptionByName("Tail Length"), 30f));
             runtimeNode.TargetMargin = Mathf.Max(0f, GetOptionValue(
                 node.GetNodeOptionByName("Target Margin"), 18f));
+            return runtimeNode;
         }
 
         private NovelBoxStyle ReadBoxStyle(
@@ -898,6 +900,12 @@ namespace Novelify.Editor
                             node.GetNodeOptionByName("Channel"),
                             NovelAudioChannel.Music)
                     };
+                case CreateSpeechBubbleNode createBubble:
+                    return CreateSpeechBubblePresentationRuntimeNode(
+                        createBubble, false);
+                case ChangeSpeechBubbleNode changeBubble:
+                    return CreateSpeechBubblePresentationRuntimeNode(
+                        changeBubble, true);
                 case FadeInNode fadeIn:
                     return CreateFadeRuntimeNode(fadeIn, false);
                     
