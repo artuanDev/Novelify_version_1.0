@@ -12,16 +12,33 @@ namespace Novelify.Editor
         private sealed class BubbleDraft
         {
             public NovelBoxStyle Style;
+            public NovelSpeechBubblePlacement Placement;
+            public NovelDialogueAnchor ScreenAnchor;
+            public float HorizontalOffset;
+            public float VerticalOffset;
+            public bool KeepInsideViewport;
+            public bool AutoSize;
             public float MinimumWidth;
             public float MaximumWidth;
+            public float MinimumHeight;
+            public float MaximumHeight;
+            public float FixedWidth;
+            public float FixedHeight;
+            public NovelTextAlignment TextAlignment;
             public float HorizontalPadding;
             public float VerticalPadding;
+            public float DialogueFontSize;
+            public float SpeakerFontSize;
+            public bool ShowSpeakerName;
+            public bool ShowTail;
+            public Vector2 TailTarget;
             public float TailWidth;
             public float TailLength;
             public float TargetMargin;
             public NovelCharacter PreviewCharacter;
             public CharacterEmotion PreviewEmotion = CharacterEmotion.Neutral;
             public bool ShowCharacter = true;
+            public bool PreviewThinking;
             public string SampleSpeaker = "Test Speaker";
             public string SampleDialogue =
                 "This speech bubble follows the speaking character.";
@@ -33,6 +50,7 @@ namespace Novelify.Editor
             public NovelCharacter Character;
             public CharacterEmotion Emotion;
             public bool ShowCharacter = true;
+            public bool Thinking;
             public string Speaker;
             public string Dialogue;
         }
@@ -78,11 +96,32 @@ namespace Novelify.Editor
         private Label _portraitEmpty;
         private VisualElement _bubble;
         private VisualElement _tail;
+        private readonly VisualElement[] _thoughtDots =
+            new VisualElement[3];
+        private VisualElement _tailTargetGuide;
+        private Label _tailTargetHandle;
+        private Label _tailTargetCaption;
         private Label _speakerLabel;
         private Label _dialogueLabel;
         private Label _resolutionLabel;
         private Label _status;
         private VisualElement _inspectorPanel;
+        private bool _draggingBubble;
+        private bool _bubbleDragMoved;
+        private Vector2 _bubbleDragStartPointer;
+        private Vector2 _bubbleDragStartOffset;
+        private Vector2 _previewCanvasSize;
+        private Vector2 _previewBubbleSize;
+        private Vector2 _previewBubbleCenter;
+        private Rect _previewPortraitRect;
+        private Vector2 _previewTailBaseLeftScreen;
+        private Vector2 _previewTailBaseRightScreen;
+        private Vector2 _previewTailTipScreen;
+        private Vector2 _previewTargetScreen;
+        private float _previewScale = 1f;
+        private bool _draggingTailTarget;
+        private bool _tailTargetDragMoved;
+        private Vector2 _tailTargetDragStartPointer;
 
         public static void Open(CreateSpeechBubbleNode source) =>
             OpenInternal(source);
@@ -155,6 +194,7 @@ namespace Novelify.Editor
             _previewUndo.Character = _draft.PreviewCharacter;
             _previewUndo.Emotion = _draft.PreviewEmotion;
             _previewUndo.ShowCharacter = _draft.ShowCharacter;
+            _previewUndo.Thinking = _draft.PreviewThinking;
             _previewUndo.Speaker = _draft.SampleSpeaker;
             _previewUndo.Dialogue = _draft.SampleDialogue;
         }
@@ -166,6 +206,7 @@ namespace Novelify.Editor
             _draft.PreviewCharacter = _previewUndo.Character;
             _draft.PreviewEmotion = _previewUndo.Emotion;
             _draft.ShowCharacter = _previewUndo.ShowCharacter;
+            _draft.PreviewThinking = _previewUndo.Thinking;
             _draft.SampleSpeaker = _previewUndo.Speaker ?? string.Empty;
             _draft.SampleDialogue = _previewUndo.Dialogue ?? string.Empty;
         }
@@ -192,6 +233,8 @@ namespace Novelify.Editor
                 : CharacterEmotion.Neutral;
             bool showCharacter = _previewUndo == null ||
                 _previewUndo.ShowCharacter;
+            bool previewThinking = _previewUndo != null &&
+                _previewUndo.Thinking;
             string speaker = _previewUndo?.Speaker;
             string dialogue = _previewUndo?.Dialogue;
             LoadDraft();
@@ -200,6 +243,7 @@ namespace Novelify.Editor
                 _draft.PreviewCharacter = previewCharacter;
                 _draft.PreviewEmotion = previewEmotion;
                 _draft.ShowCharacter = showCharacter;
+                _draft.PreviewThinking = previewThinking;
                 _draft.SampleSpeaker = speaker ?? string.Empty;
                 _draft.SampleDialogue = dialogue ?? string.Empty;
                 SyncPreviewUndo();
@@ -240,6 +284,7 @@ namespace Novelify.Editor
             CharacterEmotion previewEmotion = _draft?.PreviewEmotion ??
                 CharacterEmotion.Neutral;
             bool showCharacter = _draft?.ShowCharacter ?? true;
+            bool previewThinking = _draft?.PreviewThinking ?? false;
             string sampleSpeaker = _draft?.SampleSpeaker;
             string sampleDialogue = _draft?.SampleDialogue;
             if (previewCharacter == null)
@@ -256,17 +301,43 @@ namespace Novelify.Editor
             _draft = new BubbleDraft
             {
                 Style = ReadStyle(_node, NovelBoxStyle.BubbleDefault),
+                Placement = Read(
+                    _node, "Placement",
+                    NovelSpeechBubblePlacement.FollowSpeaker),
+                ScreenAnchor = Read(
+                    _node, "Screen Anchor", NovelDialogueAnchor.TopCenter),
+                HorizontalOffset = Read(_node, "Horizontal Offset", 0f),
+                VerticalOffset = Read(_node, "Vertical Offset", 0f),
+                KeepInsideViewport = Read(
+                    _node, "Keep Inside Viewport", true),
+                AutoSize = Read(_node, "Auto Size", true),
                 MinimumWidth = Read(_node, "Minimum Width", 180f),
                 MaximumWidth = Read(_node, "Maximum Width", 520f),
+                MinimumHeight = Read(_node, "Minimum Height", 88f),
+                MaximumHeight = Read(_node, "Maximum Height", 320f),
+                FixedWidth = Read(_node, "Fixed Width", 360f),
+                FixedHeight = Read(_node, "Fixed Height", 160f),
+                TextAlignment = Read(
+                    _node, "Text Alignment", NovelTextAlignment.TopLeft),
                 HorizontalPadding = Read(
                     _node, "Horizontal Padding", 24f),
                 VerticalPadding = Read(_node, "Vertical Padding", 18f),
+                DialogueFontSize = Read(
+                    _node, "Dialogue Font Size", 24f),
+                SpeakerFontSize = Read(
+                    _node, "Speaker Font Size", 21f),
+                ShowSpeakerName = Read(
+                    _node, "Show Speaker Name", false),
+                ShowTail = Read(_node, "Show Tail", true),
+                TailTarget = Read(
+                    _node, "Tail Target", new Vector2(0.5f, 0.5f)),
                 TailWidth = Read(_node, "Tail Width", 34f),
                 TailLength = Read(_node, "Tail Length", 30f),
                 TargetMargin = Read(_node, "Target Margin", 18f),
                 PreviewCharacter = previewCharacter,
                 PreviewEmotion = previewEmotion,
                 ShowCharacter = showCharacter,
+                PreviewThinking = previewThinking,
                 SampleSpeaker = sampleSpeaker,
                 SampleDialogue = sampleDialogue,
                 Resolution = GetGameViewResolution()
@@ -390,7 +461,7 @@ namespace Novelify.Editor
             heading.style.color = TextColor;
             panel.Add(heading);
             Label subtitle = new Label(
-                "The tail follows the character while the body stays inside the viewport.");
+                "Drag the bubble or the TAIL TARGET crosshair to compose the pointer.");
             subtitle.style.fontSize = 10f;
             subtitle.style.color = MutedTextColor;
             subtitle.style.marginBottom = 10f;
@@ -445,14 +516,48 @@ namespace Novelify.Editor
             SetRadius(_portraitEmpty, 8f);
             _stage.Add(_portraitEmpty);
 
+            _tailTargetGuide = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            _tailTargetGuide.style.position = Position.Absolute;
+            _tailTargetGuide.style.left = 0f;
+            _tailTargetGuide.style.right = 0f;
+            _tailTargetGuide.style.top = 0f;
+            _tailTargetGuide.style.bottom = 0f;
+            _tailTargetGuide.generateVisualContent += DrawTailTargetGuide;
+            _stage.Add(_tailTargetGuide);
+
             _tail = new VisualElement();
             _tail.style.position = Position.Absolute;
             _tail.pickingMode = PickingMode.Ignore;
+            _tail.generateVisualContent += DrawPreviewTail;
             _stage.Add(_tail);
+
+            for (int index = 0; index < _thoughtDots.Length; index++)
+            {
+                VisualElement dot = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore
+                };
+                dot.style.position = Position.Absolute;
+                _thoughtDots[index] = dot;
+                _stage.Add(dot);
+            }
 
             _bubble = new VisualElement();
             _bubble.style.position = Position.Absolute;
             _bubble.style.overflow = Overflow.Hidden;
+            _bubble.tooltip =
+                "Drag to place the bubble at a fixed screen position.";
+            _bubble.RegisterCallback<PointerDownEvent>(
+                OnBubblePointerDown);
+            _bubble.RegisterCallback<PointerMoveEvent>(
+                OnBubblePointerMove);
+            _bubble.RegisterCallback<PointerUpEvent>(
+                OnBubblePointerUp);
+            _bubble.RegisterCallback<PointerCaptureOutEvent>(
+                OnBubblePointerCaptureOut);
             _stage.Add(_bubble);
             _speakerLabel = new Label();
             _speakerLabel.style.position = Position.Absolute;
@@ -466,6 +571,39 @@ namespace Novelify.Editor
             _dialogueLabel.style.whiteSpace = WhiteSpace.Normal;
             _bubble.Add(_dialogueLabel);
 
+            _tailTargetHandle = new Label("+")
+            {
+                pickingMode = PickingMode.Position,
+                tooltip = "Drag this target. The speech-bubble tail always points here."
+            };
+            _tailTargetHandle.style.position = Position.Absolute;
+            _tailTargetHandle.style.width = 22f;
+            _tailTargetHandle.style.height = 22f;
+            _tailTargetHandle.style.unityTextAlign =
+                TextAnchor.MiddleCenter;
+            _tailTargetHandle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _tailTargetHandle.style.fontSize = 17f;
+            _tailTargetHandle.style.color = WindowColor;
+            _tailTargetHandle.style.backgroundColor = AccentBrightColor;
+            SetRadius(_tailTargetHandle, 11f);
+            SetBorder(_tailTargetHandle, 2f, Color.white);
+            _tailTargetHandle.RegisterCallback<PointerDownEvent>(
+                OnTailTargetPointerDown);
+            _tailTargetHandle.RegisterCallback<PointerMoveEvent>(
+                OnTailTargetPointerMove);
+            _tailTargetHandle.RegisterCallback<PointerUpEvent>(
+                OnTailTargetPointerUp);
+            _tailTargetHandle.RegisterCallback<PointerCaptureOutEvent>(
+                OnTailTargetPointerCaptureOut);
+            _stage.Add(_tailTargetHandle);
+
+            _tailTargetCaption = CreatePill(
+                "TAIL TARGET", new Color32(13, 56, 69, 235),
+                AccentBrightColor);
+            _tailTargetCaption.style.position = Position.Absolute;
+            _tailTargetCaption.pickingMode = PickingMode.Ignore;
+            _stage.Add(_tailTargetCaption);
+
             Label badge = CreatePill(
                 "LIVE PREVIEW", new Color32(19, 78, 74, 235),
                 AccentBrightColor);
@@ -476,7 +614,7 @@ namespace Novelify.Editor
             panel.Add(_previewHost);
 
             Label hint = new Label(
-                "Preview resolution follows Game View automatically. Preview content is not saved to the node.");
+                "The target point is saved relative to the character and follows the active speaker at runtime.");
             hint.style.marginTop = 8f;
             hint.style.fontSize = 9f;
             hint.style.color = MutedTextColor;
@@ -547,6 +685,19 @@ namespace Novelify.Editor
                 RefreshPreview();
             });
             preview.Add(show);
+            Toggle thinkingPreview = new Toggle("Preview Thinking")
+            {
+                value = _draft.PreviewThinking,
+                tooltip = "Preview the appearance used automatically when a Speech Bubble dialogue node has Thinking enabled."
+            };
+            thinkingPreview.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                RecordPreviewChange("Toggle Thought Bubble Preview", () =>
+                    _draft.PreviewThinking = evt.newValue);
+                RefreshPreview();
+            });
+            preview.Add(thinkingPreview);
             EnumField emotion = new EnumField(
                 "Emotion", _draft.PreviewEmotion);
             emotion.RegisterValueChangedCallback(evt =>
@@ -574,23 +725,150 @@ namespace Novelify.Editor
                 });
             scroll.Add(preview);
 
-            Foldout geometry = NewFoldout("Geometry and Tail");
-            AddFloat(geometry, "Minimum Width", _draft.MinimumWidth,
-                value => _draft.MinimumWidth = value);
-            AddFloat(geometry, "Maximum Width", _draft.MaximumWidth,
-                value => _draft.MaximumWidth = value);
-            AddFloat(geometry, "Horizontal Padding",
+            Foldout placement = NewFoldout("Placement");
+            EnumField placementMode = new EnumField(
+                "Mode", _draft.Placement);
+            placementMode.tooltip =
+                "Follow Speaker moves with the character. Screen Anchor keeps the bubble at the chosen viewport position.";
+            placementMode.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                _draft.Placement =
+                    (NovelSpeechBubblePlacement)evt.newValue;
+                DraftChanged("Change Speech Bubble Placement");
+                Rebuild();
+            });
+            placement.Add(placementMode);
+            EnumField screenAnchor = new EnumField(
+                "Screen Anchor", _draft.ScreenAnchor);
+            screenAnchor.tooltip =
+                "The viewport point used as the stable origin for manual placement.";
+            screenAnchor.SetEnabled(
+                _draft.Placement == NovelSpeechBubblePlacement.ScreenAnchor);
+            screenAnchor.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                _draft.ScreenAnchor = (NovelDialogueAnchor)evt.newValue;
+                DraftChanged("Change Speech Bubble Screen Anchor");
+            });
+            placement.Add(screenAnchor);
+            AddFloat(placement, "Horizontal Offset", _draft.HorizontalOffset,
+                value => _draft.HorizontalOffset = value);
+            AddFloat(placement, "Vertical Offset", _draft.VerticalOffset,
+                value => _draft.VerticalOffset = value);
+            AddToggle(placement, "Keep Inside Viewport",
+                _draft.KeepInsideViewport,
+                value => _draft.KeepInsideViewport = value);
+            Button center = new Button(() =>
+            {
+                _draft.Placement = NovelSpeechBubblePlacement.ScreenAnchor;
+                _draft.ScreenAnchor = NovelDialogueAnchor.CenterCenter;
+                _draft.HorizontalOffset = 0f;
+                _draft.VerticalOffset = 0f;
+                DraftChanged("Center Speech Bubble");
+                Rebuild();
+            }) { text = "Center Bubble" };
+            placement.Add(center);
+            scroll.Add(placement);
+
+            Foldout sizing = NewFoldout("Size and Text");
+            Toggle autoSize = new Toggle("Fit To Text")
+            {
+                value = _draft.AutoSize,
+                tooltip = "Grow with the current dialogue while respecting the minimum and maximum size."
+            };
+            autoSize.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                _draft.AutoSize = evt.newValue;
+                DraftChanged("Toggle Speech Bubble Auto Size");
+                Rebuild();
+            });
+            sizing.Add(autoSize);
+            if (_draft.AutoSize)
+            {
+                AddFloat(sizing, "Minimum Width", _draft.MinimumWidth,
+                    value => _draft.MinimumWidth = value);
+                AddFloat(sizing, "Maximum Width", _draft.MaximumWidth,
+                    value => _draft.MaximumWidth = value);
+                AddFloat(sizing, "Minimum Height", _draft.MinimumHeight,
+                    value => _draft.MinimumHeight = value);
+                AddFloat(sizing, "Maximum Height", _draft.MaximumHeight,
+                    value => _draft.MaximumHeight = value);
+            }
+            else
+            {
+                AddFloat(sizing, "Fixed Width", _draft.FixedWidth,
+                    value => _draft.FixedWidth = value);
+                AddFloat(sizing, "Fixed Height", _draft.FixedHeight,
+                    value => _draft.FixedHeight = value);
+            }
+            EnumField textAlignment = new EnumField(
+                "Text Alignment",
+                _draft.AutoSize
+                    ? NovelTextAlignment.CenterCenter
+                    : _draft.TextAlignment)
+            {
+                tooltip = _draft.AutoSize
+                    ? "Auto-sized bubbles always center dialogue text. Disable Fit To Text to choose another alignment."
+                    : "Anchor the dialogue text within the bubble's padded content area."
+            };
+            textAlignment.SetEnabled(!_draft.AutoSize);
+            textAlignment.RegisterValueChangedCallback(evt =>
+            {
+                if (_building || _draft.AutoSize) return;
+                _draft.TextAlignment =
+                    (NovelTextAlignment)evt.newValue;
+                DraftChanged("Change Speech Bubble Text Alignment");
+            });
+            sizing.Add(textAlignment);
+            AddFloat(sizing, "Horizontal Padding",
                 _draft.HorizontalPadding,
                 value => _draft.HorizontalPadding = value);
-            AddFloat(geometry, "Vertical Padding", _draft.VerticalPadding,
+            AddFloat(sizing, "Vertical Padding", _draft.VerticalPadding,
                 value => _draft.VerticalPadding = value);
-            AddFloat(geometry, "Tail Width", _draft.TailWidth,
+            AddFloat(sizing, "Dialogue Font Size",
+                _draft.DialogueFontSize,
+                value => _draft.DialogueFontSize = value);
+            AddFloat(sizing, "Speaker Font Size", _draft.SpeakerFontSize,
+                value => _draft.SpeakerFontSize = value);
+            AddToggle(sizing, "Show Speaker Name", _draft.ShowSpeakerName,
+                value => _draft.ShowSpeakerName = value);
+            scroll.Add(sizing);
+
+            Foldout tail = NewFoldout("Tail");
+            AddToggle(tail, "Show Tail", _draft.ShowTail,
+                value => _draft.ShowTail = value);
+            HelpBox targetHelp = new HelpBox(
+                "The visible crosshair is stored relative to the character: (0, 0) is bottom-left and (1, 1) is top-right. Drag it in the preview or enter values here; values outside the character are allowed.",
+                HelpBoxMessageType.Info);
+            tail.Add(targetHelp);
+            Vector2Field targetPoint = new Vector2Field("Target Point")
+            {
+                value = _draft.TailTarget,
+                tooltip = "Character-local point the tail aims toward."
+            };
+            targetPoint.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                _draft.TailTarget = evt.newValue;
+                DraftChanged("Move Speech Bubble Tail Target");
+            });
+            tail.Add(targetPoint);
+            Button resetTarget = new Button(() =>
+            {
+                _draft.TailTarget = new Vector2(0.5f, 0.5f);
+                DraftChanged("Reset Speech Bubble Tail Target");
+                Rebuild();
+            }) { text = "Reset Target To Character Center" };
+            tail.Add(resetTarget);
+            AddFloat(tail, "Tail Width", _draft.TailWidth,
                 value => _draft.TailWidth = value);
-            AddFloat(geometry, "Tail Length", _draft.TailLength,
+            AddFloat(tail, "Tail Length", _draft.TailLength,
                 value => _draft.TailLength = value);
-            AddFloat(geometry, "Target Margin", _draft.TargetMargin,
+            AddFloat(tail, "Target Margin", _draft.TargetMargin,
                 value => _draft.TargetMargin = value);
-            scroll.Add(geometry);
+            scroll.Add(tail);
 
             Foldout style = NewFoldout("Style");
             AddColor(style, "Fill Color", _draft.Style.FillColor, value =>
@@ -724,10 +1002,27 @@ namespace Novelify.Editor
         private void WriteOptions()
         {
             WriteStyle(_node, _draft.Style);
+            Write(_node, "Placement", _draft.Placement);
+            Write(_node, "Screen Anchor", _draft.ScreenAnchor);
+            Write(_node, "Horizontal Offset", _draft.HorizontalOffset);
+            Write(_node, "Vertical Offset", _draft.VerticalOffset);
+            Write(_node, "Keep Inside Viewport",
+                _draft.KeepInsideViewport);
+            Write(_node, "Auto Size", _draft.AutoSize);
             Write(_node, "Minimum Width", _draft.MinimumWidth);
             Write(_node, "Maximum Width", _draft.MaximumWidth);
+            Write(_node, "Minimum Height", _draft.MinimumHeight);
+            Write(_node, "Maximum Height", _draft.MaximumHeight);
+            Write(_node, "Fixed Width", _draft.FixedWidth);
+            Write(_node, "Fixed Height", _draft.FixedHeight);
+            Write(_node, "Text Alignment", _draft.TextAlignment);
             Write(_node, "Horizontal Padding", _draft.HorizontalPadding);
             Write(_node, "Vertical Padding", _draft.VerticalPadding);
+            Write(_node, "Dialogue Font Size", _draft.DialogueFontSize);
+            Write(_node, "Speaker Font Size", _draft.SpeakerFontSize);
+            Write(_node, "Show Speaker Name", _draft.ShowSpeakerName);
+            Write(_node, "Show Tail", _draft.ShowTail);
+            Write(_node, "Tail Target", _draft.TailTarget);
             Write(_node, "Tail Width", _draft.TailWidth);
             Write(_node, "Tail Length", _draft.TailLength);
             Write(_node, "Target Margin", _draft.TargetMargin);
@@ -759,10 +1054,19 @@ namespace Novelify.Editor
             _draft.MinimumWidth = Mathf.Max(120f, _draft.MinimumWidth);
             _draft.MaximumWidth = Mathf.Max(
                 _draft.MinimumWidth, _draft.MaximumWidth);
+            _draft.MinimumHeight = Mathf.Max(64f, _draft.MinimumHeight);
+            _draft.MaximumHeight = Mathf.Max(
+                _draft.MinimumHeight, _draft.MaximumHeight);
+            _draft.FixedWidth = Mathf.Max(120f, _draft.FixedWidth);
+            _draft.FixedHeight = Mathf.Max(64f, _draft.FixedHeight);
             _draft.HorizontalPadding = Mathf.Max(
                 0f, _draft.HorizontalPadding);
             _draft.VerticalPadding = Mathf.Max(
                 0f, _draft.VerticalPadding);
+            _draft.DialogueFontSize = Mathf.Max(
+                1f, _draft.DialogueFontSize);
+            _draft.SpeakerFontSize = Mathf.Max(
+                1f, _draft.SpeakerFontSize);
             _draft.TailWidth = Mathf.Max(2f, _draft.TailWidth);
             _draft.TailLength = Mathf.Max(2f, _draft.TailLength);
             _draft.TargetMargin = Mathf.Max(0f, _draft.TargetMargin);
@@ -794,52 +1098,86 @@ namespace Novelify.Editor
                 _resolutionLabel.text = ResolutionText(_draft.Resolution);
 
             Vector2 portraitSize = RefreshPortrait(canvas, scale);
-            const float dialogueFont = 24f;
-            const float speakerFont = 21f;
-            const float speakerHeight = 28f;
+            float dialogueFont = _draft.DialogueFontSize;
+            float speakerFont = _draft.SpeakerFontSize;
+            float speakerHeight = _draft.ShowSpeakerName
+                ? Mathf.Max(24f, speakerFont + 7f)
+                : 0f;
             float horizontal = _draft.HorizontalPadding;
             float vertical = _draft.VerticalPadding;
             float available = Mathf.Max(
                 1f, _draft.MaximumWidth - horizontal * 2f);
             Vector2 preferred = MeasureText(
                 _draft.SampleDialogue, dialogueFont, available);
-            float width = Mathf.Clamp(
-                preferred.x + horizontal * 2f,
-                _draft.MinimumWidth,
-                _draft.MaximumWidth);
+            float width = _draft.AutoSize
+                ? Mathf.Clamp(
+                    preferred.x + horizontal * 2f,
+                    _draft.MinimumWidth,
+                    _draft.MaximumWidth)
+                : _draft.FixedWidth;
             float textWidth = Mathf.Max(1f, width - horizontal * 2f);
             preferred = MeasureText(
                 _draft.SampleDialogue, dialogueFont, textWidth);
-            float height = Mathf.Max(
-                88f, preferred.y + vertical * 2f + speakerHeight);
+            float height = _draft.AutoSize
+                ? Mathf.Clamp(
+                    preferred.y + vertical * 2f + speakerHeight,
+                    _draft.MinimumHeight,
+                    _draft.MaximumHeight)
+                : _draft.FixedHeight;
 
-            Vector2 target = _draft.ShowCharacter && portraitSize.y > 0f
-                ? new Vector2(canvas.x * 0.5f, portraitSize.y)
-                : new Vector2(canvas.x * 0.5f, canvas.y * 0.45f);
+            Vector2 targetReferenceSize = portraitSize.y > 0f
+                ? portraitSize
+                : ResolvePortraitSize(canvas);
+            _previewPortraitRect = new Rect(
+                (canvas.x - targetReferenceSize.x) * 0.5f,
+                0f,
+                targetReferenceSize.x,
+                targetReferenceSize.y);
+            Vector2 target = _previewPortraitRect.position + Vector2.Scale(
+                _draft.TailTarget, _previewPortraitRect.size);
             float margin = Mathf.Max(8f, _draft.TargetMargin);
-            bool bubbleAbove = true;
-            Vector2 center = new Vector2(
-                target.x,
-                target.y + margin + _draft.TailLength + height * 0.5f);
-            if (center.y + height * 0.5f > canvas.y - margin)
+            Vector2 bubbleSize = new Vector2(width, height);
+            Rect viewport = new Rect(Vector2.zero, canvas);
+            Vector2 center;
+            if (_draft.Placement ==
+                NovelSpeechBubblePlacement.ScreenAnchor)
             {
-                bubbleAbove = false;
-                center.y = target.y - margin - _draft.TailLength -
-                    height * 0.5f;
+                center = GetAnchoredPreviewCenter(
+                    viewport, bubbleSize, _draft.ScreenAnchor, margin);
             }
-            center.x = Mathf.Clamp(center.x,
-                width * 0.5f + margin,
-                canvas.x - width * 0.5f - margin);
-            center.y = Mathf.Clamp(center.y,
-                height * 0.5f + margin,
-                canvas.y - height * 0.5f - margin);
+            else
+            {
+                center = new Vector2(
+                    target.x,
+                    target.y + margin + _draft.TailLength +
+                    height * 0.5f);
+                if (center.y + height * 0.5f > canvas.y - margin)
+                    center.y = target.y - margin - _draft.TailLength -
+                        height * 0.5f;
+            }
+            center += new Vector2(
+                _draft.HorizontalOffset, _draft.VerticalOffset);
+            if (_draft.KeepInsideViewport)
+                center = ClampPreviewCenter(
+                    center, viewport, bubbleSize, margin);
+
+            _previewCanvasSize = canvas;
+            _previewBubbleSize = bubbleSize;
+            _previewBubbleCenter = center;
+            _previewScale = scale;
             Rect bubbleRect = new Rect(
-                center - new Vector2(width, height) * 0.5f,
-                new Vector2(width, height));
+                center - bubbleSize * 0.5f, bubbleSize);
             Place(_bubble, bubbleRect, canvas.y, scale);
-            ApplyBoxStyle(_bubble, _draft.Style, scale);
+            NovelBoxStyle previewStyle = _draft.Style;
+            if (_draft.PreviewThinking)
+                previewStyle.CornerRadius = Mathf.Max(
+                    previewStyle.CornerRadius, 40f);
+            ApplyBoxStyle(_bubble, previewStyle, scale);
 
             _speakerLabel.text = _draft.SampleSpeaker ?? string.Empty;
+            _speakerLabel.style.display = _draft.ShowSpeakerName
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
             _speakerLabel.style.left = horizontal * scale;
             _speakerLabel.style.right = horizontal * scale;
             _speakerLabel.style.top = vertical * scale;
@@ -853,19 +1191,388 @@ namespace Novelify.Editor
             _dialogueLabel.style.bottom = vertical * scale;
             _dialogueLabel.style.fontSize = Mathf.Max(
                 7f, dialogueFont * scale);
+            _dialogueLabel.style.unityTextAlign = ToTextAnchor(
+                _draft.AutoSize
+                    ? NovelTextAlignment.CenterCenter
+                    : _draft.TextAlignment);
 
-            float tailWidth = _draft.TailWidth * scale;
-            float tailLength = _draft.TailLength * scale;
-            _tail.style.width = tailWidth;
-            _tail.style.height = tailLength;
-            _tail.style.left = center.x * scale - tailWidth * 0.5f;
-            _tail.style.top = bubbleAbove
-                ? (canvas.y - bubbleRect.yMin) * scale - 1f
-                : (canvas.y - bubbleRect.yMax) * scale - tailLength + 1f;
-            _tail.style.backgroundColor =
-                _draft.Style.EffectiveFillColor;
-            _tail.style.rotate = new Rotate(
-                new Angle(45f, AngleUnit.Degree));
+            Vector2 targetFromBubble = target - center;
+            GetPreviewTailGeometry(
+                targetFromBubble, bubbleSize,
+                out Vector2 attachment,
+                out Vector2 tipDirection,
+                out Vector2 edgeAxis,
+                out Vector2 inward);
+            attachment += center;
+            _tail.style.left = 0f;
+            _tail.style.top = 0f;
+            _tail.style.width = stageWidth;
+            _tail.style.height = stageHeight;
+            _tail.style.backgroundColor = Color.clear;
+
+            float bodyOverlap = Mathf.Min(
+                6f, _draft.TailLength * 0.25f);
+            Vector2 tailBase = attachment + inward * bodyOverlap;
+            Vector2 tailTip = attachment +
+                tipDirection * _draft.TailLength;
+            Vector2 baseLeft = tailBase +
+                edgeAxis * (_draft.TailWidth * 0.5f);
+            Vector2 baseRight = tailBase -
+                edgeAxis * (_draft.TailWidth * 0.5f);
+            _previewTailBaseLeftScreen = CanvasToPreviewScreen(
+                baseLeft, canvas.y, scale);
+            _previewTailBaseRightScreen = CanvasToPreviewScreen(
+                baseRight, canvas.y, scale);
+            _previewTailTipScreen = new Vector2(
+                tailTip.x * scale,
+                (canvas.y - tailTip.y) * scale);
+            _tail.style.display = _draft.ShowTail &&
+                !_draft.PreviewThinking
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+            float[] thoughtProgress = { 0.12f, 0.5f, 0.88f };
+            float[] thoughtScale = { 0.7f, 0.46f, 0.28f };
+            for (int index = 0; index < _thoughtDots.Length; index++)
+            {
+                VisualElement dot = _thoughtDots[index];
+                bool visible = _draft.ShowTail && _draft.PreviewThinking;
+                dot.style.display = visible
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+                float dotSize = Mathf.Max(
+                    4f, _draft.TailWidth * thoughtScale[index]);
+                Vector2 dotCenter = attachment + tipDirection *
+                    (_draft.TailLength * thoughtProgress[index]);
+                float scaledSize = dotSize * scale;
+                dot.style.left = dotCenter.x * scale - scaledSize * 0.5f;
+                dot.style.top = (canvas.y - dotCenter.y) * scale -
+                    scaledSize * 0.5f;
+                dot.style.width = scaledSize;
+                dot.style.height = scaledSize;
+                dot.style.backgroundColor =
+                    previewStyle.EffectiveFillColor;
+                SetRadius(dot, scaledSize * 0.5f);
+                SetBorder(
+                    dot,
+                    previewStyle.OutlineEnabled
+                        ? previewStyle.OutlineThickness * scale
+                        : 0f,
+                    previewStyle.OutlineColor);
+                if (index == _thoughtDots.Length - 1)
+                {
+                    Vector2 guideStart = dotCenter + tipDirection *
+                        (dotSize * 0.5f);
+                    _previewTailTipScreen = CanvasToPreviewScreen(
+                        guideStart, canvas.y, scale);
+                }
+            }
+            _previewTargetScreen = new Vector2(
+                target.x * scale,
+                (canvas.y - target.y) * scale);
+            _tailTargetHandle.style.left = _previewTargetScreen.x - 11f;
+            _tailTargetHandle.style.top = _previewTargetScreen.y - 11f;
+            _tailTargetCaption.style.left = _previewTargetScreen.x + 15f;
+            _tailTargetCaption.style.top = _previewTargetScreen.y - 12f;
+            _tail.MarkDirtyRepaint();
+            _tailTargetGuide.MarkDirtyRepaint();
+        }
+
+        private static Vector2 CanvasToPreviewScreen(
+            Vector2 point, float canvasHeight, float scale) =>
+            new Vector2(point.x * scale, (canvasHeight - point.y) * scale);
+
+        private void DrawTailTargetGuide(MeshGenerationContext context)
+        {
+            if (_draft == null || !_draft.ShowTail)
+                return;
+            Painter2D painter = context.painter2D;
+            painter.strokeColor = new Color(
+                AccentBrightColor.r,
+                AccentBrightColor.g,
+                AccentBrightColor.b,
+                0.55f);
+            painter.lineWidth = 1.5f;
+            painter.BeginPath();
+            painter.MoveTo(_previewTailTipScreen);
+            painter.LineTo(_previewTargetScreen);
+            painter.Stroke();
+        }
+
+        private void DrawPreviewTail(MeshGenerationContext context)
+        {
+            if (_draft == null || !_draft.ShowTail ||
+                _draft.PreviewThinking)
+                return;
+            Painter2D painter = context.painter2D;
+            painter.fillColor = _draft.Style.EffectiveFillColor;
+            painter.BeginPath();
+            painter.MoveTo(_previewTailBaseLeftScreen);
+            painter.LineTo(_previewTailBaseRightScreen);
+            painter.LineTo(_previewTailTipScreen);
+            painter.ClosePath();
+            painter.Fill();
+            if (!_draft.Style.OutlineEnabled ||
+                _draft.Style.OutlineThickness <= 0f)
+                return;
+            painter.strokeColor = _draft.Style.OutlineColor;
+            painter.lineWidth = Mathf.Max(
+                1f, _draft.Style.OutlineThickness * _previewScale);
+            painter.Stroke();
+        }
+
+        private void OnTailTargetPointerDown(PointerDownEvent evt)
+        {
+            if (evt.button != 0 || _stage == null || _draft == null)
+                return;
+            _draggingTailTarget = true;
+            _tailTargetDragMoved = false;
+            _tailTargetDragStartPointer =
+                _stage.WorldToLocal(evt.position);
+            _tailTargetHandle.CapturePointer(evt.pointerId);
+            evt.StopImmediatePropagation();
+        }
+
+        private void OnTailTargetPointerMove(PointerMoveEvent evt)
+        {
+            if (!_draggingTailTarget ||
+                !_tailTargetHandle.HasPointerCapture(evt.pointerId) ||
+                _stage == null)
+                return;
+            Vector2 pointer = _stage.WorldToLocal(evt.position);
+            if (!_tailTargetDragMoved &&
+                (pointer - _tailTargetDragStartPointer).sqrMagnitude < 1f)
+                return;
+            _tailTargetDragMoved = true;
+            Vector2 canvasPoint = new Vector2(
+                pointer.x / Mathf.Max(0.01f, _previewScale),
+                _previewCanvasSize.y -
+                pointer.y / Mathf.Max(0.01f, _previewScale));
+            _draft.TailTarget = new Vector2(
+                (canvasPoint.x - _previewPortraitRect.xMin) /
+                    Mathf.Max(1f, _previewPortraitRect.width),
+                (canvasPoint.y - _previewPortraitRect.yMin) /
+                    Mathf.Max(1f, _previewPortraitRect.height));
+            RefreshPreview();
+            evt.StopImmediatePropagation();
+        }
+
+        private void OnTailTargetPointerUp(PointerUpEvent evt)
+        {
+            if (!_draggingTailTarget || evt.button != 0)
+                return;
+            bool moved = _tailTargetDragMoved;
+            _draggingTailTarget = false;
+            _tailTargetDragMoved = false;
+            if (_tailTargetHandle.HasPointerCapture(evt.pointerId))
+                _tailTargetHandle.ReleasePointer(evt.pointerId);
+            if (moved)
+            {
+                DraftChanged("Move Speech Bubble Tail Target");
+                Rebuild();
+            }
+            evt.StopImmediatePropagation();
+        }
+
+        private void OnTailTargetPointerCaptureOut(
+            PointerCaptureOutEvent evt)
+        {
+            if (!_draggingTailTarget)
+                return;
+            bool moved = _tailTargetDragMoved;
+            _draggingTailTarget = false;
+            _tailTargetDragMoved = false;
+            if (moved)
+            {
+                DraftChanged("Move Speech Bubble Tail Target");
+                Rebuild();
+            }
+        }
+
+        private void OnBubblePointerDown(PointerDownEvent evt)
+        {
+            if (evt.button != 0 || _stage == null || _draft == null)
+                return;
+            _draggingBubble = true;
+            _bubbleDragMoved = false;
+            _bubbleDragStartPointer = _stage.WorldToLocal(evt.position);
+            Vector2 anchorCenter = GetAnchoredPreviewCenter(
+                new Rect(Vector2.zero, _previewCanvasSize),
+                _previewBubbleSize, _draft.ScreenAnchor,
+                Mathf.Max(8f, _draft.TargetMargin));
+            _bubbleDragStartOffset = _previewBubbleCenter - anchorCenter;
+            _bubble.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void OnBubblePointerMove(PointerMoveEvent evt)
+        {
+            if (!_draggingBubble ||
+                !_bubble.HasPointerCapture(evt.pointerId) || _stage == null)
+                return;
+            Vector2 pointer = _stage.WorldToLocal(evt.position);
+            Vector2 delta = pointer - _bubbleDragStartPointer;
+            if (!_bubbleDragMoved && delta.sqrMagnitude < 4f)
+                return;
+            _bubbleDragMoved = true;
+            _draft.Placement = NovelSpeechBubblePlacement.ScreenAnchor;
+            Vector2 canvasDelta = new Vector2(
+                delta.x / Mathf.Max(0.01f, _previewScale),
+                -delta.y / Mathf.Max(0.01f, _previewScale));
+            Vector2 offset = _bubbleDragStartOffset + canvasDelta;
+            if (_draft.KeepInsideViewport)
+            {
+                Rect viewport = new Rect(
+                    Vector2.zero, _previewCanvasSize);
+                float margin = Mathf.Max(8f, _draft.TargetMargin);
+                Vector2 anchorCenter = GetAnchoredPreviewCenter(
+                    viewport, _previewBubbleSize,
+                    _draft.ScreenAnchor, margin);
+                Vector2 clamped = ClampPreviewCenter(
+                    anchorCenter + offset, viewport,
+                    _previewBubbleSize, margin);
+                offset = clamped - anchorCenter;
+            }
+            _draft.HorizontalOffset = offset.x;
+            _draft.VerticalOffset = offset.y;
+            RefreshPreview();
+            evt.StopPropagation();
+        }
+
+        private void OnBubblePointerUp(PointerUpEvent evt)
+        {
+            if (!_draggingBubble || evt.button != 0)
+                return;
+            bool moved = _bubbleDragMoved;
+            _draggingBubble = false;
+            _bubbleDragMoved = false;
+            if (_bubble.HasPointerCapture(evt.pointerId))
+                _bubble.ReleasePointer(evt.pointerId);
+            if (moved)
+            {
+                DraftChanged("Place Speech Bubble");
+                Rebuild();
+            }
+            evt.StopPropagation();
+        }
+
+        private void OnBubblePointerCaptureOut(PointerCaptureOutEvent evt)
+        {
+            if (!_draggingBubble)
+                return;
+            bool moved = _bubbleDragMoved;
+            _draggingBubble = false;
+            _bubbleDragMoved = false;
+            if (moved)
+            {
+                DraftChanged("Place Speech Bubble");
+                Rebuild();
+            }
+        }
+
+        private static Vector2 GetAnchoredPreviewCenter(
+            Rect viewport,
+            Vector2 bubbleSize,
+            NovelDialogueAnchor anchor,
+            float margin)
+        {
+            float left = viewport.xMin + bubbleSize.x * 0.5f + margin;
+            float centerX = viewport.center.x;
+            float right = viewport.xMax - bubbleSize.x * 0.5f - margin;
+            float bottom = viewport.yMin + bubbleSize.y * 0.5f + margin;
+            float centerY = viewport.center.y;
+            float top = viewport.yMax - bubbleSize.y * 0.5f - margin;
+            return anchor switch
+            {
+                NovelDialogueAnchor.TopLeft => new Vector2(left, top),
+                NovelDialogueAnchor.TopCenter => new Vector2(centerX, top),
+                NovelDialogueAnchor.TopRight => new Vector2(right, top),
+                NovelDialogueAnchor.CenterLeft =>
+                    new Vector2(left, centerY),
+                NovelDialogueAnchor.CenterRight =>
+                    new Vector2(right, centerY),
+                NovelDialogueAnchor.BottomLeft => new Vector2(left, bottom),
+                NovelDialogueAnchor.BottomCenter =>
+                    new Vector2(centerX, bottom),
+                NovelDialogueAnchor.BottomRight =>
+                    new Vector2(right, bottom),
+                _ => new Vector2(centerX, centerY)
+            };
+        }
+
+        private static Vector2 ClampPreviewCenter(
+            Vector2 center,
+            Rect viewport,
+            Vector2 bubbleSize,
+            float margin)
+        {
+            float minimumX = viewport.xMin + bubbleSize.x * 0.5f + margin;
+            float maximumX = viewport.xMax - bubbleSize.x * 0.5f - margin;
+            float minimumY = viewport.yMin + bubbleSize.y * 0.5f + margin;
+            float maximumY = viewport.yMax - bubbleSize.y * 0.5f - margin;
+            return new Vector2(
+                minimumX <= maximumX
+                    ? Mathf.Clamp(center.x, minimumX, maximumX)
+                    : viewport.center.x,
+                minimumY <= maximumY
+                    ? Mathf.Clamp(center.y, minimumY, maximumY)
+                    : viewport.center.y);
+        }
+
+        private void GetPreviewTailGeometry(
+            Vector2 targetFromBubble,
+            Vector2 bubbleSize,
+            out Vector2 attachment,
+            out Vector2 direction,
+            out Vector2 edgeAxis,
+            out Vector2 inward)
+        {
+            float halfWidth = bubbleSize.x * 0.5f;
+            float halfHeight = bubbleSize.y * 0.5f;
+            float safeCorner = _draft.Style.CornerRadius +
+                _draft.TailWidth * 0.5f;
+            float safeX = Mathf.Min(
+                Mathf.Max(0f, halfWidth - 1f), safeCorner);
+            float safeY = Mathf.Min(
+                Mathf.Max(0f, halfHeight - 1f), safeCorner);
+            Vector2 ray = targetFromBubble.sqrMagnitude > 0.0001f
+                ? targetFromBubble
+                : Vector2.down;
+            if (Mathf.Abs(ray.x) > Mathf.Abs(ray.y))
+            {
+                float intersectionScale = halfWidth /
+                    Mathf.Max(0.0001f, Mathf.Abs(ray.x));
+                float y = Mathf.Clamp(
+                    ray.y * intersectionScale,
+                    -halfHeight + safeY,
+                    halfHeight - safeY);
+                attachment = new Vector2(
+                    ray.x >= 0f ? halfWidth : -halfWidth, y);
+                edgeAxis = Vector2.up;
+                inward = ray.x >= 0f
+                    ? Vector2.left
+                    : Vector2.right;
+            }
+            else
+            {
+                float intersectionScale = halfHeight /
+                    Mathf.Max(0.0001f, Mathf.Abs(ray.y));
+                float x = Mathf.Clamp(
+                    ray.x * intersectionScale,
+                    -halfWidth + safeX,
+                    halfWidth - safeX);
+                attachment = new Vector2(
+                    x, ray.y >= 0f ? halfHeight : -halfHeight);
+                edgeAxis = Vector2.right;
+                inward = ray.y >= 0f
+                    ? Vector2.down
+                    : Vector2.up;
+            }
+            direction = targetFromBubble - attachment;
+            if (direction.sqrMagnitude < 0.0001f)
+                direction = targetFromBubble.sqrMagnitude > 0.0001f
+                    ? targetFromBubble
+                    : Vector2.down;
+            direction.Normalize();
         }
 
         private Vector2 RefreshPortrait(Vector2 canvas, float scale)
@@ -1180,6 +1887,23 @@ namespace Novelify.Editor
                     ? style.OutlineThickness * scale
                     : 0f,
                 style.OutlineColor);
+        }
+
+        private static TextAnchor ToTextAnchor(
+            NovelTextAlignment alignment)
+        {
+            return alignment switch
+            {
+                NovelTextAlignment.TopCenter => TextAnchor.UpperCenter,
+                NovelTextAlignment.TopRight => TextAnchor.UpperRight,
+                NovelTextAlignment.CenterLeft => TextAnchor.MiddleLeft,
+                NovelTextAlignment.CenterCenter => TextAnchor.MiddleCenter,
+                NovelTextAlignment.CenterRight => TextAnchor.MiddleRight,
+                NovelTextAlignment.BottomLeft => TextAnchor.LowerLeft,
+                NovelTextAlignment.BottomCenter => TextAnchor.LowerCenter,
+                NovelTextAlignment.BottomRight => TextAnchor.LowerRight,
+                _ => TextAnchor.UpperLeft
+            };
         }
 
         private static void SetRadius(VisualElement element, float value)

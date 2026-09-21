@@ -24,7 +24,12 @@ namespace Novelify.Editor
             SerializedProperty emotionProperty = property.FindPropertyRelative(
                 nameof(SpeakerPortraitOption.Emotion));
 
-            var root = new VisualElement();
+            var root = new VisualElement
+            {
+                // Used by the graph focus lens to show the active speaker next
+                // to the enlarged dialogue editor.
+                name = "speaker-portrait-option"
+            };
             root.style.alignItems = Align.Center;
             root.style.marginTop = 6f;
             root.style.marginBottom = 8f;

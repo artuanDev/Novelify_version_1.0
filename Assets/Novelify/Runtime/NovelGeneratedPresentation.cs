@@ -64,16 +64,40 @@ namespace Novelify
         private TextMeshProUGUI _bubbleSpeakerText;
         private RectTransform _tailOutlineRect;
         private RectTransform _tailFillRect;
+        private readonly RectTransform[] _thoughtDotRects =
+            new RectTransform[3];
+        private readonly NovelRoundedGraphic[] _thoughtDots =
+            new NovelRoundedGraphic[3];
 
         private NovelTriangleGraphic _tailOutline;
         private NovelTriangleGraphic _tailFill;
         private RuntimeSpeechBubbleNode _trackedBubble;
         private CharacterInfo _trackedCharacter;
         private NovelBoxStyle _bubbleStyle = NovelBoxStyle.BubbleDefault;
+        private NovelSpeechBubblePlacement _bubblePlacement =
+            NovelSpeechBubblePlacement.FollowSpeaker;
+        private NovelDialogueAnchor _bubbleScreenAnchor =
+            NovelDialogueAnchor.TopCenter;
+        private float _bubbleHorizontalOffset;
+        private float _bubbleVerticalOffset;
+        private bool _bubbleKeepInsideViewport = true;
+        private bool _bubbleAutoSize = true;
         private float _bubbleMinimumWidth = 180f;
         private float _bubbleMaximumWidth = 520f;
+        private float _bubbleMinimumHeight = 88f;
+        private float _bubbleMaximumHeight = 320f;
+        private float _bubbleFixedWidth = 360f;
+        private float _bubbleFixedHeight = 160f;
+        private NovelTextAlignment _bubbleTextAlignment =
+            NovelTextAlignment.TopLeft;
         private float _bubbleHorizontalPadding = 24f;
         private float _bubbleVerticalPadding = 18f;
+        private float _bubbleDialogueFontSize = 24f;
+        private float _bubbleSpeakerFontSize = 21f;
+        private bool _bubbleShowSpeakerName;
+        private bool _bubbleShowTail = true;
+        private bool _bubbleIsThinking;
+        private Vector2 _bubbleTailTarget = new Vector2(0.5f, 0.5f);
         private float _bubbleTailWidth = 34f;
         private float _bubbleTailLength = 30f;
         private float _bubbleTargetMargin = 18f;
@@ -188,13 +212,32 @@ namespace Novelify
                 return;
             EnsureReady();
             _bubbleStyle = node.BubbleStyle.Validated();
+            _bubblePlacement = node.Placement;
+            _bubbleScreenAnchor = node.ScreenAnchor;
+            _bubbleHorizontalOffset = node.HorizontalOffset;
+            _bubbleVerticalOffset = node.VerticalOffset;
+            _bubbleKeepInsideViewport = node.KeepInsideViewport;
+            _bubbleAutoSize = node.AutoSize;
             _bubbleMinimumWidth = Mathf.Max(120f, node.MinimumWidth);
             _bubbleMaximumWidth = Mathf.Max(
                 _bubbleMinimumWidth, node.MaximumWidth);
+            _bubbleMinimumHeight = Mathf.Max(64f, node.MinimumHeight);
+            _bubbleMaximumHeight = Mathf.Max(
+                _bubbleMinimumHeight, node.MaximumHeight);
+            _bubbleFixedWidth = Mathf.Max(120f, node.FixedWidth);
+            _bubbleFixedHeight = Mathf.Max(64f, node.FixedHeight);
+            _bubbleTextAlignment = node.TextAlignment;
             _bubbleHorizontalPadding = Mathf.Max(
                 0f, node.HorizontalPadding);
             _bubbleVerticalPadding = Mathf.Max(
                 0f, node.VerticalPadding);
+            _bubbleDialogueFontSize = Mathf.Max(
+                1f, node.DialogueFontSize);
+            _bubbleSpeakerFontSize = Mathf.Max(
+                1f, node.SpeakerFontSize);
+            _bubbleShowSpeakerName = node.ShowSpeakerName;
+            _bubbleShowTail = node.ShowTail;
+            _bubbleTailTarget = node.TailTarget;
             _bubbleTailWidth = Mathf.Max(2f, node.TailWidth);
             _bubbleTailLength = Mathf.Max(2f, node.TailLength);
             _bubbleTargetMargin = Mathf.Max(0f, node.TargetMargin);
@@ -684,10 +727,26 @@ namespace Novelify
             _tailOutline =
                 _tailOutlineRect.gameObject.AddComponent<NovelTriangleGraphic>();
             _tailOutline.raycastTarget = false;
+            Stretch(_tailOutlineRect);
             _tailFillRect = CreateRect("Tail Fill", _bubbleWrapper);
             _tailFill =
                 _tailFillRect.gameObject.AddComponent<NovelTriangleGraphic>();
             _tailFill.raycastTarget = false;
+            Stretch(_tailFillRect);
+
+            for (int index = 0; index < _thoughtDotRects.Length; index++)
+            {
+                RectTransform dot = CreateRect(
+                    $"Thought Dot {index + 1}", _bubbleWrapper);
+                dot.anchorMin = new Vector2(0.5f, 0.5f);
+                dot.anchorMax = new Vector2(0.5f, 0.5f);
+                dot.pivot = new Vector2(0.5f, 0.5f);
+                NovelRoundedGraphic graphic =
+                    dot.gameObject.AddComponent<NovelRoundedGraphic>();
+                graphic.raycastTarget = false;
+                _thoughtDotRects[index] = dot;
+                _thoughtDots[index] = graphic;
+            }
 
             _bubbleBody = CreateRect("Body", _bubbleWrapper);
             Stretch(_bubbleBody);
@@ -711,23 +770,41 @@ namespace Novelify
         private void ConfigureBubble(RuntimeSpeechBubbleNode node)
         {
             NovelBoxStyle style = _bubbleStyle.Validated();
+            _bubbleIsThinking = node.Thinking;
+            if (_bubbleIsThinking)
+                style.CornerRadius = Mathf.Max(style.CornerRadius, 40f);
             _bubbleGraphic.Apply(style);
             _bubbleDialogueText.SetText(node.DialogueText ?? string.Empty);
+            _bubbleDialogueText.fontSize = _bubbleDialogueFontSize;
+            ApplyTextAlignment(
+                _bubbleDialogueText,
+                _bubbleAutoSize
+                    ? NovelTextAlignment.CenterCenter
+                    : _bubbleTextAlignment);
+            _bubbleSpeakerText.fontSize = _bubbleSpeakerFontSize;
+            _bubbleDialogueText.overflowMode = TextOverflowModes.Ellipsis;
             _bubbleDialogueText.ForceMeshUpdate();
 
             float horizontal = _bubbleHorizontalPadding;
             float vertical = _bubbleVerticalPadding;
             float minimum = _bubbleMinimumWidth;
             float maximum = _bubbleMaximumWidth;
-            float width = Mathf.Clamp(
-                _bubbleDialogueText.preferredWidth + horizontal * 2f,
-                minimum, maximum);
+            float width = _bubbleAutoSize
+                ? Mathf.Clamp(
+                    _bubbleDialogueText.preferredWidth + horizontal * 2f,
+                    minimum, maximum)
+                : _bubbleFixedWidth;
             float textWidth = Mathf.Max(1f, width - horizontal * 2f);
             Vector2 preferred = _bubbleDialogueText.GetPreferredValues(
                 node.DialogueText ?? string.Empty, textWidth, 10000f);
-            float speakerHeight = 28f;
-            float height = Mathf.Max(
-                88f, preferred.y + vertical * 2f + speakerHeight);
+            float speakerHeight = _bubbleShowSpeakerName
+                ? Mathf.Max(24f, _bubbleSpeakerFontSize + 7f)
+                : 0f;
+            float height = _bubbleAutoSize
+                ? Mathf.Clamp(
+                    preferred.y + vertical * 2f + speakerHeight,
+                    _bubbleMinimumHeight, _bubbleMaximumHeight)
+                : _bubbleFixedHeight;
             _bubbleWrapper.sizeDelta = new Vector2(width, height);
 
             RectTransform speakerRect = _bubbleSpeakerText.rectTransform;
@@ -737,6 +814,8 @@ namespace Novelify
             speakerRect.anchoredPosition = new Vector2(0f, -vertical);
             speakerRect.sizeDelta = new Vector2(
                 -horizontal * 2f, speakerHeight);
+            _bubbleSpeakerText.gameObject.SetActive(
+                _bubbleShowSpeakerName);
 
             RectTransform dialogueRect = _bubbleDialogueText.rectTransform;
             dialogueRect.anchorMin = Vector2.zero;
@@ -745,19 +824,15 @@ namespace Novelify
             dialogueRect.offsetMax = new Vector2(
                 -horizontal, -(vertical + speakerHeight));
 
-            float outline = style.OutlineEnabled
-                ? style.OutlineThickness
-                : 0f;
             _tailOutline.color = style.OutlineEnabled
                 ? style.OutlineColor
                 : style.EffectiveFillColor;
             _tailFill.color = style.EffectiveFillColor;
-            _tailOutlineRect.sizeDelta = new Vector2(
-                Mathf.Max(4f, _bubbleTailWidth + outline * 2f),
-                Mathf.Max(4f, _bubbleTailLength + outline * 2f));
-            _tailFillRect.sizeDelta = new Vector2(
-                _bubbleTailWidth,
-                _bubbleTailLength);
+            NovelBoxStyle thoughtDotStyle = style;
+            thoughtDotStyle.CornerRadius = 999f;
+            for (int index = 0; index < _thoughtDots.Length; index++)
+                _thoughtDots[index].Apply(thoughtDotStyle);
+            SetTailVisible(_bubbleShowTail);
         }
 
         private void BindStandardSurface()
@@ -775,7 +850,9 @@ namespace Novelify
         {
             _runner.DialoguePanel = _bubbleWrapper.gameObject;
             _runner.DialogueText = _bubbleDialogueText;
-            _runner.NameBackground = _bubbleSpeakerText.gameObject;
+            _runner.NameBackground = _bubbleShowSpeakerName
+                ? _bubbleSpeakerText.gameObject
+                : null;
             _runner.SpeakerNameText = _bubbleSpeakerText;
         }
 
@@ -787,14 +864,34 @@ namespace Novelify
             if (_trackedCharacter == null ||
                 _trackedCharacter.transform is not RectTransform characterRect)
             {
-                _bubbleWrapper.anchoredPosition = new Vector2(0f, 120f);
+                Rect fallbackSafe = _bubbleLayer.rect;
+                Vector2 fallbackSize = _bubbleWrapper.rect.size;
+                Vector2 fallback = _bubblePlacement ==
+                    NovelSpeechBubblePlacement.ScreenAnchor
+                        ? GetAnchoredBubblePosition(
+                            fallbackSafe, fallbackSize,
+                            _bubbleScreenAnchor,
+                            Mathf.Max(8f, _bubbleTargetMargin))
+                        : new Vector2(0f, 120f);
+                fallback += new Vector2(
+                    _bubbleHorizontalOffset, _bubbleVerticalOffset);
+                _bubbleWrapper.anchoredPosition = _bubbleKeepInsideViewport
+                    ? ClampBubbleToViewport(
+                        fallback, fallbackSafe, fallbackSize,
+                        Mathf.Max(8f, _bubbleTargetMargin))
+                    : fallback;
                 SetTailVisible(false);
                 return;
             }
 
             Vector3[] corners = new Vector3[4];
             characterRect.GetWorldCorners(corners);
-            Vector3 worldTarget = (corners[1] + corners[2]) * 0.5f;
+            Vector3 targetOnLeft = Vector3.LerpUnclamped(
+                corners[0], corners[1], _bubbleTailTarget.y);
+            Vector3 targetOnRight = Vector3.LerpUnclamped(
+                corners[3], corners[2], _bubbleTailTarget.y);
+            Vector3 worldTarget = Vector3.LerpUnclamped(
+                targetOnLeft, targetOnRight, _bubbleTailTarget.x);
             Camera camera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay
                 ? null
                 : _canvas.worldCamera;
@@ -807,23 +904,26 @@ namespace Novelify
             Vector2 size = _bubbleWrapper.rect.size;
             float margin = Mathf.Max(8f, _bubbleTargetMargin);
             float tailLength = _bubbleTailLength;
-            Vector2 desired = new Vector2(
-                target.x,
-                target.y + margin + tailLength + size.y * 0.5f);
-
-            if (desired.y + size.y * 0.5f > safe.yMax - margin)
+            Vector2 desired;
+            if (_bubblePlacement == NovelSpeechBubblePlacement.ScreenAnchor)
             {
-                desired.y = target.y - margin - tailLength - size.y * 0.5f;
+                desired = GetAnchoredBubblePosition(
+                    safe, size, _bubbleScreenAnchor, margin);
             }
-
-            desired.x = Mathf.Clamp(
-                desired.x,
-                safe.xMin + size.x * 0.5f + margin,
-                safe.xMax - size.x * 0.5f - margin);
-            desired.y = Mathf.Clamp(
-                desired.y,
-                safe.yMin + size.y * 0.5f + margin,
-                safe.yMax - size.y * 0.5f - margin);
+            else
+            {
+                desired = new Vector2(
+                    target.x,
+                    target.y + margin + tailLength + size.y * 0.5f);
+                if (desired.y + size.y * 0.5f > safe.yMax - margin)
+                    desired.y = target.y - margin - tailLength -
+                        size.y * 0.5f;
+            }
+            desired += new Vector2(
+                _bubbleHorizontalOffset, _bubbleVerticalOffset);
+            if (_bubbleKeepInsideViewport)
+                desired = ClampBubbleToViewport(
+                    desired, safe, size, margin);
             _bubbleWrapper.anchoredPosition = desired;
             PositionTail(target - desired, size);
         }
@@ -832,77 +932,184 @@ namespace Novelify
             Vector2 targetFromBubble,
             Vector2 bubbleSize)
         {
+            if (!_bubbleShowTail)
+            {
+                SetTailVisible(false);
+                return;
+            }
             SetTailVisible(true);
             float halfWidth = bubbleSize.x * 0.5f;
             float halfHeight = bubbleSize.y * 0.5f;
             float tailLength = _bubbleTailLength;
             float safeCorner = _bubbleStyle.CornerRadius +
                 _bubbleTailWidth * 0.5f;
-            Vector2 position;
-            float rotation;
-
-            if (Mathf.Abs(targetFromBubble.x) >
-                Mathf.Abs(targetFromBubble.y))
+            float safeX = Mathf.Min(
+                Mathf.Max(0f, halfWidth - 1f), safeCorner);
+            float safeY = Mathf.Min(
+                Mathf.Max(0f, halfHeight - 1f), safeCorner);
+            Vector2 attachment;
+            Vector2 inward;
+            bool verticalEdge;
+            Vector2 ray = targetFromBubble.sqrMagnitude > 0.0001f
+                ? targetFromBubble
+                : Vector2.down;
+            if (Mathf.Abs(ray.x) > Mathf.Abs(ray.y))
             {
+                verticalEdge = true;
+                float intersectionScale = halfWidth /
+                    Mathf.Max(0.0001f, Mathf.Abs(ray.x));
                 float y = Mathf.Clamp(
-                    targetFromBubble.y,
-                    -halfHeight + safeCorner,
-               halfHeight - safeCorner);
-                if (targetFromBubble.x >= 0f)
+                    ray.y * intersectionScale,
+                    -halfHeight + safeY,
+                    halfHeight - safeY);
+                if (ray.x >= 0f)
                 {
-                    position = new Vector2(
-                        halfWidth + tailLength * 0.5f, y);
-                    rotation = 90f;
+                    attachment = new Vector2(halfWidth, y);
+                    inward = Vector2.left;
                 }
                 else
                 {
-                    position = new Vector2(
-                        -halfWidth - tailLength * 0.5f, y);
-                    rotation = -90f;
+                    attachment = new Vector2(-halfWidth, y);
+                    inward = Vector2.right;
                 }
             }
             else
             {
+                verticalEdge = false;
+                float intersectionScale = halfHeight /
+                    Mathf.Max(0.0001f, Mathf.Abs(ray.y));
                 float x = Mathf.Clamp(
-                    targetFromBubble.x,
-                    -halfWidth + safeCorner,
-                    halfWidth - safeCorner);
-                if (targetFromBubble.y >= 0f)
+                    ray.x * intersectionScale,
+                    -halfWidth + safeX,
+                    halfWidth - safeX);
+                if (ray.y >= 0f)
                 {
-                    position = new Vector2(
-                        x, halfHeight + tailLength * 0.5f);
-                    rotation = 180f;
+                    attachment = new Vector2(x, halfHeight);
+                    inward = Vector2.down;
                 }
                 else
                 {
-                    position = new Vector2(
-                        x, -halfHeight - tailLength * 0.5f);
-                    rotation = 0f;
+                    attachment = new Vector2(x, -halfHeight);
+                    inward = Vector2.up;
                 }
             }
 
-            SetTailTransform(_tailOutlineRect, position, rotation);
-            SetTailTransform(_tailFillRect, position, rotation);
+            Vector2 direction = targetFromBubble - attachment;
+            if (direction.sqrMagnitude < 0.0001f)
+                direction = targetFromBubble.sqrMagnitude > 0.0001f
+                    ? targetFromBubble
+                    : Vector2.down;
+            direction.Normalize();
+            if (_bubbleIsThinking)
+            {
+                PositionThoughtDots(attachment, direction, tailLength);
+                return;
+            }
+
+            float bodyOverlap = GetTailBodyOverlap(tailLength);
+            Vector2 baseCenter = attachment + inward * bodyOverlap;
+            Vector2 edgeAxis = verticalEdge ? Vector2.up : Vector2.right;
+            Vector2 tip = attachment + direction * tailLength;
+            float outline = _bubbleStyle.OutlineEnabled
+                ? _bubbleStyle.OutlineThickness
+                : 0f;
+            float fillHalfWidth = _bubbleTailWidth * 0.5f;
+            float outlineHalfWidth = fillHalfWidth + outline;
+
+            _tailOutline.SetPoints(
+                baseCenter + edgeAxis * outlineHalfWidth,
+                baseCenter - edgeAxis * outlineHalfWidth,
+                tip + direction * outline);
+            _tailFill.SetPoints(
+                baseCenter + edgeAxis * fillHalfWidth,
+                baseCenter - edgeAxis * fillHalfWidth,
+                tip);
         }
 
-        private static void SetTailTransform(
-        RectTransform rect,
-        Vector2 position,
-        float rotation)
+        private void PositionThoughtDots(
+            Vector2 attachment,
+            Vector2 direction,
+            float tailLength)
         {
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = position;
-            rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
+            float[] progress = { 0.12f, 0.5f, 0.88f };
+            float[] scale = { 0.7f, 0.46f, 0.28f };
+            for (int index = 0; index < _thoughtDotRects.Length; index++)
+            {
+                float size = Mathf.Max(
+                    4f, _bubbleTailWidth * scale[index]);
+                RectTransform dot = _thoughtDotRects[index];
+                dot.sizeDelta = new Vector2(size, size);
+                dot.anchoredPosition = attachment + direction *
+                    (tailLength * progress[index]);
+            }
+        }
+
+        private static float GetTailBodyOverlap(float tailLength) =>
+            Mathf.Min(6f, Mathf.Max(0f, tailLength) * 0.25f);
+
+        private static Vector2 GetAnchoredBubblePosition(
+            Rect viewport,
+            Vector2 bubbleSize,
+            NovelDialogueAnchor anchor,
+            float margin)
+        {
+            float left = viewport.xMin + bubbleSize.x * 0.5f + margin;
+            float centerX = viewport.center.x;
+            float right = viewport.xMax - bubbleSize.x * 0.5f - margin;
+            float bottom = viewport.yMin + bubbleSize.y * 0.5f + margin;
+            float centerY = viewport.center.y;
+            float top = viewport.yMax - bubbleSize.y * 0.5f - margin;
+            return anchor switch
+            {
+                NovelDialogueAnchor.TopLeft => new Vector2(left, top),
+                NovelDialogueAnchor.TopCenter => new Vector2(centerX, top),
+                NovelDialogueAnchor.TopRight => new Vector2(right, top),
+                NovelDialogueAnchor.CenterLeft =>
+                    new Vector2(left, centerY),
+                NovelDialogueAnchor.CenterRight =>
+                    new Vector2(right, centerY),
+                NovelDialogueAnchor.BottomLeft => new Vector2(left, bottom),
+                NovelDialogueAnchor.BottomCenter =>
+                    new Vector2(centerX, bottom),
+                NovelDialogueAnchor.BottomRight =>
+                    new Vector2(right, bottom),
+                _ => new Vector2(centerX, centerY)
+            };
+        }
+
+        private static Vector2 ClampBubbleToViewport(
+            Vector2 position,
+            Rect viewport,
+            Vector2 bubbleSize,
+            float margin)
+        {
+            float minimumX = viewport.xMin + bubbleSize.x * 0.5f + margin;
+            float maximumX = viewport.xMax - bubbleSize.x * 0.5f - margin;
+            float minimumY = viewport.yMin + bubbleSize.y * 0.5f + margin;
+            float maximumY = viewport.yMax - bubbleSize.y * 0.5f - margin;
+            return new Vector2(
+                minimumX <= maximumX
+                    ? Mathf.Clamp(position.x, minimumX, maximumX)
+                    : viewport.center.x,
+                minimumY <= maximumY
+                    ? Mathf.Clamp(position.y, minimumY, maximumY)
+                    : viewport.center.y);
         }
 
         private void SetTailVisible(bool visible)
         {
             if (_tailOutlineRect != null)
-                _tailOutlineRect.gameObject.SetActive(visible);
+                _tailOutlineRect.gameObject.SetActive(
+                    visible && !_bubbleIsThinking);
             if (_tailFillRect != null)
-                _tailFillRect.gameObject.SetActive(visible);
+                _tailFillRect.gameObject.SetActive(
+                    visible && !_bubbleIsThinking);
+            for (int index = 0; index < _thoughtDotRects.Length; index++)
+            {
+                if (_thoughtDotRects[index] != null)
+                    _thoughtDotRects[index].gameObject.SetActive(
+                        visible && _bubbleIsThinking);
+            }
         }
 
         private AudioSource GetAudioSource(NovelAudioChannel channel)

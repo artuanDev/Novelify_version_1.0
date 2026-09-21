@@ -34,6 +34,7 @@ namespace Novelify.Editor.Tests
             var window = ScriptableObject.CreateInstance<EditorWindow>();
             window.position = new Rect(80f, 80f, 600f, 600f);
             VisualElement editor = drawer.CreatePropertyGUI(property);
+            Assert.That(editor.name, Is.EqualTo("rich-dialogue-editor"));
             window.rootVisualElement.Add(editor);
             window.Show();
 
@@ -85,6 +86,11 @@ namespace Novelify.Editor.Tests
 
                 yield return null;
                 Assert.That(input.value, Is.EqualTo("axb"));
+                serializedObject.Update();
+                Assert.That(
+                    holder.Dialogue.Text,
+                    Is.EqualTo("<size=160%>ax</size>b"),
+                    "Typing must be committed to the serialized dialogue, not only shown in the field.");
             }
             finally
             {

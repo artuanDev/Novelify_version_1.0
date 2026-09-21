@@ -1255,7 +1255,9 @@ namespace Novelify.Tests
                     NextNodeID = "first",
                     BubbleStyle = initial,
                     MinimumWidth = 220f,
-                    MaximumWidth = 220f
+                    MaximumWidth = 220f,
+                    AutoSize = true,
+                    TextAlignment = NovelTextAlignment.BottomRight
                 },
                 new RuntimeSpeechBubbleNode
                 {
@@ -1269,6 +1271,10 @@ namespace Novelify.Tests
                     NodeID = "change",
                     NextNodeID = "second",
                     BubbleStyle = changed,
+                    AutoSize = false,
+                    FixedWidth = 410f,
+                    FixedHeight = 180f,
+                    TextAlignment = NovelTextAlignment.BottomRight,
                     MinimumWidth = 410f,
                     MaximumWidth = 410f
                 },
@@ -1284,6 +1290,8 @@ namespace Novelify.Tests
                 .GetComponentInChildren<NovelRoundedGraphic>();
             Assert.That(graphic.color,
                 Is.EqualTo(initial.EffectiveFillColor));
+            Assert.That(_manager.DialogueText.alignment,
+                Is.EqualTo(TextAlignmentOptions.Center));
 
             _manager.Advance();
 
@@ -1293,6 +1301,8 @@ namespace Novelify.Tests
             Assert.That(_manager.DialoguePanel
                 .GetComponent<RectTransform>().sizeDelta.x,
                 Is.EqualTo(410f).Within(0.01f));
+            Assert.That(_manager.DialogueText.alignment,
+                Is.EqualTo(TextAlignmentOptions.BottomRight));
         }
 
         [UnityTest]

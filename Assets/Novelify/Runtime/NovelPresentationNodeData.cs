@@ -29,6 +29,14 @@ namespace Novelify
         BottomRight
     }
 
+    // Controls whether a speech bubble follows its speaker or remains at a
+    // deliberate position in the game viewport.
+    public enum NovelSpeechBubblePlacement
+    {
+        FollowSpeaker,
+        ScreenAnchor
+    }
+
     //Alignment of the text inside the dialogue box
     public enum NovelTextAlignment
     {
@@ -219,10 +227,30 @@ namespace Novelify
     public abstract class RuntimeSpeechBubblePresentationNode : RuntimeNode
     {
         public NovelBoxStyle BubbleStyle = NovelBoxStyle.BubbleDefault;
+        public NovelSpeechBubblePlacement Placement =
+            NovelSpeechBubblePlacement.FollowSpeaker;
+        public NovelDialogueAnchor ScreenAnchor =
+            NovelDialogueAnchor.TopCenter;
+        public float HorizontalOffset;
+        public float VerticalOffset;
+        public bool KeepInsideViewport = true;
+        public bool AutoSize = true;
         public float MinimumWidth = 180f;
         public float MaximumWidth = 520f;
+        public float MinimumHeight = 88f;
+        public float MaximumHeight = 320f;
+        public float FixedWidth = 360f;
+        public float FixedHeight = 160f;
+        public NovelTextAlignment TextAlignment =
+            NovelTextAlignment.TopLeft;
         public float HorizontalPadding = 24f;
         public float VerticalPadding = 18f;
+        public float DialogueFontSize = 24f;
+        public float SpeakerFontSize = 21f;
+        public bool ShowSpeakerName;
+        public bool ShowTail = true;
+        [Tooltip("Character-local target: (0,0) is bottom-left and (1,1) is top-right.")]
+        public Vector2 TailTarget = new Vector2(0.5f, 0.5f);
         public float TailWidth = 34f;
         public float TailLength = 30f;
         public float TargetMargin = 18f;
@@ -259,5 +287,8 @@ namespace Novelify
     public sealed class RuntimeFadeOutNode : RuntimeFadeNode { }
 
     [Serializable]
-    public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode { }
+    public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode
+    {
+        public bool Thinking;
+    }
 }

@@ -92,7 +92,14 @@ namespace Novelify.Editor
                 nameof(RichDialogueText.DefaultFont));
             SerializedProperty fontAssetsProperty = property.FindPropertyRelative(
                 nameof(RichDialogueText.FontAssets));
-            var root = new VisualElement();
+            var root = new VisualElement
+            {
+                // The graph focus lens moves this exact editor into an unscaled
+                // window overlay while it is being edited.  Keeping the real
+                // control (rather than drawing a second preview) preserves its
+                // selection, rich formatting, undo stack, and property binding.
+                name = "rich-dialogue-editor"
+            };
             root.style.width = Length.Percent(100f);
             root.style.minWidth = 0f;
             root.style.maxWidth = Length.Percent(100f);

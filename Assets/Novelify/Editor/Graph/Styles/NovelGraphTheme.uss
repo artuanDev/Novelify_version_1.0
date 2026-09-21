@@ -175,6 +175,14 @@
     --minimap-color: #4ebaf4;
 }
 
+/* Blackboard properties use Graph Toolkit's compact capsule view. They are
+   references, not full story cards, so the manuscript-card minimum must never
+   be inherited by them. */
+.novelify-graph-window .ge-node.ge-node--capsule {
+    width: auto;
+    min-width: 0;
+}
+
 .novelify-function-graph .ge-node {
     background-color: #2a1b10;
     border-left-color: #744c2b;
@@ -536,3 +544,138 @@
 
 .novelify-story-graph .ge-placemat { --placemat-border-color: #42698c; }
 .novelify-function-graph .ge-placemat { --placemat-border-color: #8b5a2e; }
+
+/* ---------------------------------------------------------------------------
+   Dialogue focus lens. This lives at window level, outside the graph's zoomed
+   content container, so the editor remains comfortably readable at any zoom.
+   --------------------------------------------------------------------------- */
+.novelify-dialogue-focus-lens {
+    position: absolute;
+    flex-direction: column;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 9px;
+    padding-bottom: 8px;
+    background-color: rgba(8, 20, 35, 0.98);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: #65ceff;
+    border-right-color: #39799c;
+    border-top-color: #65ceff;
+    border-bottom-color: #39799c;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+.novelify-function-graph .novelify-dialogue-focus-lens {
+    background-color: rgba(38, 23, 10, 0.98);
+    border-left-color: #ffb45e;
+    border-right-color: #8c592d;
+    border-top-color: #ffb45e;
+    border-bottom-color: #8c592d;
+}
+
+.novelify-dialogue-focus-lens__header {
+    height: 30px;
+    min-height: 30px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 3px;
+    padding-right: 1px;
+    margin-bottom: 7px;
+}
+
+.novelify-dialogue-focus-lens__title {
+    color: #7dd8ff;
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 1.2px;
+}
+
+.novelify-function-graph .novelify-dialogue-focus-lens__title { color: #ffbd70; }
+
+.novelify-dialogue-focus-lens__context {
+    flex-grow: 1;
+    margin-left: 10px;
+    color: #9eb8cd;
+    font-size: 10px;
+}
+
+.novelify-dialogue-focus-lens__close {
+    width: 27px;
+    height: 25px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 2px;
+    color: #dff5ff;
+    background-color: #17334b;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: #3e7698;
+    border-right-color: #3e7698;
+    border-top-color: #3e7698;
+    border-bottom-color: #3e7698;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.novelify-dialogue-focus-lens__close:hover { background-color: #245376; }
+
+.novelify-dialogue-focus-lens__scroll {
+    flex-grow: 1;
+    min-height: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: rgba(4, 11, 21, 0.72);
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+
+.novelify-dialogue-focus-lens__hint {
+    height: 21px;
+    min-height: 21px;
+    margin-top: 4px;
+    color: #718ca5;
+    font-size: 9px;
+    -unity-text-align: middle-center;
+}
+
+.novelify-dialogue-focus-lens__pointer {
+    position: absolute;
+    left: -9px;
+    top: 58px;
+    width: 16px;
+    height: 16px;
+    rotate: 45deg;
+    background-color: #0a1a2c;
+    border-left-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: #65ceff;
+    border-bottom-color: #65ceff;
+}
+
+.novelify-dialogue-focus-lens__pointer--right {
+    left: auto;
+    right: -9px;
+    border-left-width: 0;
+    border-bottom-width: 0;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-right-color: #39799c;
+    border-top-color: #39799c;
+}

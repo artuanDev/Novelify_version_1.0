@@ -180,14 +180,56 @@ namespace Novelify.Editor
             base.OnDefineOptions(context);
             NovelPresentationNodeOptions.AddStyle(
                 context, NovelBoxStyle.BubbleDefault);
+            context.AddOption<NovelSpeechBubblePlacement>("Placement")
+                .WithDefaultValue(NovelSpeechBubblePlacement.FollowSpeaker)
+                .WithTooltip("Follow the speaking character automatically, or keep the bubble at a chosen screen anchor.")
+                .Build();
+            context.AddOption<NovelDialogueAnchor>("Screen Anchor")
+                .WithDefaultValue(NovelDialogueAnchor.TopCenter).Build();
+            context.AddOption<float>("Horizontal Offset")
+                .WithDefaultValue(0f).Build();
+            context.AddOption<float>("Vertical Offset")
+                .WithDefaultValue(0f).Build();
+            context.AddOption<bool>("Keep Inside Viewport")
+                .WithDefaultValue(true).Build();
+            context.AddOption<bool>("Auto Size")
+                .WithDefaultValue(true)
+                .WithTooltip("Fit the bubble to its text within the minimum and maximum size limits.")
+                .Build();
             context.AddOption<float>("Minimum Width")
                 .WithDefaultValue(180f).Build();
             context.AddOption<float>("Maximum Width")
                 .WithDefaultValue(520f).Build();
+            context.AddOption<float>("Minimum Height")
+                .WithDefaultValue(88f).Build();
+            context.AddOption<float>("Maximum Height")
+                .WithDefaultValue(320f).Build();
+            context.AddOption<float>("Fixed Width")
+                .WithDefaultValue(360f).Build();
+            context.AddOption<float>("Fixed Height")
+                .WithDefaultValue(160f).Build();
+            context.AddOption<NovelTextAlignment>("Text Alignment")
+                .WithDefaultValue(NovelTextAlignment.TopLeft)
+                .WithTooltip("Alignment inside a fixed-size bubble. Auto-sized bubbles always center their dialogue text.")
+                .Build();
             context.AddOption<float>("Horizontal Padding")
                 .WithDefaultValue(24f).Build();
             context.AddOption<float>("Vertical Padding")
                 .WithDefaultValue(18f).Build();
+            context.AddOption<float>("Dialogue Font Size")
+                .WithDefaultValue(24f).Build();
+            context.AddOption<float>("Speaker Font Size")
+                .WithDefaultValue(21f).Build();
+            context.AddOption<bool>("Show Speaker Name")
+                .WithDefaultValue(false)
+                .WithTooltip("Show the speaking character's name inside the bubble.")
+                .Build();
+            context.AddOption<bool>("Show Tail")
+                .WithDefaultValue(true).Build();
+            context.AddOption<Vector2>("Tail Target")
+                .WithDefaultValue(new Vector2(0.5f, 0.5f))
+                .WithTooltip("Point on the speaking character that the tail aims at. (0,0) is bottom-left and (1,1) is top-right; values outside that range are allowed.")
+                .Build();
             context.AddOption<float>("Tail Width")
                 .WithDefaultValue(34f).Build();
             context.AddOption<float>("Tail Length")
@@ -252,5 +294,16 @@ namespace Novelify.Editor
     [Serializable]
     [Node("Novelify/Story", null, "Speech Bubble")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
-    public sealed class SpeechBubbleNode : DialogueNode { }
+    public sealed class SpeechBubbleNode : DialogueNode
+    {
+        protected override void OnDefineOptions(
+            IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<bool>("Thinking")
+                .WithDefaultValue(false)
+                .WithTooltip("Display this line as a thought bubble with a dotted pointer and no mouth animation.")
+                .Build();
+        }
+    }
 }

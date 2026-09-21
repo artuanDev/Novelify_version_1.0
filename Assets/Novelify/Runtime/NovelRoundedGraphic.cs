@@ -167,11 +167,34 @@ namespace Novelify
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class NovelTriangleGraphic : MaskableGraphic
     {
+        private bool _usesCustomPoints;
+        private Vector2 _baseA;
+        private Vector2 _baseB;
+        private Vector2 _tip;
+
+        public void SetPoints(Vector2 baseA, Vector2 baseB, Vector2 tip)
+        {
+            _usesCustomPoints = true;
+            _baseA = baseA;
+            _baseB = baseB;
+            _tip = tip;
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper helper)
         {
             helper.Clear();
-            Rect rect = GetPixelAdjustedRect();
             Color32 vertexColor = color;
+            if (_usesCustomPoints)
+            {
+                helper.AddVert(_baseA, vertexColor, Vector2.zero);
+                helper.AddVert(_baseB, vertexColor, Vector2.zero);
+                helper.AddVert(_tip, vertexColor, Vector2.zero);
+                helper.AddTriangle(0, 1, 2);
+                return;
+            }
+
+            Rect rect = GetPixelAdjustedRect();
             helper.AddVert(new Vector2(rect.xMin, rect.yMax),
                 vertexColor, Vector2.zero);
             helper.AddVert(new Vector2(rect.xMax, rect.yMax),

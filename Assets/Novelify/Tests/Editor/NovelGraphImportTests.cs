@@ -579,8 +579,28 @@ namespace Novelify.Tests
             ChangeSpeechBubbleNode change = Add<ChangeSpeechBubbleNode>();
             EndNode end = Add<EndNode>();
             bubble.GetInputPortByName("Speaker").TrySetValue(_character);
+            bubble.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("A saved speech-bubble line."));
+            bubble.GetNodeOptionByName("Thinking").TrySetValue(true);
             create.GetNodeOptionByName("Minimum Width").TrySetValue(211f);
             create.GetNodeOptionByName("Maximum Width").TrySetValue(477f);
+            create.GetNodeOptionByName("Placement").TrySetValue(
+                NovelSpeechBubblePlacement.ScreenAnchor);
+            create.GetNodeOptionByName("Screen Anchor").TrySetValue(
+                NovelDialogueAnchor.BottomRight);
+            create.GetNodeOptionByName("Horizontal Offset").TrySetValue(-33f);
+            create.GetNodeOptionByName("Vertical Offset").TrySetValue(27f);
+            create.GetNodeOptionByName("Auto Size").TrySetValue(false);
+            create.GetNodeOptionByName("Fixed Width").TrySetValue(410f);
+            create.GetNodeOptionByName("Fixed Height").TrySetValue(170f);
+            create.GetNodeOptionByName("Text Alignment").TrySetValue(
+                NovelTextAlignment.BottomRight);
+            create.GetNodeOptionByName("Maximum Height").TrySetValue(290f);
+            create.GetNodeOptionByName("Dialogue Font Size").TrySetValue(26f);
+            create.GetNodeOptionByName("Show Speaker Name").TrySetValue(true);
+            create.GetNodeOptionByName("Show Tail").TrySetValue(false);
+            create.GetNodeOptionByName("Tail Target").TrySetValue(
+                new Vector2(0.42f, 0.81f));
             create.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
             create.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
             change.GetNodeOptionByName("Tail Length").TrySetValue(42f);
@@ -601,8 +621,32 @@ namespace Novelify.Tests
                 .Single();
 
             Assert.That(runtimeDialogue.NovelCharacter, Is.EqualTo(_character));
+            Assert.That(runtimeDialogue.DialogueText,
+                Is.EqualTo("A saved speech-bubble line."));
+            Assert.That(runtimeDialogue.Thinking, Is.True);
+            Assert.That(runtimeDialogue.AnimateMouth, Is.False);
             Assert.That(runtimeCreate.MinimumWidth, Is.EqualTo(211f));
             Assert.That(runtimeCreate.MaximumWidth, Is.EqualTo(477f));
+            Assert.That(runtimeCreate.Placement,
+                Is.EqualTo(NovelSpeechBubblePlacement.ScreenAnchor));
+            Assert.That(runtimeCreate.ScreenAnchor,
+                Is.EqualTo(NovelDialogueAnchor.BottomRight));
+            Assert.That(runtimeCreate.HorizontalOffset, Is.EqualTo(-33f));
+            Assert.That(runtimeCreate.VerticalOffset, Is.EqualTo(27f));
+            Assert.That(runtimeCreate.AutoSize, Is.False);
+            Assert.That(runtimeCreate.FixedWidth, Is.EqualTo(410f));
+            Assert.That(runtimeCreate.FixedHeight, Is.EqualTo(170f));
+            Assert.That(runtimeCreate.TextAlignment,
+                Is.EqualTo(NovelTextAlignment.BottomRight));
+            Assert.That(runtimeCreate.MaximumHeight, Is.EqualTo(290f));
+            Assert.That(runtimeCreate.DialogueFontSize, Is.EqualTo(26f));
+            Assert.That(runtimeCreate.ShowSpeakerName, Is.True);
+            Assert.That(runtimeChange.ShowSpeakerName, Is.False);
+            Assert.That(runtimeCreate.ShowTail, Is.False);
+            Assert.That(runtimeCreate.TailTarget,
+                Is.EqualTo(new Vector2(0.42f, 0.81f)));
+            Assert.That(runtimeChange.TailTarget,
+                Is.EqualTo(new Vector2(0.5f, 0.5f)));
             Assert.That(runtimeCreate.BubbleStyle.CornerRadius, Is.EqualTo(31f));
             Assert.That(runtimeCreate.BubbleStyle.Opacity, Is.EqualTo(0.43f));
             Assert.That(runtimeChange.TailLength, Is.EqualTo(42f));

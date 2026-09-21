@@ -129,6 +129,11 @@ namespace Novelify.Editor
                         speechBubbleNode,
                         runtimeSpeechBubble,
                         nodeIDMap);
+                    runtimeSpeechBubble.Thinking = GetOptionValue(
+                        speechBubbleNode.GetNodeOptionByName("Thinking"),
+                        false);
+                    if (runtimeSpeechBubble.Thinking)
+                        runtimeSpeechBubble.AnimateMouth = false;
                     runtimeNode = runtimeSpeechBubble;
                 }
                 else if (editorNode is SimpleDialogueNode dialogueNode)
@@ -279,16 +284,54 @@ namespace Novelify.Editor
                 : new RuntimeCreateSpeechBubbleNode();
             runtimeNode.BubbleStyle = ReadBoxStyle(
                 node, NovelBoxStyle.BubbleDefault);
+            runtimeNode.Placement = GetOptionValue(
+                node.GetNodeOptionByName("Placement"),
+                NovelSpeechBubblePlacement.FollowSpeaker);
+            runtimeNode.ScreenAnchor = GetOptionValue(
+                node.GetNodeOptionByName("Screen Anchor"),
+                NovelDialogueAnchor.TopCenter);
+            runtimeNode.HorizontalOffset = GetOptionValue(
+                node.GetNodeOptionByName("Horizontal Offset"), 0f);
+            runtimeNode.VerticalOffset = GetOptionValue(
+                node.GetNodeOptionByName("Vertical Offset"), 0f);
+            runtimeNode.KeepInsideViewport = GetOptionValue(
+                node.GetNodeOptionByName("Keep Inside Viewport"), true);
+            runtimeNode.AutoSize = GetOptionValue(
+                node.GetNodeOptionByName("Auto Size"), true);
             runtimeNode.MinimumWidth = Mathf.Max(120f, GetOptionValue(
                 node.GetNodeOptionByName("Minimum Width"), 180f));
             runtimeNode.MaximumWidth = Mathf.Max(
                 runtimeNode.MinimumWidth,
                 GetOptionValue(
                     node.GetNodeOptionByName("Maximum Width"), 520f));
+            runtimeNode.MinimumHeight = Mathf.Max(64f, GetOptionValue(
+                node.GetNodeOptionByName("Minimum Height"), 88f));
+            runtimeNode.MaximumHeight = Mathf.Max(
+                runtimeNode.MinimumHeight,
+                GetOptionValue(
+                    node.GetNodeOptionByName("Maximum Height"), 320f));
+            runtimeNode.FixedWidth = Mathf.Max(120f, GetOptionValue(
+                node.GetNodeOptionByName("Fixed Width"), 360f));
+            runtimeNode.FixedHeight = Mathf.Max(64f, GetOptionValue(
+                node.GetNodeOptionByName("Fixed Height"), 160f));
+            runtimeNode.TextAlignment = GetOptionValue(
+                node.GetNodeOptionByName("Text Alignment"),
+                NovelTextAlignment.TopLeft);
             runtimeNode.HorizontalPadding = Mathf.Max(0f, GetOptionValue(
                 node.GetNodeOptionByName("Horizontal Padding"), 24f));
             runtimeNode.VerticalPadding = Mathf.Max(0f, GetOptionValue(
                 node.GetNodeOptionByName("Vertical Padding"), 18f));
+            runtimeNode.DialogueFontSize = Mathf.Max(1f, GetOptionValue(
+                node.GetNodeOptionByName("Dialogue Font Size"), 24f));
+            runtimeNode.SpeakerFontSize = Mathf.Max(1f, GetOptionValue(
+                node.GetNodeOptionByName("Speaker Font Size"), 21f));
+            runtimeNode.ShowSpeakerName = GetOptionValue(
+                node.GetNodeOptionByName("Show Speaker Name"), false);
+            runtimeNode.ShowTail = GetOptionValue(
+                node.GetNodeOptionByName("Show Tail"), true);
+            runtimeNode.TailTarget = GetOptionValue(
+                node.GetNodeOptionByName("Tail Target"),
+                new Vector2(0.5f, 0.5f));
             runtimeNode.TailWidth = Mathf.Max(2f, GetOptionValue(
                 node.GetNodeOptionByName("Tail Width"), 34f));
             runtimeNode.TailLength = Mathf.Max(2f, GetOptionValue(
