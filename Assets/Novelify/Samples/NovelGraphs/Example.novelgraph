@@ -71,9 +71,9 @@ MonoBehaviour:
         m_LastKnownBounds:
           serializedVersion: 2
           x: -2644
-          y: -271
+          y: -267
           width: 4522
-          height: 1644
+          height: 1640
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 13473657899483121740
@@ -509,7 +509,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: 581ca133275572edc0a3e8537edf5698
         m_Version: 2
-        m_Position: {x: -635.8541, y: -271.18347}
+        m_Position: {x: -684.4284, y: -266.55737}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -620,7 +620,7 @@ MonoBehaviour:
     - rid: 8564938786460401741
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 0.94
+        m_Value: 1
     - rid: 8564938786460401742
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -632,7 +632,7 @@ MonoBehaviour:
     - rid: 8564938786460401744
       type: {class: 'Constant`1[[UnityEngine.Color, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {r: 0, g: 0.0377028, b: 1, a: 0.25490198}
+        m_Value: {r: 1, g: 1, b: 1, a: 1}
     - rid: 8564938786460401745
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -698,7 +698,7 @@ MonoBehaviour:
     - rid: 8564938786460401758
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: 50
+        m_Value: 49
     - rid: 8564938786460401759
       type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -757,7 +757,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: a06510c328599cc2125729e84523ed64
         m_Version: 2
-        m_Position: {x: -169.6038, y: -130.58386}
+        m_Position: {x: -116.40341, y: -130.58386}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -926,7 +926,7 @@ MonoBehaviour:
     - rid: 8564938790814613504
       type: {class: 'Constant`1[[Novelify.NovelPresentationStyle, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
-        m_Value: {fileID: 0}
+        m_Value: {fileID: 11400000, guid: 640e9d233bdaf684db2b42a3688af47b, type: 2}
     - rid: 8564938790814613505
       type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
