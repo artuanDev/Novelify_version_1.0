@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -43,6 +44,10 @@ namespace Novelify.Editor
             public string SampleDialogue =
                 "This speech bubble follows the speaking character.";
             public Vector2Int Resolution = new Vector2Int(1920, 1080);
+            public Vector2 PreviewPosition;
+            public float PreviewRotation;
+            public Vector2 PreviewScale = Vector2.one;
+            public bool HasAuthoredTransform;
         }
 
         private sealed class PreviewUndoState : ScriptableObject
@@ -81,6 +86,8 @@ namespace Novelify.Editor
 
         private Graph _graph;
         private SpeechBubblePresentationNode _node;
+        private SpeechBubbleNode _dialogueNode;
+        private string _previewInstanceID = string.Empty;
         private BubbleDraft _draft;
         private PreviewUndoState _previewUndo;
         private bool _building;
@@ -139,15 +146,19 @@ namespace Novelify.Editor
                 "Speech Bubble Composer",
                 EditorGUIUtility.IconContent("d_SceneViewOrtho").image);
             window.minSize = new Vector2(980f, 640f);
-            window.Bind(source.Graph, source);
+            window.Bind(source.Graph, source, null);
             window.Show();
             window.Focus();
         }
 
-        private void Bind(Graph graph, SpeechBubblePresentationNode node)
+        private void Bind(
+            Graph graph,
+            SpeechBubblePresentationNode node,
+            SpeechBubbleNode dialogueNode)
         {
             _graph = graph;
             _node = node;
+            _dialogueNode = dialogueNode;
             LoadDraft();
             Rebuild();
         }
@@ -158,7 +169,7 @@ namespace Novelify.Editor
             Undo.undoRedoPerformed += OnUndoRedo;
             rootVisualElement.RegisterCallback<KeyDownEvent>(
                 OnKeyDown, TrickleDown.TrickleDown);
-            if (_graph == null || _node == null)
+            if (_graph == null || _node == null && _dialogueNode == null)
                 ShowReconnectMessage();
         }
 
@@ -225,7 +236,7 @@ namespace Novelify.Editor
 
         private void OnUndoRedo()
         {
-            if (_graph == null || _node == null)
+            if (_graph == null || _node == null && _dialogueNode == null)
                 return;
             NovelCharacter previewCharacter = _previewUndo?.Character;
             CharacterEmotion previewEmotion = _previewUndo != null
@@ -289,18 +300,36 @@ namespace Novelify.Editor
             string sampleDialogue = _draft?.SampleDialogue;
             if (previewCharacter == null)
                 TryFindGraphPreview(out previewCharacter, out previewEmotion);
+            Vector2 previewPosition = Vector2.zero;
+            float previewRotation = 0f;
+            Vector2 previewScale = Vector2.one;
+            bool hasAuthoredTransform = TryFindAuthoredTransform(
+                previewCharacter, out previewPosition,
+                out previewRotation, out previewScale);
             if (string.IsNullOrWhiteSpace(sampleSpeaker))
                 sampleSpeaker = previewCharacter != null &&
                     !string.IsNullOrWhiteSpace(previewCharacter.SpeakerName)
                         ? previewCharacter.SpeakerName
                         : "Test Speaker";
             if (string.IsNullOrWhiteSpace(sampleDialogue))
-                sampleDialogue =
-                    "This speech bubble follows the speaking character.";
+            {
+                if (_dialogueNode?.GetNodeOptionByName("Dialogue") is INodeOption dialogueOption &&
+                    dialogueOption.TryGetValue(out RichDialogueText authoredDialogue) &&
+                    !string.IsNullOrWhiteSpace(authoredDialogue.Text))
+                    sampleDialogue = authoredDialogue.Text;
+                else
+                    sampleDialogue =
+                        "This speech bubble follows the speaking character.";
+            }
+            if (_dialogueNode != null)
+                previewThinking = Read(_dialogueNode, "Thinking", previewThinking);
 
             _draft = new BubbleDraft
             {
-                Style = ReadStyle(_node, NovelBoxStyle.BubbleDefault),
+                Style = Read<NovelPresentationStyle>(
+                    _node, "Style Asset", null) is NovelPresentationStyle styleAsset
+                        ? styleAsset.SpeechBubbleStyle
+                        : ReadStyle(_node, NovelBoxStyle.BubbleDefault),
                 Placement = Read(
                     _node, "Placement",
                     NovelSpeechBubblePlacement.FollowSpeaker),
@@ -340,7 +369,11 @@ namespace Novelify.Editor
                 PreviewThinking = previewThinking,
                 SampleSpeaker = sampleSpeaker,
                 SampleDialogue = sampleDialogue,
-                Resolution = GetGameViewResolution()
+                Resolution = GetGameViewResolution(),
+                PreviewPosition = previewPosition,
+                PreviewRotation = previewRotation,
+                PreviewScale = previewScale,
+                HasAuthoredTransform = hasAuthoredTransform
             };
             ValidateDraft();
             _dirty = false;
@@ -354,7 +387,8 @@ namespace Novelify.Editor
             rootVisualElement.style.backgroundColor = WindowColor;
             rootVisualElement.style.color = TextColor;
             rootVisualElement.style.flexDirection = FlexDirection.Column;
-            if (_draft == null || _graph == null || _node == null)
+            if (_draft == null || _graph == null ||
+                _node == null && _dialogueNode == null)
             {
                 ShowReconnectMessage();
                 _building = false;
@@ -871,6 +905,32 @@ namespace Novelify.Editor
             scroll.Add(tail);
 
             Foldout style = NewFoldout("Style");
+            ObjectField reusableStyle = new ObjectField("Reusable Style Asset")
+            {
+                objectType = typeof(NovelPresentationStyle),
+                allowSceneObjects = false,
+                value = Read<NovelPresentationStyle>(
+                    _node, "Style Asset", null),
+                tooltip = "Optional appearance-only style shared with other presentation nodes."
+            };
+            reusableStyle.SetEnabled(_node != null);
+            reusableStyle.RegisterValueChangedCallback(evt =>
+            {
+                if (_building || _node == null)
+                    return;
+                NovelPresentationStyle value =
+                    evt.newValue as NovelPresentationStyle;
+                if (value != null)
+                    _draft.Style = value.SpeechBubbleStyle;
+                if (RecordGraphChange(
+                    "Assign Speech Bubble Style Asset",
+                    () => Write(_node, "Style Asset", value)))
+                {
+                    _dirty = true;
+                    Rebuild();
+                }
+            });
+            style.Add(reusableStyle);
             AddColor(style, "Fill Color", _draft.Style.FillColor, value =>
             {
                 NovelBoxStyle next = _draft.Style;
@@ -883,6 +943,44 @@ namespace Novelify.Editor
                 next.Opacity = value;
                 _draft.Style = next;
             });
+            ObjectField fillTexture = new ObjectField("Fill Texture")
+            {
+                objectType = typeof(Texture2D),
+                allowSceneObjects = false,
+                value = _draft.Style.FillTexture,
+                tooltip = "Optional texture multiplied by the fill tint."
+            };
+            fillTexture.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.FillTexture = evt.newValue as Texture2D;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Fill Texture");
+            });
+            style.Add(fillTexture);
+            Vector2Field fillTiling = new Vector2Field("Fill Tiling")
+            { value = _draft.Style.FillTiling };
+            fillTiling.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.FillTiling = evt.newValue;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Fill Tiling");
+            });
+            style.Add(fillTiling);
+            Vector2Field fillOffset = new Vector2Field("Fill Offset")
+            { value = _draft.Style.FillOffset };
+            fillOffset.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.FillOffset = evt.newValue;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Fill Offset");
+            });
+            style.Add(fillOffset);
             AddFloat(style, "Corner Radius", _draft.Style.CornerRadius,
                 value =>
                 {
@@ -904,6 +1002,13 @@ namespace Novelify.Editor
                     next.OutlineColor = value;
                     _draft.Style = next;
                 });
+            AddFloat(style, "Outline Transparency",
+                _draft.Style.OutlineTransparency, value =>
+                {
+                    NovelBoxStyle next = _draft.Style;
+                    next.OutlineTransparency = value;
+                    _draft.Style = next;
+                });
             AddFloat(style, "Outline Thickness",
                 _draft.Style.OutlineThickness, value =>
                 {
@@ -911,6 +1016,44 @@ namespace Novelify.Editor
                     next.OutlineThickness = value;
                     _draft.Style = next;
                 });
+            ObjectField outlineTexture = new ObjectField("Outline Texture")
+            {
+                objectType = typeof(Texture2D),
+                allowSceneObjects = false,
+                value = _draft.Style.OutlineTexture,
+                tooltip = "Optional texture multiplied by the outline tint."
+            };
+            outlineTexture.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.OutlineTexture = evt.newValue as Texture2D;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Outline Texture");
+            });
+            style.Add(outlineTexture);
+            Vector2Field outlineTiling = new Vector2Field("Outline Tiling")
+            { value = _draft.Style.OutlineTiling };
+            outlineTiling.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.OutlineTiling = evt.newValue;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Outline Tiling");
+            });
+            style.Add(outlineTiling);
+            Vector2Field outlineOffset = new Vector2Field("Outline Offset")
+            { value = _draft.Style.OutlineOffset };
+            outlineOffset.RegisterValueChangedCallback(evt =>
+            {
+                if (_building) return;
+                NovelBoxStyle next = _draft.Style;
+                next.OutlineOffset = evt.newValue;
+                _draft.Style = next;
+                DraftChanged("Change Speech Bubble Outline Offset");
+            });
+            style.Add(outlineOffset);
             Button reset = new Button(() =>
             {
                 _draft.Style = NovelBoxStyle.BubbleDefault;
@@ -1002,6 +1145,14 @@ namespace Novelify.Editor
         private void WriteOptions()
         {
             WriteStyle(_node, _draft.Style);
+            NovelPresentationStyle styleAsset =
+                Read<NovelPresentationStyle>(_node, "Style Asset", null);
+            if (styleAsset != null)
+            {
+                Undo.RecordObject(styleAsset, "Edit Speech Bubble Style");
+                styleAsset.SpeechBubble = _draft.Style.Validated();
+                EditorUtility.SetDirty(styleAsset);
+            }
             Write(_node, "Placement", _draft.Placement);
             Write(_node, "Screen Anchor", _draft.ScreenAnchor);
             Write(_node, "Horizontal Offset", _draft.HorizontalOffset);
@@ -1128,11 +1279,13 @@ namespace Novelify.Editor
             Vector2 targetReferenceSize = portraitSize.y > 0f
                 ? portraitSize
                 : ResolvePortraitSize(canvas);
-            _previewPortraitRect = new Rect(
-                (canvas.x - targetReferenceSize.x) * 0.5f,
-                0f,
-                targetReferenceSize.x,
-                targetReferenceSize.y);
+            if (_previewPortraitRect.width <= 0f ||
+                _previewPortraitRect.height <= 0f)
+                _previewPortraitRect = new Rect(
+                    (canvas.x - targetReferenceSize.x) * 0.5f,
+                    0f,
+                    targetReferenceSize.x,
+                    targetReferenceSize.y);
             Vector2 target = _previewPortraitRect.position + Vector2.Scale(
                 _draft.TailTarget, _previewPortraitRect.size);
             float margin = Mathf.Max(8f, _draft.TargetMargin);
@@ -1257,7 +1410,7 @@ namespace Novelify.Editor
                     previewStyle.OutlineEnabled
                         ? previewStyle.OutlineThickness * scale
                         : 0f,
-                    previewStyle.OutlineColor);
+                    previewStyle.EffectiveOutlineColor);
                 if (index == _thoughtDots.Length - 1)
                 {
                     Vector2 guideStart = dotCenter + tipDirection *
@@ -1314,7 +1467,7 @@ namespace Novelify.Editor
             if (!_draft.Style.OutlineEnabled ||
                 _draft.Style.OutlineThickness <= 0f)
                 return;
-            painter.strokeColor = _draft.Style.OutlineColor;
+            painter.strokeColor = _draft.Style.EffectiveOutlineColor;
             painter.lineWidth = Mathf.Max(
                 1f, _draft.Style.OutlineThickness * _previewScale);
             painter.Stroke();
@@ -1584,16 +1737,19 @@ namespace Novelify.Editor
             bool hasPortrait = portrait.Body != null ||
                 portrait.Eyes != null || portrait.Details != null ||
                 portrait.Mouth != null;
-            bool visible = _draft.ShowCharacter && hasPortrait;
-            _portraitRoot.style.display = visible
+            bool showPortrait = _draft.ShowCharacter && hasPortrait;
+            _portraitRoot.style.display = showPortrait
                 ? DisplayStyle.Flex
                 : DisplayStyle.None;
             _portraitEmpty.style.display =
                 _draft.ShowCharacter && !hasPortrait
                     ? DisplayStyle.Flex
                     : DisplayStyle.None;
-            if (!visible)
+            if (!showPortrait)
+            {
+                _previewPortraitRect = Rect.zero;
                 return Vector2.zero;
+            }
             _portraitBody.sprite = portrait.Body;
             _portraitEyes.sprite = portrait.Eyes;
             _portraitDetails.sprite = portrait.Details;
@@ -1603,11 +1759,136 @@ namespace Novelify.Editor
             SetLayerVisible(_portraitDetails, portrait.Details != null);
             SetLayerVisible(_portraitMouth, portrait.Mouth != null);
             Vector2 size = ResolvePortraitSize(canvas);
-            _portraitRoot.style.left = (canvas.x - size.x) * 0.5f * scale;
-            _portraitRoot.style.top = (canvas.y - size.y) * scale;
+            Vector2 authoredScale = _draft.HasAuthoredTransform
+                ? _draft.PreviewScale
+                : Vector2.one;
+            Rect visibleBounds = ResolveVisiblePortraitBounds(portrait, size);
+            Vector2 pivot = new Vector2(
+                visibleBounds.center.x, visibleBounds.yMin);
+            Vector2 baseline = new Vector2(canvas.x * 0.5f, 0f);
+            if (_draft.HasAuthoredTransform)
+                baseline = canvas * 0.5f + Vector2.Scale(
+                    _draft.PreviewPosition, canvas * 0.5f);
+            float rotation = _draft.HasAuthoredTransform
+                ? _draft.PreviewRotation
+                : 0f;
+            Vector2 minimum = new Vector2(
+                float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(
+                float.NegativeInfinity, float.NegativeInfinity);
+            Vector2[] visibleCorners =
+            {
+                new Vector2(visibleBounds.xMin, visibleBounds.yMin),
+                new Vector2(visibleBounds.xMax, visibleBounds.yMin),
+                new Vector2(visibleBounds.xMin, visibleBounds.yMax),
+                new Vector2(visibleBounds.xMax, visibleBounds.yMax)
+            };
+            foreach (Vector2 corner in visibleCorners)
+            {
+                Vector2 local = Vector2.Scale(
+                    Vector2.Scale(corner - pivot, size),
+                    authoredScale);
+                float radians = rotation * Mathf.Deg2Rad;
+                float sine = Mathf.Sin(radians);
+                float cosine = Mathf.Cos(radians);
+                Vector2 rotated = new Vector2(
+                    local.x * cosine - local.y * sine,
+                    local.x * sine + local.y * cosine);
+                Vector2 point = baseline + rotated;
+                minimum = Vector2.Min(minimum, point);
+                maximum = Vector2.Max(maximum, point);
+            }
+            _previewPortraitRect = Rect.MinMaxRect(
+                minimum.x, minimum.y, maximum.x, maximum.y);
+            float rootLeft = baseline.x - pivot.x * size.x;
+            float rootBottom = baseline.y - pivot.y * size.y;
+            _portraitRoot.style.left = rootLeft * scale;
+            _portraitRoot.style.top =
+                (canvas.y - rootBottom - size.y) * scale;
             _portraitRoot.style.width = size.x * scale;
             _portraitRoot.style.height = size.y * scale;
-            return size;
+            _portraitRoot.style.transformOrigin = new TransformOrigin(
+                Length.Percent(pivot.x * 100f),
+                Length.Percent((1f - pivot.y) * 100f),
+                0f);
+            _portraitRoot.style.rotate = new Rotate(new Angle(
+                rotation,
+                AngleUnit.Degree));
+            _portraitRoot.style.scale = new Scale(new Vector3(
+                authoredScale.x, authoredScale.y, 1f));
+            return _previewPortraitRect.size;
+        }
+
+        private static Rect ResolveVisiblePortraitBounds(
+            CharacterPortrait portrait, Vector2 rootSize)
+        {
+            Sprite[] sprites =
+            {
+                portrait.Body,
+                portrait.Eyes,
+                portrait.Details,
+                portrait.Mouth
+            };
+            bool found = false;
+            Rect combined = default;
+            float rootRatio = rootSize.x / Mathf.Max(1f, rootSize.y);
+            foreach (Sprite sprite in sprites)
+            {
+                if (sprite == null || sprite.rect.width <= 0f ||
+                    sprite.rect.height <= 0f)
+                    continue;
+                float spriteRatio = sprite.rect.width / sprite.rect.height;
+                Rect fitted;
+                if (spriteRatio > rootRatio)
+                {
+                    float height = rootRatio / spriteRatio;
+                    fitted = new Rect(0f, (1f - height) * 0.5f, 1f, height);
+                }
+                else
+                {
+                    float width = spriteRatio / rootRatio;
+                    fitted = new Rect((1f - width) * 0.5f, 0f, width, 1f);
+                }
+
+                Rect spriteBounds = GetSpriteMeshBounds(sprite);
+                Rect visible = new Rect(
+                    fitted.xMin + spriteBounds.xMin * fitted.width,
+                    fitted.yMin + spriteBounds.yMin * fitted.height,
+                    spriteBounds.width * fitted.width,
+                    spriteBounds.height * fitted.height);
+                combined = found
+                    ? Rect.MinMaxRect(
+                        Mathf.Min(combined.xMin, visible.xMin),
+                        Mathf.Min(combined.yMin, visible.yMin),
+                        Mathf.Max(combined.xMax, visible.xMax),
+                        Mathf.Max(combined.yMax, visible.yMax))
+                    : visible;
+                found = true;
+            }
+            return found ? combined : new Rect(0f, 0f, 1f, 1f);
+        }
+
+        private static Rect GetSpriteMeshBounds(Sprite sprite)
+        {
+            Vector2[] vertices = sprite.vertices;
+            if (vertices == null || vertices.Length == 0 ||
+                sprite.pixelsPerUnit <= Mathf.Epsilon)
+                return new Rect(0f, 0f, 1f, 1f);
+            Vector2 minimum = new Vector2(
+                float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(
+                float.NegativeInfinity, float.NegativeInfinity);
+            foreach (Vector2 vertex in vertices)
+            {
+                Vector2 pixel = vertex * sprite.pixelsPerUnit + sprite.pivot;
+                minimum = Vector2.Min(minimum, pixel);
+                maximum = Vector2.Max(maximum, pixel);
+            }
+            return Rect.MinMaxRect(
+                Mathf.Clamp01(minimum.x / sprite.rect.width),
+                Mathf.Clamp01(minimum.y / sprite.rect.height),
+                Mathf.Clamp01(maximum.x / sprite.rect.width),
+                Mathf.Clamp01(maximum.y / sprite.rect.height));
         }
 
         private static Vector2 ResolvePortraitSize(Vector2 canvas)
@@ -1886,7 +2167,7 @@ namespace Novelify.Editor
                 style.OutlineEnabled
                     ? style.OutlineThickness * scale
                     : 0f,
-                style.OutlineColor);
+                style.EffectiveOutlineColor);
         }
 
         private static TextAnchor ToTextAnchor(
@@ -1934,14 +2215,27 @@ namespace Novelify.Editor
             {
                 FillColor = Read(node, "Fill Color", fallback.FillColor),
                 Opacity = Read(node, "Opacity", fallback.Opacity),
+                FillTexture = Read(
+                    node, "Fill Texture", fallback.FillTexture),
+                FillTiling = Read(node, "Fill Tiling", fallback.FillTiling),
+                FillOffset = Read(node, "Fill Offset", fallback.FillOffset),
                 CornerRadius = Read(
                     node, "Corner Radius", fallback.CornerRadius),
                 OutlineEnabled = Read(
                     node, "Outline", fallback.OutlineEnabled),
                 OutlineColor = Read(
                     node, "Outline Color", fallback.OutlineColor),
+                OutlineTransparency = Read(
+                    node, "Outline Transparency",
+                    fallback.OutlineTransparency),
                 OutlineThickness = Read(
-                    node, "Outline Thickness", fallback.OutlineThickness)
+                    node, "Outline Thickness", fallback.OutlineThickness),
+                OutlineTexture = Read(
+                    node, "Outline Texture", fallback.OutlineTexture),
+                OutlineTiling = Read(
+                    node, "Outline Tiling", fallback.OutlineTiling),
+                OutlineOffset = Read(
+                    node, "Outline Offset", fallback.OutlineOffset)
             }.Validated();
         }
 
@@ -1950,10 +2244,17 @@ namespace Novelify.Editor
             style = style.Validated();
             Write(node, "Fill Color", style.FillColor);
             Write(node, "Opacity", style.Opacity);
+            Write(node, "Fill Texture", style.FillTexture);
+            Write(node, "Fill Tiling", style.FillTiling);
+            Write(node, "Fill Offset", style.FillOffset);
             Write(node, "Corner Radius", style.CornerRadius);
             Write(node, "Outline", style.OutlineEnabled);
             Write(node, "Outline Color", style.OutlineColor);
+            Write(node, "Outline Transparency", style.OutlineTransparency);
             Write(node, "Outline Thickness", style.OutlineThickness);
+            Write(node, "Outline Texture", style.OutlineTexture);
+            Write(node, "Outline Tiling", style.OutlineTiling);
+            Write(node, "Outline Offset", style.OutlineOffset);
         }
 
         private static T Read<T>(INode node, string name, T fallback)
@@ -1969,12 +2270,285 @@ namespace Novelify.Editor
             node?.GetNodeOptionByName(name)?.TrySetValue(value);
         }
 
+        private static SpeechBubblePresentationNode FindPreviousPresentation(
+            INode origin)
+        {
+            var queue = new Queue<INode>();
+            var visited = new HashSet<INode>();
+            EnqueuePredecessors(origin, queue);
+            int remaining = 256;
+            while (queue.Count > 0 && remaining-- > 0)
+            {
+                INode candidate = queue.Dequeue();
+                if (candidate == null || !visited.Add(candidate))
+                    continue;
+                if (candidate is SpeechBubblePresentationNode presentation)
+                    return presentation;
+                EnqueuePredecessors(candidate, queue);
+            }
+            return null;
+        }
+
+        private static void EnqueuePredecessors(
+            INode node, Queue<INode> queue)
+        {
+            IPort input = node?.GetInputPortByName("in");
+            if (input == null)
+                return;
+            var connected = new List<IPort>();
+            input.GetConnectedPorts(connected);
+            foreach (IPort port in connected)
+            {
+                INode predecessor = port?.GetNode();
+                if (predecessor != null)
+                    queue.Enqueue(predecessor);
+            }
+        }
+
+        private bool TryFindAuthoredTransform(
+            NovelCharacter character,
+            out Vector2 position,
+            out float rotation,
+            out Vector2 scale)
+        {
+            return TryFindAuthoredTransform(
+                _dialogueNode ?? (INode)_node,
+                character,
+                new HashSet<INode>(),
+                out position,
+                out rotation,
+                out scale);
+        }
+
+        private bool TryFindAuthoredTransform(
+            INode origin,
+            NovelCharacter character,
+            HashSet<INode> visited,
+            out Vector2 position,
+            out float rotation,
+            out Vector2 scale)
+        {
+            position = Vector2.zero;
+            rotation = 0f;
+            scale = Vector2.one;
+            if (_graph == null || origin == null || character == null)
+                return false;
+
+            var queue = new Queue<INode>();
+            EnqueuePredecessors(origin, queue);
+            int remaining = 256;
+            while (queue.Count > 0 && remaining-- > 0)
+            {
+                INode candidate = queue.Dequeue();
+                if (candidate == null || !visited.Add(candidate))
+                    continue;
+
+                if (candidate is TransformSpeakerPortraitNode transform &&
+                    TryReadMatchingTransform(transform, character,
+                        out position, out rotation, out scale,
+                        out bool relative))
+                {
+                    if (relative)
+                    {
+                        Vector2 previousPosition;
+                        if (!TryFindAuthoredTransform(
+                                transform,
+                                character,
+                                new HashSet<INode>(visited),
+                                out previousPosition,
+                                out _,
+                                out _))
+                            previousPosition = new Vector2(0f, -1f);
+                        position += previousPosition;
+                    }
+                    return true;
+                }
+
+                if (candidate is ShowCharacterNode show &&
+                    ResolveCharacter(show, "Character", "Character Reference") == character &&
+                    string.Equals(
+                        ResolveInstanceID(show, "Character Reference", "Instance ID"),
+                        _previewInstanceID, StringComparison.Ordinal))
+                {
+                    position = Read(show, "Position", Vector2.zero);
+                    if (Read(show, "Coordinate Space", CharacterPositionSpace.Canvas) ==
+                        CharacterPositionSpace.Canvas)
+                        position = CanvasToNormalizedPreview(position, false);
+                    return true;
+                }
+
+                EnqueuePredecessors(candidate, queue);
+            }
+            return false;
+        }
+
+        private bool TryReadMatchingTransform(
+            TransformSpeakerPortraitNode node,
+            NovelCharacter character,
+            out Vector2 position,
+            out float rotation,
+            out Vector2 scale,
+            out bool relative)
+        {
+            position = Vector2.zero;
+            rotation = 0f;
+            scale = Vector2.one;
+            relative = false;
+            int matchingTarget = 0;
+            int targetCount = node.GetDesiredCharacterCount();
+            for (int target = 1; target <= targetCount; target++)
+            {
+                string suffix = target == 1 ? string.Empty : $" {target}";
+                if (ResolveCharacter(
+                        node,
+                        "Character" + suffix,
+                        "Character Reference" + suffix) != character ||
+                    !string.Equals(
+                        ResolveInstanceID(
+                            node,
+                            "Character Reference" + suffix,
+                            "Instance ID" + suffix),
+                        _previewInstanceID,
+                        StringComparison.Ordinal))
+                    continue;
+                matchingTarget = target;
+                break;
+            }
+            if (matchingTarget == 0)
+                return false;
+
+            string targetSuffix = matchingTarget == 1
+                ? string.Empty
+                : $" {matchingTarget}";
+            IPort positionPort = node.GetInputPortByName(
+                "Position" + targetSuffix);
+            IPort rotationPort = node.GetInputPortByName(
+                "Rotation" + targetSuffix);
+            IPort scalePort = node.GetInputPortByName(
+                "Scale" + targetSuffix);
+            position = NovelGraphValues.Resolve<Vector2>(_graph, positionPort);
+            rotation = NovelGraphValues.Resolve<float>(_graph, rotationPort);
+            scale = NovelGraphValues.Resolve<Vector2>(_graph, scalePort);
+            if (matchingTarget == 1)
+            {
+                Vector2 legacyPosition = new Vector2(
+                    Read(node, "OffsetX", 0f), Read(node, "OffsetY", 0f));
+                float legacyRotation = Read(node, "Rotation", 0f);
+                Vector2 legacyScale = Read(node, "Scale", Vector2.one);
+                if (positionPort != null && !positionPort.IsConnected &&
+                    position == Vector2.zero && legacyPosition != Vector2.zero)
+                    position = legacyPosition;
+                if (rotationPort != null && !rotationPort.IsConnected &&
+                    Mathf.Approximately(rotation, 0f) &&
+                    !Mathf.Approximately(legacyRotation, 0f))
+                    rotation = legacyRotation;
+                if (scalePort != null && !scalePort.IsConnected &&
+                    scale == Vector2.one && legacyScale != Vector2.one)
+                    scale = legacyScale;
+            }
+            relative = Read(node, "Relative", false);
+            if (Read(node, "Coordinate Space", CharacterPositionSpace.Normalized) ==
+                CharacterPositionSpace.Canvas)
+                position = CanvasToNormalizedPreview(position, relative);
+            return true;
+        }
+
+        private NovelCharacter ResolveCharacter(
+            INode node,
+            string characterPort,
+            string referencePort)
+        {
+            NovelCharacterReference reference =
+                NovelGraphValues.Resolve<NovelCharacterReference>(
+                    _graph, node?.GetInputPortByName(referencePort));
+            return reference.Character != null
+                ? reference.Character
+                : NovelGraphValues.Resolve<NovelCharacter>(
+                    _graph, node?.GetInputPortByName(characterPort));
+        }
+
+        private string ResolveInstanceID(
+            INode node,
+            string referencePort,
+            string instanceOption)
+        {
+            NovelCharacterReference reference =
+                NovelGraphValues.Resolve<NovelCharacterReference>(
+                    _graph, node?.GetInputPortByName(referencePort));
+            return reference.Character != null
+                ? reference.InstanceID ?? string.Empty
+                : Read(node, instanceOption, string.Empty) ?? string.Empty;
+        }
+
+        private static Vector2 CanvasToNormalizedPreview(
+            Vector2 position, bool relative)
+        {
+            Vector2Int resolution = GetGameViewResolution();
+            return new Vector2(
+                position.x / Mathf.Max(1f, resolution.x * 0.5f),
+                position.y / Mathf.Max(1f, resolution.y * 0.5f) -
+                (relative ? 0f : 1f));
+        }
+
         private void TryFindGraphPreview(
             out NovelCharacter character,
             out CharacterEmotion emotion)
         {
             character = null;
             emotion = CharacterEmotion.Neutral;
+            _previewInstanceID = string.Empty;
+            if (_dialogueNode != null)
+            {
+                NovelCharacterReference reference =
+                    NovelGraphValues.Resolve<NovelCharacterReference>(
+                        _graph, _dialogueNode.GetInputPortByName(
+                            "Character Reference"));
+                character = reference.Character != null
+                    ? reference.Character
+                    : NovelGraphValues.Resolve<NovelCharacter>(
+                        _graph, _dialogueNode.GetInputPortByName("Character"));
+                if (character == null)
+                {
+                    reference = NovelGraphValues.Resolve<NovelCharacterReference>(
+                        _graph, _dialogueNode.GetInputPortByName(
+                            "Speaker Reference"));
+                    character = reference.Character != null
+                        ? reference.Character
+                        : NovelGraphValues.Resolve<NovelCharacter>(
+                            _graph, _dialogueNode.GetInputPortByName("Speaker"));
+                }
+                _previewInstanceID = reference.Character != null
+                    ? reference.InstanceID ?? string.Empty
+                    : Read(_dialogueNode, "Instance ID", string.Empty) ??
+                      string.Empty;
+                emotion = Read(
+                    _dialogueNode, "Emotion", CharacterEmotion.Neutral);
+                // A story bubble must preview its own target. Showing an
+                // unrelated graph character hides missing wiring mistakes.
+                return;
+            }
+            if (_node != null)
+            {
+                NovelCharacterReference reference =
+                    NovelGraphValues.Resolve<NovelCharacterReference>(
+                        _graph, _node.GetInputPortByName(
+                            "Preview Character Reference"));
+                character = reference.Character != null
+                    ? reference.Character
+                    : NovelGraphValues.Resolve<NovelCharacter>(
+                        _graph, _node.GetInputPortByName(
+                            "Preview Character"));
+                _previewInstanceID = reference.Character != null
+                    ? reference.InstanceID ?? string.Empty
+                    : Read(
+                        _node, "Preview Instance ID", string.Empty) ??
+                      string.Empty;
+
+                // The box node's target is authoritative. An empty target
+                // should be obvious instead of silently previewing a random
+                // character asset from the project.
+                return;
+            }
             if (_graph != null)
             {
                 foreach (INode node in _graph.GetNodes())

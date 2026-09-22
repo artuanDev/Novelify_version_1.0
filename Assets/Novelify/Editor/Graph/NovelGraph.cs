@@ -275,6 +275,20 @@ namespace Novelify.Editor
             {
                 foreach (INode node in graph.GetNodes())
                 {
+                    if (node is TransformSpeakerPortraitNode transform)
+                    {
+                        if (!transform.TransformPortCountMatches())
+                        {
+                            if (!isRecordingUndo)
+                            {
+                                graph.UndoBeginRecordGraph(
+                                    "Update Character Transform Targets");
+                                isRecordingUndo = true;
+                            }
+                            transform.DefineNode();
+                        }
+                    }
+
                     if (node is not DialogueNode && node is not ChoiceNode)
                     {
                         continue;
@@ -302,9 +316,45 @@ namespace Novelify.Editor
                         namedChoice.DefineNode();
                     }
 
-                    NovelCharacter character = NovelGraphValues.Resolve<NovelCharacter>(
-                        graph,
-                        node.GetInputPortByName("Speaker"));
+                    NovelCharacter character;
+                    if (node is SpeechBubbleNode)
+                    {
+                        NovelCharacterReference reference =
+                            NovelGraphValues.Resolve<NovelCharacterReference>(
+                                graph,
+                                node.GetInputPortByName("Character Reference"));
+                        character = reference.Character != null
+                            ? reference.Character
+                            : NovelGraphValues.Resolve<NovelCharacter>(
+                                graph,
+                                node.GetInputPortByName("Character"));
+
+                        // Compatibility for speech-bubble nodes authored before
+                        // the explicit Character ports were introduced.
+                        if (character == null)
+                        {
+                            reference = NovelGraphValues.Resolve<NovelCharacterReference>(
+                                graph,
+                                node.GetInputPortByName("Speaker Reference"));
+                            character = reference.Character != null
+                                ? reference.Character
+                                : NovelGraphValues.Resolve<NovelCharacter>(
+                                    graph,
+                                    node.GetInputPortByName("Speaker"));
+                        }
+                    }
+                    else
+                    {
+                        NovelCharacterReference reference =
+                            NovelGraphValues.Resolve<NovelCharacterReference>(
+                                graph,
+                                node.GetInputPortByName("Speaker Reference"));
+                        character = reference.Character != null
+                            ? reference.Character
+                            : NovelGraphValues.Resolve<NovelCharacter>(
+                                graph,
+                                node.GetInputPortByName("Speaker"));
+                    }
                     CharacterEmotion emotion = CharacterEmotion.Neutral;
                     node.GetNodeOptionByName("Emotion")?.TryGetValue(out emotion);
                     INodeOption previewOption = node.GetNodeOptionByName("Speaker Preview");

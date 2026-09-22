@@ -17,12 +17,29 @@ namespace Novelify.Editor
             IOptionDefinitionContext context,
             NovelBoxStyle defaults)
         {
+            context.AddOption<NovelPresentationStyle>("Style Asset")
+                .WithTooltip("Optional reusable style asset. Its matching box style overrides the inline values below.")
+                .Build();
             context.AddOption<Color>("Fill Color").WithDefaultValue(defaults.FillColor).Build();
             context.AddOption<float>("Opacity").WithDefaultValue(defaults.Opacity).Build();
+            context.AddOption<Texture2D>("Fill Texture")
+                .WithDefaultValue(defaults.FillTexture).Build();
+            context.AddOption<Vector2>("Fill Tiling")
+                .WithDefaultValue(defaults.FillTiling).Build();
+            context.AddOption<Vector2>("Fill Offset")
+                .WithDefaultValue(defaults.FillOffset).Build();
             context.AddOption<float>("Corner Radius").WithDefaultValue(defaults.CornerRadius).Build();
             context.AddOption<bool>("Outline").WithDefaultValue(defaults.OutlineEnabled).Build();
             context.AddOption<Color>("Outline Color").WithDefaultValue(defaults.OutlineColor).Build();
+            context.AddOption<float>("Outline Transparency")
+                .WithDefaultValue(defaults.OutlineTransparency).Build();
             context.AddOption<float>("Outline Thickness").WithDefaultValue(defaults.OutlineThickness).Build();
+            context.AddOption<Texture2D>("Outline Texture")
+                .WithDefaultValue(defaults.OutlineTexture).Build();
+            context.AddOption<Vector2>("Outline Tiling")
+                .WithDefaultValue(defaults.OutlineTiling).Build();
+            context.AddOption<Vector2>("Outline Offset")
+                .WithDefaultValue(defaults.OutlineOffset).Build();
         }
         public static void AddTextSizing(
             IOptionDefinitionContext context,
@@ -85,6 +102,11 @@ namespace Novelify.Editor
 
             NovelPresentationNodeOptions.AddStyle(
                 context, NovelBoxStyle.SpeakerDefault);
+
+            context.AddOption<NovelSpeakerAnchor>("Anchor")
+                .WithDefaultValue(NovelSpeakerAnchor.TopLeft)
+                .WithTooltip("Edge of the dialogue box used to attach the speaker-name box.")
+                .Build();
 
             context.AddOption<float>("Font Size")
                 .WithDefaultValue(25f).Build();
@@ -174,6 +196,18 @@ namespace Novelify.Editor
     [Serializable]
     public abstract class SpeechBubblePresentationNode : ActionNode
     {
+        protected override void OnDefinePorts(
+            IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<NovelCharacter>("Preview Character")
+                .WithTooltip("Character used to preview this bubble box at its current authored screen position.")
+                .Build();
+            context.AddInputPort<NovelCharacterReference>("Preview Character Reference")
+                .WithTooltip("Exact character instance used by the bubble-box preview.")
+                .Build();
+        }
+
         protected override void OnDefineOptions(
             IOptionDefinitionContext context)
         {
@@ -236,17 +270,21 @@ namespace Novelify.Editor
                 .WithDefaultValue(30f).Build();
             context.AddOption<float>("Target Margin")
                 .WithDefaultValue(18f).Build();
+            context.AddOption<string>("Preview Instance ID")
+                .WithDefaultValue(string.Empty)
+                .WithTooltip("Instance used for preview when Preview Character Reference is not connected.")
+                .Build();
         }
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Create Speech Bubble")]
+    [Node("Novelify/Presentation", null, "Create Speech Bubble Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class CreateSpeechBubbleNode :
         SpeechBubblePresentationNode { }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Change Speech Bubble")]
+    [Node("Novelify/Presentation", null, "Change Speech Bubble Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class ChangeSpeechBubbleNode :
         SpeechBubblePresentationNode { }
@@ -296,6 +334,17 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SpeechBubbleNode : DialogueNode
     {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<NovelCharacter>("Character")
+                .WithTooltip("Character this bubble belongs to. Its current transformed position is used for placement and preview.")
+                .Build();
+            context.AddInputPort<NovelCharacterReference>("Character Reference")
+                .WithTooltip("Exact character instance this bubble follows. Prefer this when using multiple copies of one character.")
+                .Build();
+        }
+
         protected override void OnDefineOptions(
             IOptionDefinitionContext context)
         {
@@ -303,6 +352,65 @@ namespace Novelify.Editor
             context.AddOption<bool>("Thinking")
                 .WithDefaultValue(false)
                 .WithTooltip("Display this line as a thought bubble with a dotted pointer and no mouth animation.")
+                .Build();
+            context.AddOption<NovelSpeechBubbleOverlapMode>("When Another Bubble Is Visible")
+                .WithDefaultValue(NovelSpeechBubbleOverlapMode.ReplacePrevious)
+                .WithTooltip("Keep Previous places this line beside the previous bubble for interruptions and overlapping reactions.")
+                .Build();
+            context.AddOption<bool>("Continue Automatically")
+                .WithDefaultValue(false)
+                .WithTooltip("Advance without a click so the following bubble can appear almost immediately.")
+                .Build();
+            context.AddOption<float>("Auto Continue Delay")
+                .WithDefaultValue(0.15f)
+                .WithTooltip("Seconds after this bubble appears before continuing. Small values work well for interruptions.")
+                .Build();
+        }
+    }
+
+    [Serializable]
+    [Node("Novelify/Presentation", null, "Set Background")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class SetBackgroundNode : ActionNode
+    {
+        public const string BackgroundPort = "Background Image";
+        public const string DurationPort = "Transition Duration";
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Set scene background",
+                "Creates or changes the responsive background. Leave the image empty to clear it.",
+                new Color32(96, 165, 250, 255));
+        }
+
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<Sprite>(BackgroundPort)
+                .WithTooltip("Background sprite. Leave empty to fade the current background out.")
+                .Build();
+            context.AddInputPort<float>(DurationPort)
+                .WithDefaultValue(0.35f)
+                .WithTooltip("Cross-fade time in dialogue-clock seconds. Zero changes instantly.")
+                .Build();
+        }
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<Color>("Tint")
+                .WithDefaultValue(Color.white)
+                .Build();
+            context.AddOption<NovelBackgroundScaleMode>("Scale Mode")
+                .WithDefaultValue(NovelBackgroundScaleMode.Cover)
+                .WithTooltip("Cover fills every aspect ratio, Contain shows the whole image, and Stretch fills without preserving aspect.")
+                .Build();
+            context.AddOption<bool>("Wait For Completion")
+                .WithDefaultValue(false)
+                .WithTooltip("Pause graph flow until the cross-fade completes.")
                 .Build();
         }
     }

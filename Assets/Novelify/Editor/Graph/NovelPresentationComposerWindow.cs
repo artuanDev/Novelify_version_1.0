@@ -360,6 +360,10 @@ namespace Novelify.Editor
             };
             _draft.Dialogue.Style = ReadStyle(
                 DialogueNode, NovelBoxStyle.DialogueDefault);
+            NovelPresentationStyle dialogueStyleAsset = Read<NovelPresentationStyle>(
+                DialogueNode, "Style Asset", null);
+            if (dialogueStyleAsset != null)
+                _draft.Dialogue.Style = dialogueStyleAsset.DialogueBoxStyle;
             _draft.Dialogue.TextAlignment = Read(
                 DialogueNode, "Text Alignment", NovelTextAlignment.TopLeft);
             _draft.Dialogue.Anchor = Read(
@@ -386,6 +390,10 @@ namespace Novelify.Editor
                 DialogueNode, "Vertical Padding", 22f);
             _draft.Speaker.Style = ReadStyle(
                 SpeakerNode, NovelBoxStyle.SpeakerDefault);
+            NovelPresentationStyle speakerStyleAsset = Read<NovelPresentationStyle>(
+                SpeakerNode, "Style Asset", null);
+            if (speakerStyleAsset != null)
+                _draft.Speaker.Style = speakerStyleAsset.SpeakerBoxStyle;
             _draft.Speaker.Anchor = Read(
                 SpeakerNode, "Anchor", NovelSpeakerAnchor.TopLeft);
             _draft.Speaker.FontSize = Read(
@@ -780,6 +788,45 @@ namespace Novelify.Editor
             AddText(samples, "Dialogue", _draft.SampleDialogue, true,
                 value => _draft.SampleDialogue = value, false);
             inspector.Add(samples);
+
+            NovelPresentationStyle dialogueAsset = Read<NovelPresentationStyle>(
+                DialogueNode, "Style Asset", null);
+            NovelPresentationStyle speakerAsset = Read<NovelPresentationStyle>(
+                SpeakerNode, "Style Asset", null);
+            ObjectField reusableStyle = new ObjectField("Reusable Style Asset")
+            {
+                objectType = typeof(NovelPresentationStyle),
+                allowSceneObjects = false,
+                value = dialogueAsset == speakerAsset
+                    ? dialogueAsset
+                    : null,
+                tooltip = "Assign one appearance-only asset to both the dialogue and speaker boxes."
+            };
+            reusableStyle.RegisterValueChangedCallback(evt =>
+            {
+                if (_building)
+                    return;
+                NovelPresentationStyle value =
+                    evt.newValue as NovelPresentationStyle;
+                if (value != null)
+                {
+                    _draft.Dialogue.Style = value.DialogueBoxStyle;
+                    _draft.Speaker.Style = value.SpeakerBoxStyle;
+                }
+                bool changed = RecordGraphChange(
+                    "Assign Presentation Style Asset", () =>
+                    {
+                        Write(DialogueNode, "Style Asset", value);
+                        Write(SpeakerNode, "Style Asset", value);
+                    });
+                if (changed)
+                {
+                    _draftDirty = true;
+                    Rebuild();
+                }
+            });
+            inspector.Add(reusableStyle);
+
             Foldout dialogue = NewFoldout("Dialogue Box");
             AddEnum(dialogue, "Anchor", _draft.Dialogue.Anchor,
                 value => _draft.Dialogue.Anchor = value);
@@ -1004,6 +1051,41 @@ namespace Novelify.Editor
                 style.Opacity = Mathf.Clamp01(value);
                 setter(style);
             });
+            ObjectField fillTexture = new ObjectField("Fill Texture")
+            {
+                objectType = typeof(Texture2D),
+                allowSceneObjects = false,
+                value = getter().FillTexture,
+                tooltip = "Optional texture multiplied by the fill tint."
+            };
+            fillTexture.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.FillTexture = evt.newValue as Texture2D;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(fillTexture);
+            Vector2Field fillTiling = new Vector2Field("Fill Tiling")
+            { value = getter().FillTiling };
+            fillTiling.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.FillTiling = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(fillTiling);
+            Vector2Field fillOffset = new Vector2Field("Fill Offset")
+            { value = getter().FillOffset };
+            fillOffset.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.FillOffset = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(fillOffset);
             AddFloat(styleFoldout, "Corner Radius", getter().CornerRadius, value =>
             {
                 NovelBoxStyle style = getter();
@@ -1026,6 +1108,13 @@ namespace Novelify.Editor
                 DraftChanged();
             });
             styleFoldout.Add(outline);
+            AddFloat(styleFoldout, "Outline Transparency",
+                getter().OutlineTransparency, value =>
+                {
+                    NovelBoxStyle style = getter();
+                    style.OutlineTransparency = Mathf.Clamp01(value);
+                    setter(style);
+                });
             AddFloat(styleFoldout, "Outline Thickness",
                 getter().OutlineThickness, value =>
                 {
@@ -1033,6 +1122,41 @@ namespace Novelify.Editor
                     style.OutlineThickness = Mathf.Max(0f, value);
                     setter(style);
                 });
+            ObjectField outlineTexture = new ObjectField("Outline Texture")
+            {
+                objectType = typeof(Texture2D),
+                allowSceneObjects = false,
+                value = getter().OutlineTexture,
+                tooltip = "Optional texture multiplied by the outline tint."
+            };
+            outlineTexture.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineTexture = evt.newValue as Texture2D;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(outlineTexture);
+            Vector2Field outlineTiling = new Vector2Field("Outline Tiling")
+            { value = getter().OutlineTiling };
+            outlineTiling.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineTiling = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(outlineTiling);
+            Vector2Field outlineOffset = new Vector2Field("Outline Offset")
+            { value = getter().OutlineOffset };
+            outlineOffset.RegisterValueChangedCallback(evt =>
+            {
+                NovelBoxStyle style = getter();
+                style.OutlineOffset = evt.newValue;
+                setter(style);
+                DraftChanged();
+            });
+            styleFoldout.Add(outlineOffset);
             Button reset = new Button(() =>
             {
                 setter(defaults);
@@ -1054,6 +1178,27 @@ namespace Novelify.Editor
             {
                 WriteDialogueOptions(DialogueNode, _draft.Dialogue);
                 WriteSpeakerOptions(SpeakerNode, _draft.Speaker);
+                NovelPresentationStyle dialogueAsset =
+                    Read<NovelPresentationStyle>(
+                        DialogueNode, "Style Asset", null);
+                NovelPresentationStyle speakerAsset =
+                    Read<NovelPresentationStyle>(
+                        SpeakerNode, "Style Asset", null);
+                if (dialogueAsset != null)
+                {
+                    Undo.RecordObject(dialogueAsset, actionName);
+                    dialogueAsset.DialogueBox =
+                        _draft.Dialogue.Style.Validated();
+                    EditorUtility.SetDirty(dialogueAsset);
+                }
+                if (speakerAsset != null)
+                {
+                    if (speakerAsset != dialogueAsset)
+                        Undo.RecordObject(speakerAsset, actionName);
+                    speakerAsset.SpeakerBox =
+                        _draft.Speaker.Style.Validated();
+                    EditorUtility.SetDirty(speakerAsset);
+                }
             });
             if (updated)
                 _draftDirty = true;
@@ -1410,7 +1555,7 @@ namespace Novelify.Editor
             float border = style.OutlineEnabled
                 ? style.OutlineThickness * scale
                 : 0f;
-            SetBorder(target, border, style.OutlineColor);
+            SetBorder(target, border, style.EffectiveOutlineColor);
         }
         private static void SetBorder(
             VisualElement target,
@@ -1589,14 +1734,27 @@ namespace Novelify.Editor
             {
                 FillColor = Read(node, "Fill Color", fallback.FillColor),
                 Opacity = Read(node, "Opacity", fallback.Opacity),
+                FillTexture = Read(
+                    node, "Fill Texture", fallback.FillTexture),
+                FillTiling = Read(node, "Fill Tiling", fallback.FillTiling),
+                FillOffset = Read(node, "Fill Offset", fallback.FillOffset),
                 CornerRadius = Read(
                     node, "Corner Radius", fallback.CornerRadius),
                 OutlineEnabled = Read(
                     node, "Outline", fallback.OutlineEnabled),
                 OutlineColor = Read(
                     node, "Outline Color", fallback.OutlineColor),
+                OutlineTransparency = Read(
+                    node, "Outline Transparency",
+                    fallback.OutlineTransparency),
                 OutlineThickness = Read(
-                    node, "Outline Thickness", fallback.OutlineThickness)
+                    node, "Outline Thickness", fallback.OutlineThickness),
+                OutlineTexture = Read(
+                    node, "Outline Texture", fallback.OutlineTexture),
+                OutlineTiling = Read(
+                    node, "Outline Tiling", fallback.OutlineTiling),
+                OutlineOffset = Read(
+                    node, "Outline Offset", fallback.OutlineOffset)
             }.Validated();
         }
         private static void WriteStyle(INode node, NovelBoxStyle style)
@@ -1604,10 +1762,17 @@ namespace Novelify.Editor
             style = style.Validated();
             Write(node, "Fill Color", style.FillColor);
             Write(node, "Opacity", style.Opacity);
+            Write(node, "Fill Texture", style.FillTexture);
+            Write(node, "Fill Tiling", style.FillTiling);
+            Write(node, "Fill Offset", style.FillOffset);
             Write(node, "Corner Radius", style.CornerRadius);
             Write(node, "Outline", style.OutlineEnabled);
             Write(node, "Outline Color", style.OutlineColor);
+            Write(node, "Outline Transparency", style.OutlineTransparency);
             Write(node, "Outline Thickness", style.OutlineThickness);
+            Write(node, "Outline Texture", style.OutlineTexture);
+            Write(node, "Outline Tiling", style.OutlineTiling);
+            Write(node, "Outline Offset", style.OutlineOffset);
         }
         private static T Read<T>(INode node, string name, T fallback)
         {
@@ -1797,6 +1962,382 @@ namespace Novelify.Editor
         private static string ResolutionText(Vector2Int resolution)
         {
             return $"{resolution.x} × {resolution.y}  •  GAME VIEW";
+        }
+    }
+}
+
+namespace Novelify.Editor
+{
+    [CustomEditor(typeof(NovelPresentationStyle))]
+    internal sealed class NovelPresentationStyleInspector : UnityEditor.Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+            NovelBoxStyleEditorGUI.Draw(
+                serializedObject.FindProperty(
+                    nameof(NovelPresentationStyle.DialogueBox)),
+                new GUIContent("Dialogue Box Style"));
+            NovelBoxStyleEditorGUI.Draw(
+                serializedObject.FindProperty(
+                    nameof(NovelPresentationStyle.SpeakerBox)),
+                new GUIContent("Speaker Box Style"));
+            NovelBoxStyleEditorGUI.Draw(
+                serializedObject.FindProperty(
+                    nameof(NovelPresentationStyle.SpeechBubble)),
+                new GUIContent("Speech Bubble Style"));
+            serializedObject.ApplyModifiedProperties();
+            EditorGUILayout.Space(8f);
+            if (GUILayout.Button("Open Style Preview", GUILayout.Height(28f)))
+                NovelPresentationStyleWindow.Open(
+                    (NovelPresentationStyle)target);
+        }
+
+        [UnityEditor.Callbacks.OnOpenAsset]
+        private static bool OpenAsset(EntityId entityID, int line)
+        {
+            NovelPresentationStyle style =
+                EditorUtility.EntityIdToObject(entityID) as
+                    NovelPresentationStyle;
+            if (style == null)
+                return false;
+            NovelPresentationStyleWindow.Open(style);
+            return true;
+        }
+    }
+
+    internal sealed class NovelPresentationStyleWindow : EditorWindow
+    {
+        private NovelPresentationStyle _style;
+        private SerializedObject _serialized;
+        private Vector2 _scroll;
+
+        public static void Open(NovelPresentationStyle style)
+        {
+            if (style == null)
+                return;
+            NovelPresentationStyleWindow window =
+                GetWindow<NovelPresentationStyleWindow>();
+            window.titleContent = new GUIContent("Novelify Style Preview");
+            window.minSize = new Vector2(720f, 500f);
+            window._style = style;
+            window._serialized = new SerializedObject(style);
+            window.Show();
+            window.Focus();
+        }
+
+        private void OnGUI()
+        {
+            if (_style == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Double-click a Novel Presentation Style asset to preview it.",
+                    MessageType.Info);
+                return;
+            }
+
+            _serialized ??= new SerializedObject(_style);
+            _serialized.Update();
+            EditorGUILayout.LabelField(_style.name, EditorStyles.largeLabel);
+            EditorGUILayout.HelpBox(
+                "This asset stores appearance only. Layout, text, characters, and timing stay on graph nodes.",
+                MessageType.None);
+
+            Rect preview = GUILayoutUtility.GetRect(
+                680f, 210f, GUILayout.ExpandWidth(true));
+            DrawPreview(preview);
+
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
+            NovelBoxStyleEditorGUI.Draw(
+                _serialized.FindProperty(nameof(NovelPresentationStyle.DialogueBox)),
+                new GUIContent("Dialogue Box Style"));
+            EditorGUILayout.Space(5f);
+            NovelBoxStyleEditorGUI.Draw(
+                _serialized.FindProperty(nameof(NovelPresentationStyle.SpeakerBox)),
+                new GUIContent("Speaker Box Style"));
+            EditorGUILayout.Space(5f);
+            NovelBoxStyleEditorGUI.Draw(
+                _serialized.FindProperty(nameof(NovelPresentationStyle.SpeechBubble)),
+                new GUIContent("Speech Bubble Style"));
+            EditorGUILayout.EndScrollView();
+
+            if (_serialized.ApplyModifiedProperties())
+            {
+                EditorUtility.SetDirty(_style);
+                Repaint();
+            }
+            if (GUILayout.Button("Save Asset"))
+                AssetDatabase.SaveAssetIfDirty(_style);
+        }
+
+        private void DrawPreview(Rect area)
+        {
+            EditorGUI.DrawRect(area, new Color(0.035f, 0.075f, 0.12f));
+            float gap = 14f;
+            float width = (area.width - gap * 4f) / 3f;
+            Rect dialogue = new Rect(
+                area.x + gap, area.y + 70f, width, 110f);
+            Rect speaker = new Rect(
+                area.x + gap * 2f + width, area.y + 38f,
+                width, 54f);
+            Rect bubble = new Rect(
+                area.x + gap * 3f + width * 2f, area.y + 55f,
+                width, 100f);
+            DrawStyledBox(dialogue, _style.DialogueBoxStyle,
+                "Dialogue Box\nA reusable dialogue style");
+            DrawStyledBox(speaker, _style.SpeakerBoxStyle,
+                "Speaker Name");
+            DrawBubbleTail(bubble, _style.SpeechBubbleStyle);
+            DrawStyledBox(bubble, _style.SpeechBubbleStyle,
+                "Speech Bubble\nPositioned by its speaker");
+        }
+
+        private void DrawStyledBox(
+            Rect rect, NovelBoxStyle style, string label)
+        {
+            style = style.Validated();
+            DrawRoundedFallback(rect, style);
+            DrawTexturePreview(rect, style);
+            GUIStyle text = new GUIStyle(EditorStyles.wordWrappedLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+            GUI.Label(rect, label, text);
+        }
+
+        private static void DrawTexturePreview(
+            Rect rect, NovelBoxStyle style)
+        {
+            float inset = style.OutlineEnabled
+                ? Mathf.Clamp(
+                    style.OutlineThickness,
+                    0f,
+                    Mathf.Min(rect.width, rect.height) * 0.5f)
+                : 0f;
+            if (style.OutlineEnabled &&
+                inset > 0f &&
+                style.OutlineTexture != null)
+            {
+                DrawOutlineTexture(
+                    rect,
+                    style.OutlineTexture,
+                    style.EffectiveOutlineColor,
+                    style.OutlineTiling,
+                    style.OutlineOffset,
+                    style.CornerRadius,
+                    inset);
+            }
+
+            if (style.FillTexture == null)
+                return;
+            Rect fillRect = new Rect(
+                rect.x + inset,
+                rect.y + inset,
+                Mathf.Max(0f, rect.width - inset * 2f),
+                Mathf.Max(0f, rect.height - inset * 2f));
+            DrawRoundedTexture(
+                fillRect,
+                style.FillTexture,
+                style.EffectiveFillColor,
+                style.FillTiling,
+                style.FillOffset,
+                Mathf.Max(0f, style.CornerRadius - inset));
+        }
+
+        private static void DrawRoundedTexture(
+            Rect rect,
+            Texture texture,
+            Color tint,
+            Vector2 tiling,
+            Vector2 offset,
+            float radius)
+        {
+            if (rect.width <= 0f || rect.height <= 0f)
+                return;
+            radius = Mathf.Clamp(
+                radius, 0f, Mathf.Min(rect.width, rect.height) * 0.5f);
+            DrawTextureRegion(
+                new Rect(
+                    rect.x,
+                    rect.y + radius,
+                    rect.width,
+                    Mathf.Max(0f, rect.height - radius * 2f)),
+                rect, texture, tint, tiling, offset);
+            DrawTextureRegion(
+                new Rect(
+                    rect.x + radius,
+                    rect.y,
+                    Mathf.Max(0f, rect.width - radius * 2f),
+                    radius),
+                rect, texture, tint, tiling, offset);
+            DrawTextureRegion(
+                new Rect(
+                    rect.x + radius,
+                    rect.yMax - radius,
+                    Mathf.Max(0f, rect.width - radius * 2f),
+                    radius),
+                rect, texture, tint, tiling, offset);
+        }
+
+        private static void DrawOutlineTexture(
+            Rect rect,
+            Texture texture,
+            Color tint,
+            Vector2 tiling,
+            Vector2 offset,
+            float radius,
+            float thickness)
+        {
+            radius = Mathf.Clamp(
+                radius, 0f, Mathf.Min(rect.width, rect.height) * 0.5f);
+            float straightWidth = Mathf.Max(0f, rect.width - radius * 2f);
+            float straightHeight = Mathf.Max(0f, rect.height - radius * 2f);
+            DrawTextureRegion(
+                new Rect(rect.x + radius, rect.y, straightWidth, thickness),
+                rect, texture, tint, tiling, offset);
+            DrawTextureRegion(
+                new Rect(
+                    rect.x + radius,
+                    rect.yMax - thickness,
+                    straightWidth,
+                    thickness),
+                rect, texture, tint, tiling, offset);
+            DrawTextureRegion(
+                new Rect(rect.x, rect.y + radius, thickness, straightHeight),
+                rect, texture, tint, tiling, offset);
+            DrawTextureRegion(
+                new Rect(
+                    rect.xMax - thickness,
+                    rect.y + radius,
+                    thickness,
+                    straightHeight),
+                rect, texture, tint, tiling, offset);
+        }
+
+        private static void DrawTextureRegion(
+            Rect drawRect,
+            Rect mappingRect,
+            Texture texture,
+            Color tint,
+            Vector2 tiling,
+            Vector2 offset)
+        {
+            if (texture == null ||
+                drawRect.width <= 0f || drawRect.height <= 0f ||
+                mappingRect.width <= 0f || mappingRect.height <= 0f)
+                return;
+            float x = (drawRect.xMin - mappingRect.xMin) /
+                mappingRect.width;
+            float y = (drawRect.yMin - mappingRect.yMin) /
+                mappingRect.height;
+            Rect uv = new Rect(
+                x * tiling.x + offset.x,
+                y * tiling.y + offset.y,
+                drawRect.width / mappingRect.width * tiling.x,
+                drawRect.height / mappingRect.height * tiling.y);
+            Color previous = GUI.color;
+            GUI.color = tint;
+            GUI.DrawTextureWithTexCoords(drawRect, texture, uv, true);
+            GUI.color = previous;
+        }
+
+        private static void DrawRoundedFallback(
+            Rect rect, NovelBoxStyle style)
+        {
+            Handles.BeginGUI();
+            if (style.OutlineEnabled && style.OutlineThickness > 0f)
+            {
+                Handles.color = style.EffectiveOutlineColor;
+                Handles.DrawAAConvexPolygon(BuildRoundedContour(
+                    rect, style.CornerRadius));
+                float inset = Mathf.Clamp(
+                    style.OutlineThickness, 0f,
+                    Mathf.Min(rect.width, rect.height) * 0.5f);
+                rect = new Rect(
+                    rect.x + inset, rect.y + inset,
+                    rect.width - inset * 2f, rect.height - inset * 2f);
+            }
+            Handles.color = style.EffectiveFillColor;
+            Handles.DrawAAConvexPolygon(BuildRoundedContour(
+                rect, Mathf.Max(0f,
+                    style.CornerRadius - (style.OutlineEnabled
+                        ? style.OutlineThickness
+                        : 0f))));
+            Handles.EndGUI();
+        }
+
+        private static Vector3[] BuildRoundedContour(Rect rect, float radius)
+        {
+            radius = Mathf.Clamp(
+                radius, 0f, Mathf.Min(rect.width, rect.height) * 0.5f);
+            const int segments = 8;
+            var points = new List<Vector3>((segments + 1) * 4);
+            AddPreviewArc(points,
+                new Vector2(rect.xMin + radius, rect.yMin + radius),
+                radius, 180f, 270f, segments);
+            AddPreviewArc(points,
+                new Vector2(rect.xMax - radius, rect.yMin + radius),
+                radius, 270f, 360f, segments);
+            AddPreviewArc(points,
+                new Vector2(rect.xMax - radius, rect.yMax - radius),
+                radius, 0f, 90f, segments);
+            AddPreviewArc(points,
+                new Vector2(rect.xMin + radius, rect.yMax - radius),
+                radius, 90f, 180f, segments);
+            return points.ToArray();
+        }
+
+        private static void AddPreviewArc(
+            List<Vector3> points,
+            Vector2 center,
+            float radius,
+            float startDegrees,
+            float endDegrees,
+            int segments)
+        {
+            for (int index = 0; index <= segments; index++)
+            {
+                float angle = Mathf.Lerp(
+                    startDegrees, endDegrees, index / (float)segments) *
+                    Mathf.Deg2Rad;
+                points.Add(center + new Vector2(
+                    Mathf.Cos(angle), Mathf.Sin(angle)) * radius);
+            }
+        }
+
+        private static void DrawBubbleTail(Rect bubble, NovelBoxStyle source)
+        {
+            NovelBoxStyle style = source.Validated();
+            float halfWidth = Mathf.Clamp(bubble.width * 0.08f, 10f, 22f);
+            float length = Mathf.Clamp(bubble.height * 0.28f, 18f, 30f);
+            Vector2 center = new Vector2(
+                bubble.x + bubble.width * 0.62f, bubble.yMax - 1f);
+            Vector3[] outer =
+            {
+                center + Vector2.left * halfWidth,
+                center + Vector2.right * halfWidth,
+                center + Vector2.down * -length
+            };
+            Handles.BeginGUI();
+            Handles.color = style.OutlineEnabled
+                ? style.EffectiveOutlineColor
+                : style.EffectiveFillColor;
+            Handles.DrawAAConvexPolygon(outer);
+            if (style.OutlineEnabled && style.OutlineThickness > 0f)
+            {
+                float inset = Mathf.Clamp(
+                    style.OutlineThickness, 1f, halfWidth * 0.4f);
+                Vector3[] inner =
+                {
+                    center + Vector2.left * (halfWidth - inset),
+                    center + Vector2.right * (halfWidth - inset),
+                    center + Vector2.down * -(length - inset * 1.5f)
+                };
+                Handles.color = style.EffectiveFillColor;
+                Handles.DrawAAConvexPolygon(inner);
+            }
+            Handles.EndGUI();
         }
     }
 }

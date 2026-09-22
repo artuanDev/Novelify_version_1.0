@@ -37,7 +37,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Utilities")]
+    [Node("Novelify/Characters", null, "Transform Characters")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class PlaySoundNode : Node
     {
@@ -73,13 +73,15 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class TransformSpeakerPortraitNode : CharacterActionNode
     {
+        public const string TargetsOptionID = "Animated Characters";
+
         public override void OnEnable()
         {
             base.OnEnable();
             NovelNodePresentation.Apply(
                 this,
-                "Transform character",
-                "Moves, rotates, and scales one character instance using normalized screen coordinates.",
+                "Transform characters",
+                "Moves, rotates, scales, and fades any number of character instances in one synchronized tween.",
                 new Color32(251, 191, 36, 255));
         }
 
@@ -87,7 +89,7 @@ namespace Novelify.Editor
         {
             base.OnDefinePorts(context);
             context.AddInputPort<Vector2>("Position")
-                .WithDefaultValue(Vector2.zero)
+                .WithDefaultValue(new Vector2(0f, -1f))
                 .WithTooltip("Normalized target: (-1,-1) is bottom-left and (1,1) is top-right.")
                 .Build();
             context.AddInputPort<float>("Rotation")
@@ -106,6 +108,28 @@ namespace Novelify.Editor
                 .WithDefaultValue(1f)
                 .WithTooltip("Target portrait opacity from 0 (transparent) to 1 (opaque). Used when Animate Transparency is enabled.")
                 .Build();
+            int characterCount = GetDesiredCharacterCount();
+            for (int target = 2; target <= characterCount; target++)
+            {
+                context.AddInputPort<NovelCharacter>($"Character {target}")
+                    .WithTooltip($"Character target {target}. Every connected target starts its tween on the same frame.")
+                    .Build();
+                context.AddInputPort<NovelCharacterReference>($"Character Reference {target}")
+                    .WithTooltip($"Optional exact instance for character target {target}.")
+                    .Build();
+                context.AddInputPort<Vector2>($"Position {target}")
+                    .WithDefaultValue(new Vector2(0f, -1f))
+                    .WithTooltip($"Target {target} position in the shared coordinate space.")
+                    .Build();
+                context.AddInputPort<float>($"Rotation {target}")
+                    .WithDefaultValue(0f).Build();
+                context.AddInputPort<Vector2>($"Scale {target}")
+                    .WithDefaultValue(Vector2.one).Build();
+                context.AddInputPort<float>($"Margin {target}")
+                    .WithDefaultValue(0f).Build();
+                context.AddInputPort<float>($"Opacity {target}")
+                    .WithDefaultValue(1f).Build();
+            }
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -136,6 +160,82 @@ namespace Novelify.Editor
             // Retained for existing serialized graphs. New authoring uses Easing.
             context.AddOption<bool>("Ease In Out").WithTooltip("Legacy timing setting retained for older graphs.").WithDefaultValue(true).ShowInInspectorOnly().Build();
             context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for the transform before continuing. Disable to animate during following dialogue.").WithDefaultValue(true).Build();
+            context.AddOption<bool>("Transform Second Character")
+                .WithDefaultValue(false)
+                .WithDisplayName("Legacy Enable Character 2")
+                .ShowInInspectorOnly()
+                .Build();
+            context.AddOption(
+                    TargetsOptionID,
+                    typeof(TransformTargetAuthoringList))
+                .WithDefaultValue(
+                    TransformTargetAuthoringList.CreateDefault())
+                .WithTooltip("Add or remove synchronized character transform groups without a fixed limit.")
+                .Build();
+            for (int target = 2;
+                 target <= GetDesiredCharacterCount();
+                 target++)
+                context.AddOption<string>($"Instance ID {target}")
+                    .WithDefaultValue(string.Empty)
+                    .WithTooltip($"Optional instance ID for Character {target} when its reference port is not connected.")
+                    .Build();
+        }
+
+        internal int GetDesiredCharacterCount()
+        {
+            INodeOption option = GetNodeOptionByName(TargetsOptionID);
+            if (option != null &&
+                option.TryGetValue(out TransformTargetAuthoringList targets) &&
+                targets?.Targets != null &&
+                targets.Targets.Count > 0)
+                return targets.Targets.Count;
+
+            // Versions that used an empty marker class could save Targets as
+            // an empty list even while Character 2+ ports remained authored.
+            // Recover the count from those real ports so import never drops a
+            // connected character or its transform.
+            int existingPortCount = GetExistingCharacterPortCount();
+            if (existingPortCount > 1)
+                return existingPortCount;
+
+            // Graphs authored before the expandable list had one optional
+            // second target. Preserve both port groups when they are upgraded.
+            return 2;
+        }
+
+        private int GetExistingCharacterPortCount()
+        {
+            int highest = 0;
+            foreach (IPort port in GetInputPorts())
+            {
+                if (port.Name == "Character")
+                {
+                    highest = Mathf.Max(highest, 1);
+                    continue;
+                }
+                const string prefix = "Character ";
+                if (port.Name.StartsWith(prefix, StringComparison.Ordinal) &&
+                    int.TryParse(
+                        port.Name.Substring(prefix.Length),
+                        out int number))
+                    highest = Mathf.Max(highest, number);
+            }
+            return Mathf.Max(1, highest);
+        }
+
+        internal bool TransformPortCountMatches()
+        {
+            int actual = GetInputPorts().Count(port =>
+            {
+                if (port.Name == "Character")
+                    return true;
+                const string prefix = "Character ";
+                return port.Name.StartsWith(prefix, StringComparison.Ordinal) &&
+                       int.TryParse(
+                           port.Name.Substring(prefix.Length),
+                           out _);
+            });
+            return actual == GetDesiredCharacterCount();
         }
     }
 

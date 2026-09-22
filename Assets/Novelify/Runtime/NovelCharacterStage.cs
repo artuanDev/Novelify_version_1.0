@@ -10,6 +10,10 @@ namespace Novelify
         private readonly Transform _root;
         private readonly GameObject _prefab;
         private readonly Dictionary<string, CharacterInfo> _characters = new Dictionary<string, CharacterInfo>();
+        private CharacterInfo _activeSpeaker;
+        private bool _dimInactive;
+        private Color _inactiveTint = Color.white;
+        private float _focusTransitionDuration;
         public IReadOnlyDictionary<string, CharacterInfo> Characters => _characters;
 
         public NovelCharacterStage(Transform root, GameObject prefab)
@@ -60,7 +64,12 @@ namespace Novelify
             portrait.transform.SetAsFirstSibling();
             CharacterInfo info = portrait.GetComponent<CharacterInfo>();
             if (info == null) info = portrait.AddComponent<CharacterInfo>();
+            info.AnchorAtStageBottomCenter();
             info.Initialize(character, instanceID);
+            bool focused = !_dimInactive || _activeSpeaker == null ||
+                           ReferenceEquals(info, _activeSpeaker);
+            info.SetSpeakerFocus(
+                focused, _inactiveTint, _focusTransitionDuration);
             _characters[Key(character, instanceID)] = info;
             portrait.SetActive(true);
             return info;
@@ -90,6 +99,38 @@ namespace Novelify
         public void BringToFront(CharacterInfo info)
         {
             if (info != null && info.transform.parent == _root) info.transform.SetAsLastSibling();
+        }
+
+        public void SetActiveSpeaker(
+            CharacterInfo activeSpeaker,
+            bool dimInactive,
+            Color inactiveTint,
+            float transitionDuration)
+        {
+            _activeSpeaker = activeSpeaker;
+            _dimInactive = dimInactive;
+            _inactiveTint = inactiveTint;
+            _focusTransitionDuration = transitionDuration;
+            foreach (CharacterInfo info in _characters.Values)
+            {
+                if (info == null)
+                    continue;
+                bool focused = !dimInactive || activeSpeaker == null ||
+                               ReferenceEquals(info, activeSpeaker);
+                info.SetSpeakerFocus(
+                    focused, inactiveTint, transitionDuration);
+            }
+        }
+
+        public void ClearSpeakerFocus(float transitionDuration = 0f)
+        {
+            _activeSpeaker = null;
+            _dimInactive = false;
+            _inactiveTint = Color.white;
+            _focusTransitionDuration = transitionDuration;
+            foreach (CharacterInfo info in _characters.Values)
+                if (info != null)
+                    info.SetSpeakerFocus(true, Color.white, transitionDuration);
         }
 
         public void HideAll()

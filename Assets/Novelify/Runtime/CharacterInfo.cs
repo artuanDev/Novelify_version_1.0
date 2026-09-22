@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace Novelify
 {
@@ -78,6 +79,15 @@ namespace Novelify
         private bool _speaking, _animateMouth, _animateBlinking = true, _speechPause;
         private bool _eyesClosed;
         private float _nextMouthFrame, _nextBlink;
+        private readonly Dictionary<Image, Color> _baseLayerColors =
+            new Dictionary<Image, Color>();
+        private Color _focusTint = Color.white;
+        private Color _focusTintStart = Color.white;
+        private Color _focusTintTarget = Color.white;
+        private float _focusTintElapsed;
+        private float _focusTintDuration;
+        private static readonly Dictionary<Sprite, Rect>
+            VisibleSpriteBounds = new Dictionary<Sprite, Rect>();
 
         public Vector2 Position
         {
@@ -122,6 +132,17 @@ namespace Novelify
             SetEmotion(CharacterEmotion.Neutral);
         }
 
+        public void AnchorAtStageBottomCenter()
+        {
+            if (transform is not RectTransform rect)
+                return;
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = Vector2.zero;
+            AlignVisiblePortraitPivotToBaseline();
+        }
+
         private void ResolveLayers()
         {
             // Named fallback keeps existing portrait prefabs working. Custom prefabs can assign references.
@@ -135,6 +156,41 @@ namespace Novelify
                     case "PortraitMouth": if (Mouth == null) Mouth = layer; break;
                 }
                 layer.raycastTarget = false;
+                if (!_baseLayerColors.ContainsKey(layer))
+                    _baseLayerColors.Add(layer, layer.color);
+            }
+            ApplyFocusTint();
+        }
+
+        public void SetSpeakerFocus(
+            bool focused,
+            Color inactiveTint,
+            float transitionDuration)
+        {
+            Color target = focused ? Color.white : inactiveTint;
+            target.a = 1f;
+            _focusTintStart = _focusTint;
+            _focusTintTarget = target;
+            _focusTintElapsed = 0f;
+            _focusTintDuration = Mathf.Max(0f, transitionDuration);
+            if (_focusTintDuration <= 0f)
+            {
+                _focusTint = _focusTintTarget;
+                ApplyFocusTint();
+            }
+        }
+
+        private void ApplyFocusTint()
+        {
+            foreach (KeyValuePair<Image, Color> entry in _baseLayerColors)
+            {
+                if (entry.Key == null)
+                    continue;
+                Color color = entry.Value;
+                color.r *= _focusTint.r;
+                color.g *= _focusTint.g;
+                color.b *= _focusTint.b;
+                entry.Key.color = color;
             }
         }
 
@@ -159,8 +215,136 @@ namespace Novelify
             SetLayer(Eyes, Portrait.Eyes);
             SetLayer(Details, Portrait.Details);
             SetLayer(Mouth, Portrait.Mouth);
+            AlignVisiblePortraitPivotToBaseline();
             _eyesClosed = false;
             ScheduleBlink();
+        }
+
+        private void AlignVisiblePortraitPivotToBaseline()
+        {
+            if (transform is not RectTransform rect)
+                return;
+            Image[] layers = { Body, Eyes, Details, Mouth };
+            bool found = false;
+            Vector2 minimum = new Vector2(
+                float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(
+                float.NegativeInfinity, float.NegativeInfinity);
+            foreach (Image layer in layers)
+            {
+                Sprite sprite = layer != null ? layer.sprite : null;
+                if (sprite == null ||
+                    layer.transform is not RectTransform layerRect ||
+                    !TryGetVisibleSpriteBounds(sprite, out Rect visible))
+                    continue;
+
+                Rect drawing = GetSpriteDrawingRect(layer, sprite);
+                Vector2[] corners =
+                {
+                    new Vector2(
+                        Mathf.Lerp(drawing.xMin, drawing.xMax, visible.xMin),
+                        Mathf.Lerp(drawing.yMin, drawing.yMax, visible.yMin)),
+                    new Vector2(
+                        Mathf.Lerp(drawing.xMin, drawing.xMax, visible.xMax),
+                        Mathf.Lerp(drawing.yMin, drawing.yMax, visible.yMin)),
+                    new Vector2(
+                        Mathf.Lerp(drawing.xMin, drawing.xMax, visible.xMin),
+                        Mathf.Lerp(drawing.yMin, drawing.yMax, visible.yMax)),
+                    new Vector2(
+                        Mathf.Lerp(drawing.xMin, drawing.xMax, visible.xMax),
+                        Mathf.Lerp(drawing.yMin, drawing.yMax, visible.yMax))
+                };
+                for (int index = 0; index < corners.Length; index++)
+                {
+                    Vector3 world = layerRect.TransformPoint(corners[index]);
+                    Vector2 local = rect.InverseTransformPoint(world);
+                    minimum = Vector2.Min(minimum, local);
+                    maximum = Vector2.Max(maximum, local);
+                    found = true;
+                }
+            }
+
+            if (!found || rect.rect.width <= Mathf.Epsilon ||
+                rect.rect.height <= Mathf.Epsilon)
+            {
+                rect.pivot = new Vector2(0.5f, 0f);
+                return;
+            }
+
+            // The root can be much smaller than its composed Image children,
+            // so this pivot is intentionally allowed outside 0..1. Moving the
+            // parent pivot shifts every anchored child by the inverse amount;
+            // adding the current visible baseline in root units therefore puts
+            // that baseline exactly on the root's logical position.
+            Vector2 baseline = new Vector2(
+                (minimum.x + maximum.x) * 0.5f,
+                minimum.y);
+            rect.pivot += new Vector2(
+                baseline.x / rect.rect.width,
+                baseline.y / rect.rect.height);
+        }
+
+        private static Rect GetSpriteDrawingRect(Image image, Sprite sprite)
+        {
+            Rect result = image.rectTransform.rect;
+            if (!image.preserveAspect || sprite.rect.width <= Mathf.Epsilon ||
+                sprite.rect.height <= Mathf.Epsilon ||
+                result.width <= Mathf.Epsilon ||
+                result.height <= Mathf.Epsilon)
+                return result;
+
+            float spriteRatio = sprite.rect.width / sprite.rect.height;
+            float rectRatio = result.width / result.height;
+            Vector2 pivot = image.rectTransform.pivot;
+            if (spriteRatio > rectRatio)
+            {
+                float previousHeight = result.height;
+                result.height = result.width / spriteRatio;
+                result.y += (previousHeight - result.height) * pivot.y;
+            }
+            else
+            {
+                float previousWidth = result.width;
+                result.width = result.height * spriteRatio;
+                result.x += (previousWidth - result.width) * pivot.x;
+            }
+            return result;
+        }
+
+        private static bool TryGetVisibleSpriteBounds(
+            Sprite sprite, out Rect bounds)
+        {
+            bounds = new Rect(0f, 0f, 1f, 1f);
+            if (sprite == null || sprite.rect.width <= Mathf.Epsilon ||
+                sprite.rect.height <= Mathf.Epsilon)
+                return false;
+            if (VisibleSpriteBounds.TryGetValue(sprite, out bounds))
+                return true;
+
+            Vector2[] vertices = sprite.vertices;
+            if (vertices != null && vertices.Length > 0 &&
+                sprite.pixelsPerUnit > Mathf.Epsilon)
+            {
+                Vector2 minimum = new Vector2(
+                    float.PositiveInfinity, float.PositiveInfinity);
+                Vector2 maximum = new Vector2(
+                    float.NegativeInfinity, float.NegativeInfinity);
+                foreach (Vector2 vertex in vertices)
+                {
+                    Vector2 pixel = vertex * sprite.pixelsPerUnit +
+                                    sprite.pivot;
+                    minimum = Vector2.Min(minimum, pixel);
+                    maximum = Vector2.Max(maximum, pixel);
+                }
+                bounds = Rect.MinMaxRect(
+                    Mathf.Clamp01(minimum.x / sprite.rect.width),
+                    Mathf.Clamp01(minimum.y / sprite.rect.height),
+                    Mathf.Clamp01(maximum.x / sprite.rect.width),
+                    Mathf.Clamp01(maximum.y / sprite.rect.height));
+            }
+
+            VisibleSpriteBounds[sprite] = bounds;
+            return true;
         }
 
         public void BeginDialogue(RuntimeDialogueNode node)
@@ -193,23 +377,49 @@ namespace Novelify
         {
             normalizedPosition.x = Mathf.Clamp(normalizedPosition.x, -1f, 1f);
             normalizedPosition.y = Mathf.Clamp(normalizedPosition.y, -1f, 1f);
-            return Vector2.Scale(normalizedPosition, GetStageExtent(margin));
+            Vector2 localTarget = Vector2.Scale(
+                normalizedPosition, GetStageExtent(margin));
+            return localTarget - GetAnchorReferencePosition();
+        }
+
+        public Vector2 NormalizedToAnchoredOffset(
+            Vector2 normalizedOffset,
+            float margin)
+        {
+            return Vector2.Scale(normalizedOffset, GetStageExtent(margin));
         }
 
         public Vector2 AnchoredToNormalizedPosition(Vector2 anchoredPosition, float margin = 0f)
         {
             Vector2 extent = GetStageExtent(margin);
+            Vector2 localPosition = anchoredPosition +
+                                    GetAnchorReferencePosition();
             return new Vector2(
-                extent.x > 0f ? anchoredPosition.x / extent.x : 0f,
-                extent.y > 0f ? anchoredPosition.y / extent.y : 0f);
+                extent.x > 0f ? localPosition.x / extent.x : 0f,
+                extent.y > 0f ? localPosition.y / extent.y : 0f);
         }
 
         public Vector2 ClampToStageBounds(Vector2 position, float margin)
         {
             Vector2 extent = GetStageExtent(margin);
+            Vector2 anchorReference = GetAnchorReferencePosition();
+            Vector2 localPosition = position + anchorReference;
+            localPosition = new Vector2(
+                Mathf.Clamp(localPosition.x, -extent.x, extent.x),
+                Mathf.Clamp(localPosition.y, -extent.y, extent.y));
+            return localPosition - anchorReference;
+        }
+
+        private Vector2 GetAnchorReferencePosition()
+        {
+            if (transform is not RectTransform rect ||
+                rect.parent is not RectTransform parentRect)
+                return Vector2.zero;
+            Vector2 anchor = (rect.anchorMin + rect.anchorMax) * 0.5f;
+            Rect parentBounds = parentRect.rect;
             return new Vector2(
-                Mathf.Clamp(position.x, -extent.x, extent.x),
-                Mathf.Clamp(position.y, -extent.y, extent.y));
+                Mathf.Lerp(parentBounds.xMin, parentBounds.xMax, anchor.x),
+                Mathf.Lerp(parentBounds.yMin, parentBounds.yMax, anchor.y));
         }
 
         private Vector2 GetStageExtent(float margin)
@@ -400,6 +610,20 @@ namespace Novelify
 
         private void Update()
         {
+            if (_focusTint != _focusTintTarget)
+            {
+                _focusTintElapsed += TimeMode == DialogueTimeMode.Unscaled
+                    ? Time.unscaledDeltaTime
+                    : Time.deltaTime;
+                float focusProgress = _focusTintDuration > 0f
+                    ? Mathf.Clamp01(_focusTintElapsed / _focusTintDuration)
+                    : 1f;
+                _focusTint = Color.Lerp(
+                    _focusTintStart, _focusTintTarget,
+                    focusProgress * focusProgress * (3f - 2f * focusProgress));
+                ApplyFocusTint();
+            }
+
             if (IsMoving)
             {
                 _moveElapsed += TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;

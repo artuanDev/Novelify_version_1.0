@@ -11,7 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(17, NovelGraph.AssetExtension)]
+    [ScriptedImporter(22, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -129,9 +129,41 @@ namespace Novelify.Editor
                         speechBubbleNode,
                         runtimeSpeechBubble,
                         nodeIDMap);
+                    IPort bubbleCharacter =
+                        speechBubbleNode.GetInputPortByName("Character");
+                    IPort bubbleCharacterReference =
+                        speechBubbleNode.GetInputPortByName(
+                            "Character Reference");
+                    NovelCharacter explicitBubbleCharacter =
+                        GetPortValue<NovelCharacter>(bubbleCharacter);
+                    RuntimeValueExpression explicitBubbleCharacterValue =
+                        BuildExpression(bubbleCharacter);
+                    RuntimeValueExpression explicitBubbleReferenceValue =
+                        BuildExpression(bubbleCharacterReference);
+                    if (explicitBubbleCharacter != null ||
+                        !IsMissingConstant(explicitBubbleCharacterValue) ||
+                        !IsMissingCharacterReference(explicitBubbleReferenceValue))
+                    {
+                        runtimeSpeechBubble.NovelCharacter =
+                            explicitBubbleCharacter;
+                        runtimeSpeechBubble.CharacterValue =
+                            explicitBubbleCharacterValue;
+                        runtimeSpeechBubble.CharacterReferenceValue =
+                            explicitBubbleReferenceValue;
+                    }
                     runtimeSpeechBubble.Thinking = GetOptionValue(
                         speechBubbleNode.GetNodeOptionByName("Thinking"),
                         false);
+                    runtimeSpeechBubble.OverlapMode = GetOptionValue(
+                        speechBubbleNode.GetNodeOptionByName("When Another Bubble Is Visible"),
+                        NovelSpeechBubbleOverlapMode.ReplacePrevious);
+                    bool autoContinue = GetOptionValue(
+                        speechBubbleNode.GetNodeOptionByName("Continue Automatically"),
+                        false);
+                    runtimeSpeechBubble.AutoAdvanceDelay = autoContinue
+                        ? Mathf.Max(0f, GetOptionValue(
+                            speechBubbleNode.GetNodeOptionByName("Auto Continue Delay"), 0.15f))
+                        : -1f;
                     if (runtimeSpeechBubble.Thinking)
                         runtimeSpeechBubble.AnimateMouth = false;
                     runtimeNode = runtimeSpeechBubble;
@@ -282,6 +314,9 @@ namespace Novelify.Editor
             RuntimeSpeechBubblePresentationNode runtimeNode = change
                 ? new RuntimeChangeSpeechBubbleNode()
                 : new RuntimeCreateSpeechBubbleNode();
+            runtimeNode.StyleAsset = GetOptionValue(
+                node.GetNodeOptionByName("Style Asset"),
+                (NovelPresentationStyle)null);
             runtimeNode.BubbleStyle = ReadBoxStyle(
                 node, NovelBoxStyle.BubbleDefault);
             runtimeNode.Placement = GetOptionValue(
@@ -353,6 +388,15 @@ namespace Novelify.Editor
                 Opacity = Mathf.Clamp01(GetOptionValue(
                      node.GetNodeOptionByName("Opacity"),
                      fallback.Opacity)),
+                FillTexture = GetOptionValue(
+                    node.GetNodeOptionByName("Fill Texture"),
+                    fallback.FillTexture),
+                FillTiling = GetOptionValue(
+                    node.GetNodeOptionByName("Fill Tiling"),
+                    fallback.FillTiling),
+                FillOffset = GetOptionValue(
+                    node.GetNodeOptionByName("Fill Offset"),
+                    fallback.FillOffset),
                 CornerRadius = Mathf.Max(0f, GetOptionValue(
                      node.GetNodeOptionByName("Corner Radius"),
                      fallback.CornerRadius)),
@@ -362,10 +406,22 @@ namespace Novelify.Editor
                 OutlineColor = GetOptionValue(
                      node.GetNodeOptionByName("Outline Color"),
                      fallback.OutlineColor),
+                OutlineTransparency = Mathf.Clamp01(GetOptionValue(
+                    node.GetNodeOptionByName("Outline Transparency"),
+                    fallback.OutlineTransparency)),
                 OutlineThickness = Mathf.Max(0f, GetOptionValue(
                      node.GetNodeOptionByName("Outline Thickness"),
-                     fallback.OutlineThickness))
-            };
+                     fallback.OutlineThickness)),
+                OutlineTexture = GetOptionValue(
+                    node.GetNodeOptionByName("Outline Texture"),
+                    fallback.OutlineTexture),
+                OutlineTiling = GetOptionValue(
+                    node.GetNodeOptionByName("Outline Tiling"),
+                    fallback.OutlineTiling),
+                OutlineOffset = GetOptionValue(
+                    node.GetNodeOptionByName("Outline Offset"),
+                    fallback.OutlineOffset)
+            }.Validated();
         }
 
         private RuntimeFadeNode CreateFadeRuntimeNode(
@@ -673,12 +729,100 @@ namespace Novelify.Editor
             runtimeNode.AnimateOpacity = node is TransformSpeakerPortraitNode &&
                 GetOptionValue(node.GetNodeOptionByName("Animate Transparency"), false);
 
+            if (node is TransformSpeakerPortraitNode transformNode)
+            {
+                runtimeNode.AdditionalTargets.Clear();
+                int characterCount = transformNode.GetDesiredCharacterCount();
+                for (int targetIndex = 2;
+                     targetIndex <= characterCount;
+                     targetIndex++)
+                {
+                    RuntimePortraitTransformTarget target =
+                        CompilePortraitTransformTarget(
+                            transformNode, targetIndex);
+                    if (!HasCharacterTarget(target))
+                        continue;
+                    runtimeNode.AdditionalTargets.Add(target);
+                    if (targetIndex == 2)
+                        CopyLegacySecondTarget(runtimeNode, target);
+                }
+
+                // Retain the old fields for already-built runtime graphs while
+                // new imports use the unbounded AdditionalTargets collection.
+                runtimeNode.TransformSecondCharacter =
+                    runtimeNode.AdditionalTargets.Count > 0;
+            }
+
             if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
                 IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
                 _context?.LogImportWarning("Transform Speaker Portrait needs a Character or Character Reference input.");
 
             runtimeNode.NextNodeID =
                 GetNextNodeID(node, nodeIDMap);
+        }
+
+        private RuntimePortraitTransformTarget CompilePortraitTransformTarget(
+            TransformSpeakerPortraitNode node,
+            int targetIndex)
+        {
+            string suffix = $" {targetIndex}";
+            IPort character = node.GetInputPortByName("Character" + suffix);
+            IPort reference = node.GetInputPortByName(
+                "Character Reference" + suffix);
+            IPort position = node.GetInputPortByName("Position" + suffix);
+            IPort rotation = node.GetInputPortByName("Rotation" + suffix);
+            IPort scale = node.GetInputPortByName("Scale" + suffix);
+            IPort margin = node.GetInputPortByName("Margin" + suffix);
+            IPort opacity = node.GetInputPortByName("Opacity" + suffix);
+            Vector2 fallbackPosition = GetPortValue<Vector2>(position);
+            return new RuntimePortraitTransformTarget
+            {
+                Character = GetPortValue<NovelCharacter>(character),
+                InstanceID = GetOptionValue(
+                    node.GetNodeOptionByName("Instance ID" + suffix),
+                    string.Empty),
+                OffsetX = fallbackPosition.x,
+                OffsetY = fallbackPosition.y,
+                Rotation = GetPortValue<float>(rotation),
+                Scale = GetPortValue<Vector2>(scale),
+                Margin = Mathf.Max(0f, GetPortValue<float>(margin)),
+                Opacity = Mathf.Clamp01(GetPortValue<float>(opacity)),
+                CharacterValue = BuildExpression(character),
+                CharacterReferenceValue = BuildExpression(reference),
+                PositionValue = BuildExpression(position),
+                RotationValue = BuildExpression(rotation),
+                ScaleValue = BuildExpression(scale),
+                MarginValue = BuildExpression(margin),
+                OpacityValue = BuildExpression(opacity)
+            };
+        }
+
+        private bool HasCharacterTarget(RuntimePortraitTransformTarget target) =>
+            target != null &&
+            (target.Character != null ||
+             !IsMissingConstant(target.CharacterValue) ||
+             !IsMissingCharacterReference(target.CharacterReferenceValue));
+
+        private static void CopyLegacySecondTarget(
+            RuntimeTransformSpeakerPortraitNode node,
+            RuntimePortraitTransformTarget target)
+        {
+            node.SecondCharacter = target.Character;
+            node.SecondInstanceID = target.InstanceID;
+            node.SecondOffsetX = target.OffsetX;
+            node.SecondOffsetY = target.OffsetY;
+            node.SecondRotation = target.Rotation;
+            node.SecondScale = target.Scale;
+            node.SecondMargin = target.Margin;
+            node.SecondOpacity = target.Opacity;
+            node.SecondCharacterValue = target.CharacterValue;
+            node.SecondCharacterReferenceValue =
+                target.CharacterReferenceValue;
+            node.SecondPositionValue = target.PositionValue;
+            node.SecondRotationValue = target.RotationValue;
+            node.SecondScaleValue = target.ScaleValue;
+            node.SecondMarginValue = target.MarginValue;
+            node.SecondOpacityValue = target.OpacityValue;
         }
 
         private void ProcessFlipCharacterNode(
@@ -828,6 +972,9 @@ namespace Novelify.Editor
                 case CreateDialogueBoxNode _:
                     return new RuntimeCreateDialogueBoxNode
                     {
+                        StyleAsset = GetOptionValue(
+                            node.GetNodeOptionByName("Style Asset"),
+                            (NovelPresentationStyle)null),
                         Style = ReadBoxStyle(
                                 node, NovelBoxStyle.DialogueDefault),
 
@@ -873,6 +1020,9 @@ namespace Novelify.Editor
                 case CreateDialogueSpeakerBoxNode _:
                     return new RuntimeCreateDialogueSpeakerBoxNode
                     {
+                        StyleAsset = GetOptionValue(
+                            node.GetNodeOptionByName("Style Asset"),
+                            (NovelPresentationStyle)null),
                         Style = ReadBoxStyle(
                                          node, NovelBoxStyle.SpeakerDefault),
 
@@ -896,6 +1046,9 @@ namespace Novelify.Editor
                 case ChangeDialogueBackgroundStyleNode _:
                     return new RuntimeChangeDialogueStyleNode
                     {
+                        StyleAsset = GetOptionValue(
+                            node.GetNodeOptionByName("Style Asset"),
+                            (NovelPresentationStyle)null),
                         Target = GetOptionValue(
                             node.GetNodeOptionByName("Target"),
                                 NovelBoxTarget.Both),
@@ -943,6 +1096,28 @@ namespace Novelify.Editor
                             node.GetNodeOptionByName("Channel"),
                             NovelAudioChannel.Music)
                     };
+                case SetBackgroundNode setBackground:
+                {
+                    IPort background = setBackground.GetInputPortByName(
+                        SetBackgroundNode.BackgroundPort);
+                    IPort duration = setBackground.GetInputPortByName(
+                        SetBackgroundNode.DurationPort);
+                    return new RuntimeSetBackgroundNode
+                    {
+                        Background = GetPortValue<Sprite>(background),
+                        BackgroundValue = BuildExpression(background),
+                        Tint = GetOptionValue(
+                            node.GetNodeOptionByName("Tint"), Color.white),
+                        ScaleMode = GetOptionValue(
+                            node.GetNodeOptionByName("Scale Mode"),
+                            NovelBackgroundScaleMode.Cover),
+                        TransitionDuration = Mathf.Max(
+                            0f, GetPortValue<float>(duration)),
+                        TransitionDurationValue = BuildExpression(duration),
+                        WaitForCompletion = GetOptionValue(
+                            node.GetNodeOptionByName("Wait For Completion"), false)
+                    };
+                }
                 case CreateSpeechBubbleNode createBubble:
                     return CreateSpeechBubblePresentationRuntimeNode(
                         createBubble, false);
@@ -1625,7 +1800,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(9, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(14, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

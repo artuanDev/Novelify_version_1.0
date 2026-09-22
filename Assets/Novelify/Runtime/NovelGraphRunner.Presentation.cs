@@ -32,14 +32,27 @@ namespace Novelify
         private float DialogueDeltaTime =>
             TimeMode == DialogueTimeMode.Unscaled ? Time.unscaledDeltaTime : Time.deltaTime;
 
-        private IEnumerator WaitThenContinue(RuntimeNode node, int version, float seconds, CharacterInfo moving = null)
+        private IEnumerator WaitThenContinue(
+            RuntimeNode node,
+            int version,
+            float seconds,
+            params CharacterInfo[] movingCharacters)
         {
             // Yield before continuing so the coroutine handle is assigned before completion.
+            bool characterIsMoving;
             do
             {
                 yield return null;
                 seconds -= DialogueDeltaTime;
-            } while (seconds > 0f || (moving != null && moving.IsMoving));
+                characterIsMoving = false;
+                if (movingCharacters != null)
+                    foreach (CharacterInfo character in movingCharacters)
+                        if (character != null && character.IsMoving)
+                        {
+                            characterIsMoving = true;
+                            break;
+                        }
+            } while (seconds > 0f || characterIsMoving);
             _waitCoroutine = null;
             _isWaiting = false;
             if (version == _flowVersion && _currentNode == node) AdvanceCurrentNode();
@@ -75,6 +88,7 @@ namespace Novelify
                     OnDialogueBoundaryPresented(node, speakerName, node.DialogueText ?? string.Empty);
                     Session.RaiseDialoguePresented(RuntimeGraph, node, speakerName);
                 }
+                ScheduleAutomaticBubbleAdvance(node);
                 return;
             }
 
@@ -99,6 +113,11 @@ namespace Novelify
             _speaker = speakingCharacter != null ? ShowCharacter(speakingCharacter, speakerReference.InstanceID) : null;
 
             TrackGeneratedSpeechBubble(node);
+            Stage.SetActiveSpeaker(
+                _speaker,
+                DimInactiveCharacters,
+                InactiveCharacterTint,
+                SpeakerFocusTransitionDuration);
             Stage.BringToFront(_speaker);
             CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
@@ -125,6 +144,42 @@ namespace Novelify
                 OnDialogueBoundaryPresented(node, speakerName, node.DialogueText ?? string.Empty);
                 Session.RaiseDialoguePresented(RuntimeGraph, node, speakerName);
             }
+            ScheduleAutomaticBubbleAdvance(node);
+        }
+
+        private void ScheduleAutomaticBubbleAdvance(RuntimeDialogueNode node)
+        {
+            if (node is not RuntimeSpeechBubbleNode bubble ||
+                bubble.AutoAdvanceDelay < 0f)
+                return;
+            if (_autoAdvanceCoroutine != null)
+                StopCoroutine(_autoAdvanceCoroutine);
+            _autoAdvanceCoroutine = StartCoroutine(AutoAdvanceBubble(
+                bubble, _flowVersion, bubble.AutoAdvanceDelay));
+        }
+
+        private IEnumerator AutoAdvanceBubble(
+            RuntimeSpeechBubbleNode node,
+            int version,
+            float delay)
+        {
+            // Always keep the node alive for at least one rendered frame.
+            do
+            {
+                yield return null;
+                delay -= DialogueDeltaTime;
+            } while (delay > 0f);
+
+            if (version != _flowVersion || _currentNode != node)
+                yield break;
+            _autoAdvanceCoroutine = null;
+            if (_isTextRevealing)
+            {
+                CompleteTextImmediately();
+                yield return null;
+            }
+            if (version == _flowVersion && _currentNode == node)
+                AdvanceCurrentNode();
         }
 
         private void ApplyDialogueFonts(RuntimeDialogueNode node)
@@ -223,6 +278,7 @@ namespace Novelify
             _currentNode = null;
             HideDialoguePanel();
             if (HideCharactersOnEnd) _stage?.HideAll();
+            _stage?.ClearSpeakerFocus();
             ClearChoiceButtons();
             _customPresentation?.Stop();
             if (wasRunning) Session.RaiseStopped(stoppedGraph);
@@ -287,7 +343,9 @@ namespace Novelify
 
         private void StopNodePresentation()
         {
-            _generatedPresentation?.StopTrackingSpeechBubble();
+            if (_autoAdvanceCoroutine != null)
+                StopCoroutine(_autoAdvanceCoroutine);
+            _autoAdvanceCoroutine = null;
             if (_customPresentation != null)
             {
                 _customPresentation.HideDialogue();

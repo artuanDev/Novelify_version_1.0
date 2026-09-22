@@ -1,9 +1,6 @@
-using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Novelify
 {
@@ -16,22 +13,31 @@ namespace Novelify
         [SerializeField] private float outlineThickness = 2f;
         [SerializeField, UnityEngine.Range(2, 16)] private int segmentsPerCorner = 8;
 
+        private NovelBoxStyle _style = NovelBoxStyle.DialogueDefault;
+        private Material _styleMaterial;
+
         public void Apply(NovelBoxStyle style)
         {
             NovelBoxStyle value = style.Validated();
+            _style = value;
             color = value.EffectiveFillColor;
             cornerRadius = value.CornerRadius;
             outlineEnabled = value.OutlineEnabled;
-            outlineColor = value.OutlineColor;
+            outlineColor = value.EffectiveOutlineColor;
             outlineThickness = value.OutlineThickness;
             raycastTarget = false;
+            EnsureStyleMaterial();
+            UpdateMaterialProperties(GetPixelAdjustedRect());
             SetVerticesDirty();
+            SetMaterialDirty();
         }
 
         protected override void OnRectTransformDimensionsChange()
         {
             base.OnRectTransformDimensionsChange();
+            UpdateMaterialProperties(GetPixelAdjustedRect());
             SetVerticesDirty();
+            SetMaterialDirty();
         }
 
         protected override void OnPopulateMesh(VertexHelper helper)
@@ -40,6 +46,13 @@ namespace Novelify
             Rect outerRect = GetPixelAdjustedRect();
             if (outerRect.width <= 0f || outerRect.height <= 0f)
                 return;
+
+            if (_styleMaterial != null)
+            {
+                UpdateMaterialProperties(outerRect);
+                AddQuad(helper, outerRect, Color.white);
+                return;
+            }
 
             float radius = Mathf.Min(
                 Mathf.Max(0f, cornerRadius),
@@ -72,6 +85,69 @@ namespace Novelify
 
             AddRing(helper, outer, inner, outlineColor);
             AddFan(helper, inner, color);
+        }
+
+        private void EnsureStyleMaterial()
+        {
+            if (_styleMaterial != null)
+                return;
+            Shader shader = Resources.Load<Shader>("NovelStyledBox");
+            if (shader == null)
+                shader = Shader.Find("Novelify/UI/Styled Box");
+            if (shader == null)
+                return;
+            _styleMaterial = new Material(shader)
+            {
+                name = "Novelify Styled Box (Instance)",
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            material = _styleMaterial;
+        }
+
+        private void UpdateMaterialProperties(Rect rect)
+        {
+            if (_styleMaterial == null)
+                return;
+            NovelBoxStyle style = _style.Validated();
+            _styleMaterial.SetTexture(
+                "_FillTex", style.FillTexture != null
+                    ? style.FillTexture
+                    : Texture2D.whiteTexture);
+            _styleMaterial.SetColor("_FillColor", style.EffectiveFillColor);
+            _styleMaterial.SetVector("_FillTiling", style.FillTiling);
+            _styleMaterial.SetVector("_FillOffset", style.FillOffset);
+            _styleMaterial.SetTexture(
+                "_OutlineTex", style.OutlineTexture != null
+                    ? style.OutlineTexture
+                    : Texture2D.whiteTexture);
+            _styleMaterial.SetColor(
+                "_OutlineColor", style.EffectiveOutlineColor);
+            _styleMaterial.SetVector("_OutlineTiling", style.OutlineTiling);
+            _styleMaterial.SetVector("_OutlineOffset", style.OutlineOffset);
+            _styleMaterial.SetVector(
+                "_RectSize", new Vector4(rect.width, rect.height, 0f, 0f));
+            _styleMaterial.SetFloat("_CornerRadius", style.CornerRadius);
+            _styleMaterial.SetFloat(
+                "_OutlineThickness", style.OutlineThickness);
+            _styleMaterial.SetFloat(
+                "_OutlineEnabled", style.OutlineEnabled ? 1f : 0f);
+        }
+
+        private static void AddQuad(
+            VertexHelper helper,
+            Rect rect,
+            Color32 vertexColor)
+        {
+            helper.AddVert(
+                new Vector2(rect.xMin, rect.yMin), vertexColor, Vector2.zero);
+            helper.AddVert(
+                new Vector2(rect.xMin, rect.yMax), vertexColor, Vector2.up);
+            helper.AddVert(
+                new Vector2(rect.xMax, rect.yMax), vertexColor, Vector2.one);
+            helper.AddVert(
+                new Vector2(rect.xMax, rect.yMin), vertexColor, Vector2.right);
+            helper.AddTriangle(0, 1, 2);
+            helper.AddTriangle(0, 2, 3);
         }
 
         private static List<Vector2> BuildContour(
@@ -171,6 +247,26 @@ namespace Novelify
         private Vector2 _baseA;
         private Vector2 _baseB;
         private Vector2 _tip;
+        private Texture2D _texture;
+        private Vector2 _tiling = Vector2.one;
+        private Vector2 _offset;
+
+        public override Texture mainTexture =>
+            _texture != null ? _texture : Texture2D.whiteTexture;
+
+        public void ApplyAppearance(
+            Texture2D texture,
+            Color tint,
+            Vector2 tiling,
+            Vector2 offset)
+        {
+            _texture = texture;
+            color = tint;
+            _tiling = tiling;
+            _offset = offset;
+            SetMaterialDirty();
+            SetVerticesDirty();
+        }
 
         public void SetPoints(Vector2 baseA, Vector2 baseB, Vector2 tip)
         {
@@ -185,23 +281,31 @@ namespace Novelify
         {
             helper.Clear();
             Color32 vertexColor = color;
+            Rect rect = GetPixelAdjustedRect();
             if (_usesCustomPoints)
             {
-                helper.AddVert(_baseA, vertexColor, Vector2.zero);
-                helper.AddVert(_baseB, vertexColor, Vector2.zero);
-                helper.AddVert(_tip, vertexColor, Vector2.zero);
+                helper.AddVert(_baseA, vertexColor, TextureUv(_baseA, rect));
+                helper.AddVert(_baseB, vertexColor, TextureUv(_baseB, rect));
+                helper.AddVert(_tip, vertexColor, TextureUv(_tip, rect));
                 helper.AddTriangle(0, 1, 2);
                 return;
             }
 
-            Rect rect = GetPixelAdjustedRect();
-            helper.AddVert(new Vector2(rect.xMin, rect.yMax),
-                vertexColor, Vector2.zero);
-            helper.AddVert(new Vector2(rect.xMax, rect.yMax),
-                vertexColor, Vector2.zero);
-            helper.AddVert(new Vector2(rect.center.x, rect.yMin),
-                vertexColor, Vector2.zero);
+            Vector2 left = new Vector2(rect.xMin, rect.yMax);
+            Vector2 right = new Vector2(rect.xMax, rect.yMax);
+            Vector2 tip = new Vector2(rect.center.x, rect.yMin);
+            helper.AddVert(left, vertexColor, TextureUv(left, rect));
+            helper.AddVert(right, vertexColor, TextureUv(right, rect));
+            helper.AddVert(tip, vertexColor, TextureUv(tip, rect));
             helper.AddTriangle(0, 1, 2);
+        }
+
+        private Vector2 TextureUv(Vector2 point, Rect rect)
+        {
+            Vector2 normalized = new Vector2(
+                rect.width > 0f ? (point.x - rect.xMin) / rect.width : 0f,
+                rect.height > 0f ? (point.y - rect.yMin) / rect.height : 0f);
+            return Vector2.Scale(normalized, _tiling) + _offset;
         }
     }
 }

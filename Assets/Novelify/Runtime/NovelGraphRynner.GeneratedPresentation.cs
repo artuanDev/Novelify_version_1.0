@@ -66,6 +66,37 @@ namespace Novelify
               node.Priority);
         }
 
+        private bool BeginGeneratedBackground(
+            RuntimeSetBackgroundNode node,
+            int version)
+        {
+            Sprite sprite = AsObject(
+                Evaluate(node.BackgroundValue), node.Background);
+            float duration = Mathf.Max(0f, AsFloat(
+                Evaluate(node.TransitionDurationValue),
+                node.TransitionDuration));
+            bool wait = node.WaitForCompletion && duration > 0f;
+            if (wait)
+                _isWaiting = true;
+            GeneratedPresentation.SetBackground(
+                sprite,
+                node.Tint,
+                node.ScaleMode,
+                duration,
+                wait ? () => CompleteGeneratedBackground(node, version) : null);
+            return wait;
+        }
+
+        private void CompleteGeneratedBackground(
+            RuntimeSetBackgroundNode node,
+            int version)
+        {
+            if (version != _flowVersion || _currentNode != node)
+                return;
+            _isWaiting = false;
+            AdvanceCurrentNode();
+        }
+
         private bool BeginGeneratedFade(RuntimeFadeNode node, int version)
         {
             float duration = Mathf.Max(0f, AsFloat(

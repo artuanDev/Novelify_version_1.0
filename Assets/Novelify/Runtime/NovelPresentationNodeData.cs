@@ -1,6 +1,4 @@
 using System;
-using System.Security.Cryptography.X509Certificates;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEngine;
 
 namespace Novelify
@@ -35,6 +33,20 @@ namespace Novelify
     {
         FollowSpeaker,
         ScreenAnchor
+    }
+
+    /// <summary>Controls what happens to an already visible bubble when a new one is shown.</summary>
+    public enum NovelSpeechBubbleOverlapMode
+    {
+        ReplacePrevious,
+        KeepPrevious
+    }
+
+    public enum NovelBackgroundScaleMode
+    {
+        Cover,
+        Contain,
+        Stretch
     }
 
     //Alignment of the text inside the dialogue box
@@ -100,17 +112,37 @@ namespace Novelify
     {
         public Color FillColor;
         public float Opacity;
+        public Texture2D FillTexture;
+        public Vector2 FillTiling;
+        public Vector2 FillOffset;
         public float CornerRadius;
         public bool OutlineEnabled;
         public Color OutlineColor;
+        public float OutlineTransparency;
         public float OutlineThickness;
+        public Texture2D OutlineTexture;
+        public Vector2 OutlineTiling;
+        public Vector2 OutlineOffset;
 
         public NovelBoxStyle Validated()
         {
             NovelBoxStyle value = this;
             value.Opacity = Mathf.Clamp01(value.Opacity);
+            value.FillTiling = ValidateTiling(value.FillTiling);
             value.CornerRadius = Mathf.Max(0f, value.CornerRadius);
+            value.OutlineTransparency = Mathf.Clamp01(
+                value.OutlineTransparency);
             value.OutlineThickness = Mathf.Max(0f, value.OutlineThickness);
+            value.OutlineTiling = ValidateTiling(value.OutlineTiling);
+            return value;
+        }
+
+        private static Vector2 ValidateTiling(Vector2 value)
+        {
+            if (Mathf.Abs(value.x) < 0.001f)
+                value.x = 1f;
+            if (Mathf.Abs(value.y) < 0.001f)
+                value.y = 1f;
             return value;
         }
 
@@ -125,35 +157,55 @@ namespace Novelify
             }
         }
 
+        public Color EffectiveOutlineColor
+        {
+            get
+            {
+                NovelBoxStyle value = Validated();
+                Color color = value.OutlineColor;
+                color.a *= 1f - value.OutlineTransparency;
+                return color;
+            }
+        }
+
         //Default styles
         public static NovelBoxStyle DialogueDefault = new NovelBoxStyle
         {
             FillColor = new Color(0.055f, 0.075f, 0.13f, 1f),
             Opacity = 0.94f,
+            FillTiling = Vector2.one,
             CornerRadius = 24f,
             OutlineEnabled = false,
             OutlineColor = new Color(1f, 1f, 1f, 0.35f),
+            OutlineTransparency = 0f,
             OutlineThickness = 2f,
+            OutlineTiling = Vector2.one,
         };
 
         public static NovelBoxStyle SpeakerDefault => new NovelBoxStyle
         {
             FillColor = new Color(0.12f, 0.42f, 0.88f, 1f),
             Opacity = 1f,
+            FillTiling = Vector2.one,
             CornerRadius = 16f,
             OutlineEnabled = false,
             OutlineColor = Color.white,
+            OutlineTransparency = 0f,
             OutlineThickness = 2f,
+            OutlineTiling = Vector2.one,
         };
 
         public static NovelBoxStyle BubbleDefault => new NovelBoxStyle
         {
             FillColor = new Color(0.04f, 0.05f, 0.1f, 0.3f),
             Opacity = 0.2f,
+            FillTiling = Vector2.one,
             CornerRadius = 24f,
             OutlineEnabled = false,
             OutlineColor = Color.white,
+            OutlineTransparency = 0f,
             OutlineThickness = 2f,
+            OutlineTiling = Vector2.one,
         };
     }
 
@@ -161,7 +213,11 @@ namespace Novelify
     [Serializable]
     public sealed class RuntimeCreateDialogueBoxNode : RuntimeNode
     {
+        public NovelPresentationStyle StyleAsset;
         public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+        public NovelBoxStyle ResolvedStyle => StyleAsset != null
+            ? StyleAsset.DialogueBoxStyle
+            : Style.Validated();
         public NovelTextAlignment TextAlignment = NovelTextAlignment.TopLeft;
         public NovelDialogueAnchor Anchor = NovelDialogueAnchor.BottomCenter;
         public float BaseFontSize = 30f;
@@ -180,7 +236,11 @@ namespace Novelify
     [Serializable]
     public sealed class RuntimeCreateDialogueSpeakerBoxNode : RuntimeNode
     {
+        public NovelPresentationStyle StyleAsset;
         public NovelBoxStyle Style = NovelBoxStyle.SpeakerDefault;
+        public NovelBoxStyle ResolvedStyle => StyleAsset != null
+            ? StyleAsset.SpeakerBoxStyle
+            : Style.Validated();
         public NovelSpeakerAnchor Anchor = NovelSpeakerAnchor.TopLeft;
         public float FontSize = 25f;
         public float HorizontalPadding = 16f;
@@ -192,8 +252,18 @@ namespace Novelify
     [Serializable]
     public sealed class RuntimeChangeDialogueStyleNode : RuntimeNode
     {
+        public NovelPresentationStyle StyleAsset;
         public NovelBoxTarget Target = NovelBoxTarget.Both;
         public NovelBoxStyle Style = NovelBoxStyle.DialogueDefault;
+
+        public NovelBoxStyle Resolve(NovelBoxTarget target)
+        {
+            if (StyleAsset == null)
+                return Style.Validated();
+            return target == NovelBoxTarget.Speaker
+                ? StyleAsset.SpeakerBoxStyle
+                : StyleAsset.DialogueBoxStyle;
+        }
     }
 
     [Serializable]
@@ -224,9 +294,26 @@ namespace Novelify
     }
 
     [Serializable]
+    public sealed class RuntimeSetBackgroundNode : RuntimeNode
+    {
+        public Sprite Background;
+        [SerializeReference] public RuntimeValueExpression BackgroundValue;
+        public Color Tint = Color.white;
+        public NovelBackgroundScaleMode ScaleMode =
+            NovelBackgroundScaleMode.Cover;
+        public float TransitionDuration = 0.35f;
+        [SerializeReference] public RuntimeValueExpression TransitionDurationValue;
+        public bool WaitForCompletion;
+    }
+
+    [Serializable]
     public abstract class RuntimeSpeechBubblePresentationNode : RuntimeNode
     {
+        public NovelPresentationStyle StyleAsset;
         public NovelBoxStyle BubbleStyle = NovelBoxStyle.BubbleDefault;
+        public NovelBoxStyle ResolvedStyle => StyleAsset != null
+            ? StyleAsset.SpeechBubbleStyle
+            : BubbleStyle.Validated();
         public NovelSpeechBubblePlacement Placement =
             NovelSpeechBubblePlacement.FollowSpeaker;
         public NovelDialogueAnchor ScreenAnchor =
@@ -290,5 +377,9 @@ namespace Novelify
     public sealed class RuntimeSpeechBubbleNode : RuntimeDialogueNode
     {
         public bool Thinking;
+        public NovelSpeechBubbleOverlapMode OverlapMode =
+            NovelSpeechBubbleOverlapMode.ReplacePrevious;
+        [Tooltip("Negative values wait for player input. Zero or greater advances automatically after that many seconds.")]
+        public float AutoAdvanceDelay = -1f;
     }
 }

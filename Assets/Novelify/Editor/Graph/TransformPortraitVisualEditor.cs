@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
@@ -44,7 +45,7 @@ namespace Novelify.Editor
                         TrickleDown.TrickleDown);
                 }
 
-                HideRedundantChoicePorts(root);
+                ConfigureGraphPorts(root);
             }
         }
 
@@ -106,19 +107,40 @@ namespace Novelify.Editor
             return null;
         }
 
-        private static void HideRedundantChoicePorts(VisualElement element)
+        private static void ConfigureGraphPorts(VisualElement element)
         {
-            if (IsViewType(element, "Port") && !element.ClassListContains(PortHookClass))
+            if (IsViewType(element, "Port"))
             {
                 object model = ReadMember(element, "PortModel");
                 if (model is IPort port)
                 {
-                    element.AddToClassList(PortHookClass);
-                    HideRedundantChoicePort(element, port);
+                    if (!element.ClassListContains(PortHookClass))
+                    {
+                        element.AddToClassList(PortHookClass);
+                        HideRedundantChoicePort(element, port);
+                    }
+                    ConfigureLegacyBubbleSpeakerPort(element, port);
                 }
             }
             for (int i = 0; i < element.hierarchy.childCount; i++)
-                HideRedundantChoicePorts(element.hierarchy[i]);
+                ConfigureGraphPorts(element.hierarchy[i]);
+        }
+
+        private static void ConfigureLegacyBubbleSpeakerPort(
+            VisualElement view, IPort port)
+        {
+            if (port.GetNode() is not SpeechBubbleNode)
+                return;
+            string name = ReadStringMember(port, "UniqueName") ??
+                          port.Name ?? string.Empty;
+            if (name != "Speaker" && name != "Speaker Reference")
+                return;
+
+            // Speech bubbles use their explicit Character ports. Keep an old
+            // Speaker wire visible so existing graphs remain understandable.
+            view.style.display = port.IsConnected
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
         }
 
         private static void HideRedundantChoicePort(VisualElement view, IPort port)
@@ -233,6 +255,27 @@ namespace Novelify.Editor
                     Vector2.LerpUnclamped(from.Scale, to.Scale, t));
         }
 
+        private sealed class ComposerTarget
+        {
+            public int Number;
+            public NovelCharacter Character;
+            public string InstanceID;
+            public PortraitState Start;
+            public PortraitState Target;
+            public Vector2 AuthoredPosition;
+            public string StartSource;
+            public bool TargetSeededFromStart;
+            public float StartOpacity = 1f;
+            public float TargetOpacity = 1f;
+            public float Margin;
+            public Vector2 PortraitCanvasSize;
+            public Vector2 StageCanvasSize;
+            public Rect ContentRect = new Rect(0f, 0f, 1f, 1f);
+            public string PortraitSizeSource;
+            public VisualElement GhostVisual;
+            public VisualElement TargetVisual;
+        }
+
         private static readonly Color Background = new Color32(6, 13, 24, 255);
         private static readonly Color Panel = new Color32(14, 30, 49, 255);
         private static readonly Color PanelRaised = new Color32(20, 42, 65, 255);
@@ -256,6 +299,9 @@ namespace Novelify.Editor
 
         private TransformSpeakerPortraitNode _node;
         private Graph _graph;
+        private readonly List<ComposerTarget> _composerTargets = new();
+        private int _selectedComposerTarget;
+        private DropdownField _targetSelector;
         private NovelCharacter _character;
         private string _instanceID;
         private PortraitState _start;
@@ -481,18 +527,10 @@ namespace Novelify.Editor
             if (_node == null) return;
             _historyReady = false;
             _graph = _node.Graph;
-            ResolveAuthoredValues();
-            bool untouchedDefaultTarget = HasUntouchedDefaultTarget();
+            ResolveSharedAuthoredValues();
             if (!TryGetSelectedGameViewResolution(out _resolution))
                 _resolution = new Vector2Int(1920, 1080);
-            ResolveStartState();
-            _targetSeededFromStart = untouchedDefaultTarget;
-            _target = new PortraitState(
-                _targetSeededFromStart
-                    ? _start.Position
-                    : AuthoredToVisualPosition(_authoredPosition),
-                _target.Rotation,
-                _target.Scale);
+            ResolveComposerTargets();
             ResolvePortraitCanvasSize();
             _marginOpacity = EditorPrefs.GetFloat(GetMarginOpacityPrefsKey(), _marginOpacity);
             _viewportZoom = Mathf.Clamp(
@@ -566,7 +604,7 @@ namespace Novelify.Editor
             Label title = new Label("Portrait Tween Composer");
             title.style.fontSize = 17f;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            Label subtitle = new Label("Compose the target visually, preview the motion, then confirm it on the node.");
+            Label subtitle = new Label("Compose every connected character together, select a target to edit it, then confirm the synchronized tween.");
             subtitle.style.fontSize = 11f;
             subtitle.style.color = Muted;
             titles.Add(title);
@@ -611,7 +649,7 @@ namespace Novelify.Editor
             _screen.style.overflow = Overflow.Visible;
             SetBorder(_screen, Border, 1f);
             _screen.focusable = true;
-            _screen.tooltip = "Drag the portrait to move it. Pull corners to scale and drag a side to rotate.";
+            _screen.tooltip = "Drag the selected character to move it. Use the Character Target selector to edit another connected portrait.";
             _screen.RegisterCallback<PointerDownEvent>(OnStagePointerDown);
             _screen.RegisterCallback<PointerMoveEvent>(OnStagePointerMove);
             _screen.RegisterCallback<PointerUpEvent>(OnStagePointerUp);
@@ -672,12 +710,7 @@ namespace Novelify.Editor
             _safeArea.pickingMode = PickingMode.Ignore;
             _gameViewport.Add(_safeArea);
 
-            _ghost = CreatePortraitGroup(0.24f, StartAccent, "START");
-            _ghost.pickingMode = PickingMode.Ignore;
-            _screen.Add(_ghost);
-            _targetPortrait = CreatePortraitGroup(1f, Accent, "TARGET");
-            _targetPortrait.pickingMode = PickingMode.Ignore;
-            _screen.Add(_targetPortrait);
+            RebuildComposerPortraitVisuals();
 
             // Additive preview: this displays the selected scene UI on top of
             // the existing portrait preview without modifying it.
@@ -707,6 +740,26 @@ namespace Novelify.Editor
             inspector.contentContainer.style.paddingTop = 14f;
             inspector.contentContainer.style.paddingBottom = 14f;
             parent.Add(inspector);
+
+            AddSectionTitle(inspector, "CHARACTER TARGET");
+            _targetSelector = new DropdownField(
+                "Editing",
+                GetComposerTargetNames(),
+                Mathf.Clamp(
+                    _selectedComposerTarget,
+                    0,
+                    Mathf.Max(0, _composerTargets.Count - 1)));
+            _targetSelector.tooltip =
+                "All connected characters are shown together. Select which target to move, rotate, scale, or fade.";
+            _targetSelector.RegisterValueChangedCallback(evt =>
+            {
+                if (_updatingFields)
+                    return;
+                int index = GetComposerTargetNames().IndexOf(evt.newValue);
+                if (index >= 0)
+                    SelectComposerTarget(index);
+            });
+            inspector.Add(_targetSelector);
 
             AddSectionTitle(inspector, "TARGET TRANSFORM");
             if (_targetSeededFromStart)
@@ -805,7 +858,10 @@ namespace Novelify.Editor
 
             _instanceIDField = new TextField("Instance ID") { value = _instanceID ?? string.Empty };
             _instanceIDField.tooltip = "Targets an additional instance of this character. A connected Character Reference supplies its own instance ID.";
-            bool referenceConnected = _node.GetInputPortByName("Character Reference")?.IsConnected == true;
+            string selectedSuffix = TargetSuffix(
+                _composerTargets[_selectedComposerTarget].Number);
+            bool referenceConnected = _node.GetInputPortByName(
+                "Character Reference" + selectedSuffix)?.IsConnected == true;
             _instanceIDField.SetEnabled(!referenceConnected);
             _instanceIDField.RegisterValueChangedCallback(evt =>
             {
@@ -1134,37 +1190,175 @@ namespace Novelify.Editor
             rootVisualElement.Add(footer);
         }
 
-        private void ResolveAuthoredValues()
+        private List<string> GetComposerTargetNames()
         {
-            _character = ResolveCharacter(_node);
-            _instanceID = ResolveInstanceID(_node);
+            var names = new List<string>();
+            foreach (ComposerTarget target in _composerTargets)
+            {
+                string characterName = target.Character != null &&
+                    !string.IsNullOrWhiteSpace(target.Character.SpeakerName)
+                        ? target.Character.SpeakerName
+                        : "unassigned";
+                names.Add($"Character {target.Number} - {characterName}");
+            }
+            if (names.Count == 0)
+                names.Add("Character 1 - unassigned");
+            return names;
+        }
+
+        private void SelectComposerTarget(int index)
+        {
+            if (index < 0 || index >= _composerTargets.Count ||
+                index == _selectedComposerTarget)
+                return;
+            StoreActiveComposerTarget();
+            _selectedComposerTarget = index;
+            LoadComposerTarget(_composerTargets[index]);
+            ResolvePortraitCanvasSize();
+            RebuildComposerPortraitVisuals();
+            _undoHistory.Clear();
+            _redoHistory.Clear();
+            RefreshHistoryButtons();
+            RefreshAll();
+            _targetSelector?.SetValueWithoutNotify(
+                GetComposerTargetNames()[index]);
+            SetStatus(
+                $"Editing Character {_composerTargets[index].Number}. All targets remain visible and preview together.",
+                false);
+        }
+
+        private void ResolveSharedAuthoredValues()
+        {
             _positionSpace = GetOption(_node, "Coordinate Space", CharacterPositionSpace.Normalized);
             _relative = GetOption(_node, "Relative", false);
             _animateTransform = GetOption(_node, "Animate Transform", false);
             _animateOpacity = GetOption(_node, "Animate Transparency", false);
-            _targetOpacity = ResolveOpacity(_node);
-            _margin = Mathf.Max(0f, ResolveMargin(_node));
             _easing = ResolveEasing(_node);
             _customCurve = SanitizeCustomCurve(GetOption(
                 _node,
                 "Custom Easing Curve",
                 AnimationCurve.Linear(0f, 0f, 1f, 1f)));
-            _authoredPosition = ResolvePosition(_node);
-            _target = new PortraitState(
-                _authoredPosition,
-                ResolveRotation(_node),
-                ResolveScale(_node));
         }
 
-        private bool HasUntouchedDefaultTarget()
+        private void ResolveComposerTargets()
         {
-            IPort position = _node.GetInputPortByName("Position");
-            IPort rotation = _node.GetInputPortByName("Rotation");
-            IPort scale = _node.GetInputPortByName("Scale");
+            int previousNumber = _composerTargets.Count > 0 &&
+                                 _selectedComposerTarget >= 0 &&
+                                 _selectedComposerTarget < _composerTargets.Count
+                ? _composerTargets[_selectedComposerTarget].Number
+                : 1;
+            _composerTargets.Clear();
+            int count = Mathf.Max(1, _node.GetDesiredCharacterCount());
+            for (int number = 1; number <= count; number++)
+            {
+                LoadTargetFromNode(number);
+                ResolvePortraitCanvasSize();
+                bool untouched = HasUntouchedDefaultTarget(number);
+                ResolveStartState();
+                _targetSeededFromStart = untouched;
+                _target = new PortraitState(
+                    untouched
+                        ? _start.Position
+                        : AuthoredToVisualPosition(_authoredPosition),
+                    _target.Rotation,
+                    _target.Scale);
+                _composerTargets.Add(CaptureComposerTarget(number));
+            }
+
+            _selectedComposerTarget = Mathf.Max(
+                0,
+                _composerTargets.FindIndex(target =>
+                    target.Number == previousNumber));
+            LoadComposerTarget(_composerTargets[_selectedComposerTarget]);
+        }
+
+        private void LoadTargetFromNode(int number)
+        {
+            _character = ResolveCharacter(_node, number);
+            _instanceID = ResolveInstanceID(_node, number);
+            _targetOpacity = ResolveOpacity(_node, number);
+            _margin = Mathf.Max(0f, ResolveMargin(_node, number));
+            _authoredPosition = ResolvePosition(_node, number);
+            _target = new PortraitState(
+                _authoredPosition,
+                ResolveRotation(_node, number),
+                ResolveScale(_node, number));
+        }
+
+        private ComposerTarget CaptureComposerTarget(int number) => new()
+        {
+            Number = number,
+            Character = _character,
+            InstanceID = _instanceID,
+            Start = _start,
+            Target = _target,
+            AuthoredPosition = _authoredPosition,
+            StartSource = _startSource,
+            TargetSeededFromStart = _targetSeededFromStart,
+            StartOpacity = _startOpacity,
+            TargetOpacity = _targetOpacity,
+            Margin = _margin,
+            PortraitCanvasSize = _portraitCanvasSize,
+            StageCanvasSize = _stageCanvasSize,
+            ContentRect = _portraitContentRect,
+            PortraitSizeSource = _portraitSizeSource
+        };
+
+        private void StoreActiveComposerTarget()
+        {
+            if (_selectedComposerTarget < 0 ||
+                _selectedComposerTarget >= _composerTargets.Count)
+                return;
+            ComposerTarget target = _composerTargets[_selectedComposerTarget];
+            target.Character = _character;
+            target.InstanceID = _instanceID;
+            target.Start = _start;
+            target.Target = _target;
+            target.AuthoredPosition = _authoredPosition;
+            target.StartSource = _startSource;
+            target.TargetSeededFromStart = _targetSeededFromStart;
+            target.StartOpacity = _startOpacity;
+            target.TargetOpacity = _targetOpacity;
+            target.Margin = _margin;
+            target.PortraitCanvasSize = _portraitCanvasSize;
+            target.StageCanvasSize = _stageCanvasSize;
+            target.ContentRect = _portraitContentRect;
+            target.PortraitSizeSource = _portraitSizeSource;
+        }
+
+        private void LoadComposerTarget(ComposerTarget target)
+        {
+            if (target == null)
+                return;
+            _character = target.Character;
+            _instanceID = target.InstanceID ?? string.Empty;
+            _start = target.Start;
+            _target = target.Target;
+            _authoredPosition = target.AuthoredPosition;
+            _startSource = target.StartSource;
+            _targetSeededFromStart = target.TargetSeededFromStart;
+            _startOpacity = target.StartOpacity;
+            _targetOpacity = target.TargetOpacity;
+            _margin = target.Margin;
+            _portraitCanvasSize = target.PortraitCanvasSize;
+            _stageCanvasSize = target.StageCanvasSize;
+            _portraitContentRect = target.ContentRect;
+            _portraitSizeSource = target.PortraitSizeSource;
+        }
+
+        private bool HasUntouchedDefaultTarget(int number)
+        {
+            string suffix = TargetSuffix(number);
+            IPort position = _node.GetInputPortByName("Position" + suffix);
+            IPort rotation = _node.GetInputPortByName("Rotation" + suffix);
+            IPort scale = _node.GetInputPortByName("Scale" + suffix);
             if (position?.IsConnected == true || rotation?.IsConnected == true || scale?.IsConnected == true)
                 return false;
 
-            return _authoredPosition == Vector2.zero &&
+            bool defaultPosition = _authoredPosition == Vector2.zero ||
+                                   _authoredPosition ==
+                                   new Vector2(0f, -1f);
+            return defaultPosition &&
                    Mathf.Approximately(_target.Rotation, 0f) &&
                    _target.Scale == Vector2.one &&
                    !_relative &&
@@ -1180,7 +1374,10 @@ namespace Novelify.Editor
                 {
                     if (info == null || !info.gameObject.scene.IsValid() || info.character != _character ||
                         !string.Equals(info.InstanceID ?? string.Empty, _instanceID, StringComparison.Ordinal)) continue;
-                    _start = new PortraitState(CanvasToNormalized(info.Position), info.Rotation, info.Scale);
+                    _start = new PortraitState(
+                        info.AnchoredToNormalizedPosition(info.Position),
+                        info.Rotation,
+                        info.Scale);
                     _startOpacity = info.Opacity;
                     _startSource = "Live character in Play Mode";
                     return;
@@ -1194,8 +1391,12 @@ namespace Novelify.Editor
                 return;
             }
 
-            _start = new PortraitState(Vector2.zero, 0f, Vector2.one);
-            _startSource = "Default screen center (no earlier matching character transform was found)";
+            _start = new PortraitState(
+                new Vector2(0f, -1f),
+                0f,
+                Vector2.one);
+            _startSource =
+                "Default bottom-center baseline (visible portrait lower bound aligned to the camera)";
         }
 
         private bool TryFindPreviousAuthoredState(out PortraitState state, out string source)
@@ -1220,32 +1421,41 @@ namespace Novelify.Editor
                 INode candidate = queue.Dequeue();
                 if (candidate == null || !visited.Add(candidate)) continue;
 
-                if (candidate is TransformSpeakerPortraitNode transform && SameTarget(transform))
+                if (candidate is TransformSpeakerPortraitNode transform &&
+                    TryGetMatchingTargetNumber(transform, out int targetNumber))
                 {
-                    Vector2 position = ResolvePosition(transform);
+                    Vector2 position = ResolvePosition(
+                        transform, targetNumber);
                     CharacterPositionSpace space = GetOption(transform, "Coordinate Space", CharacterPositionSpace.Normalized);
-                    float sourceMargin = Mathf.Max(0f, ResolveMargin(transform));
-                    position = space == CharacterPositionSpace.Canvas
-                        ? CanvasToNormalized(position)
-                        : SourceNormalizedToVisual(position, sourceMargin);
+                    float sourceMargin = Mathf.Max(
+                        0f, ResolveMargin(transform, targetNumber));
                     bool relative = GetOption(transform, "Relative", false);
+                    position = space == CharacterPositionSpace.Canvas
+                        ? relative
+                            ? CanvasOffsetToNormalized(position)
+                            : CanvasToNormalized(position)
+                        : SourceNormalizedToVisual(position, sourceMargin);
                     string previousSource = null;
                     if (relative)
                     {
-                        PortraitState previous = new PortraitState(Vector2.zero, 0f, Vector2.one);
-                        TryFindPreviousAuthoredState(
-                            transform,
-                            new HashSet<INode>(visited),
-                            out previous,
-                            out previousSource);
+                        PortraitState previous;
+                        if (!TryFindPreviousAuthoredState(
+                                transform,
+                                new HashSet<INode>(visited),
+                                out previous,
+                                out previousSource))
+                            previous = new PortraitState(
+                                new Vector2(0f, -1f),
+                                0f,
+                                Vector2.one);
                         position += previous.Position;
                     }
                     state = new PortraitState(
                         position,
-                        ResolveRotation(transform),
-                        ResolveScale(transform));
+                        ResolveRotation(transform, targetNumber),
+                        ResolveScale(transform, targetNumber));
                     source = relative
-                        ? $"Previous relative Transform Portrait node, resolved after {previousSource ?? "screen center"}"
+                        ? $"Previous relative Transform Portrait node, resolved after {previousSource ?? "default bottom baseline"}"
                         : "Previous Transform Portrait node";
                     return true;
                 }
@@ -1284,12 +1494,48 @@ namespace Novelify.Editor
             ResolveCharacter(node) == _character &&
             string.Equals(ResolveInstanceID(node), _instanceID, StringComparison.Ordinal);
 
+        private bool TryGetMatchingTargetNumber(
+            TransformSpeakerPortraitNode node,
+            out int targetNumber)
+        {
+            int count = Mathf.Max(1, node.GetDesiredCharacterCount());
+            for (int number = 1; number <= count; number++)
+                if (ResolveCharacter(node, number) == _character &&
+                    string.Equals(
+                        ResolveInstanceID(node, number),
+                        _instanceID,
+                        StringComparison.Ordinal))
+                {
+                    targetNumber = number;
+                    return true;
+                }
+            targetNumber = 0;
+            return false;
+        }
+
         private NovelCharacter ResolveCharacter(CharacterActionNode node)
         {
             NovelCharacterReference reference = NovelGraphValues.Resolve<NovelCharacterReference>(
                 _graph, node.GetInputPortByName("Character Reference"));
             if (reference.Character != null) return reference.Character;
             return NovelGraphValues.Resolve<NovelCharacter>(_graph, node.GetInputPortByName("Character"));
+        }
+
+        private NovelCharacter ResolveCharacter(
+            TransformSpeakerPortraitNode node,
+            int number)
+        {
+            string suffix = TargetSuffix(number);
+            NovelCharacterReference reference =
+                NovelGraphValues.Resolve<NovelCharacterReference>(
+                    _graph,
+                    node.GetInputPortByName(
+                        "Character Reference" + suffix));
+            return reference.Character != null
+                ? reference.Character
+                : NovelGraphValues.Resolve<NovelCharacter>(
+                    _graph,
+                    node.GetInputPortByName("Character" + suffix));
         }
 
         private string ResolveInstanceID(CharacterActionNode node)
@@ -1301,20 +1547,52 @@ namespace Novelify.Editor
                 : GetOption(node, "Instance ID", string.Empty) ?? string.Empty;
         }
 
-        private Vector2 ResolvePosition(TransformSpeakerPortraitNode node)
+        private string ResolveInstanceID(
+            TransformSpeakerPortraitNode node,
+            int number)
         {
-            IPort port = node.GetInputPortByName("Position");
+            string suffix = TargetSuffix(number);
+            NovelCharacterReference reference =
+                NovelGraphValues.Resolve<NovelCharacterReference>(
+                    _graph,
+                    node.GetInputPortByName(
+                        "Character Reference" + suffix));
+            return reference.Character != null
+                ? reference.InstanceID ?? string.Empty
+                : GetOption(
+                    node, "Instance ID" + suffix,
+                    string.Empty) ?? string.Empty;
+        }
+
+        private static string TargetSuffix(int number) =>
+            number <= 1 ? string.Empty : $" {number}";
+
+        private Vector2 ResolvePosition(
+            TransformSpeakerPortraitNode node,
+            int number = 1)
+        {
+            string suffix = TargetSuffix(number);
+            IPort port = node.GetInputPortByName("Position" + suffix);
             if (port == null) return new Vector2(
                 GetOption(node, "OffsetX", 0f), GetOption(node, "OffsetY", 0f));
             Vector2 value = NovelGraphValues.Resolve<Vector2>(_graph, port);
+            if (number > 1)
+                return value;
             Vector2 legacy = new Vector2(
                 GetOption(node, "OffsetX", 0f), GetOption(node, "OffsetY", 0f));
             return !port.IsConnected && value == Vector2.zero && legacy != Vector2.zero ? legacy : value;
         }
 
-        private float ResolveRotation(TransformSpeakerPortraitNode node)
+        private float ResolveRotation(
+            TransformSpeakerPortraitNode node,
+            int number = 1)
         {
-            IPort port = node.GetInputPortByName("Rotation");
+            IPort port = node.GetInputPortByName(
+                "Rotation" + TargetSuffix(number));
+            if (number > 1)
+                return port == null
+                    ? 0f
+                    : NovelGraphValues.Resolve<float>(_graph, port);
             float legacy = GetOption(node, "Rotation", 0f);
             if (port == null) return legacy;
             float value = NovelGraphValues.Resolve<float>(_graph, port);
@@ -1323,18 +1601,32 @@ namespace Novelify.Editor
                 : value;
         }
 
-        private Vector2 ResolveScale(TransformSpeakerPortraitNode node)
+        private Vector2 ResolveScale(
+            TransformSpeakerPortraitNode node,
+            int number = 1)
         {
-            IPort port = node.GetInputPortByName("Scale");
+            IPort port = node.GetInputPortByName(
+                "Scale" + TargetSuffix(number));
+            if (number > 1)
+                return port == null
+                    ? Vector2.one
+                    : NovelGraphValues.Resolve<Vector2>(_graph, port);
             Vector2 legacy = GetOption(node, "Scale", Vector2.one);
             if (port == null) return legacy;
             Vector2 value = NovelGraphValues.Resolve<Vector2>(_graph, port);
             return !port.IsConnected && value == Vector2.one && legacy != Vector2.one ? legacy : value;
         }
 
-        private float ResolveMargin(TransformSpeakerPortraitNode node)
+        private float ResolveMargin(
+            TransformSpeakerPortraitNode node,
+            int number = 1)
         {
-            IPort port = node.GetInputPortByName("Margin");
+            IPort port = node.GetInputPortByName(
+                "Margin" + TargetSuffix(number));
+            if (number > 1)
+                return port == null
+                    ? 0f
+                    : NovelGraphValues.Resolve<float>(_graph, port);
             float legacy = GetOption(node, "Margin", 0f);
             if (port == null) return legacy;
             float value = NovelGraphValues.Resolve<float>(_graph, port);
@@ -1343,9 +1635,12 @@ namespace Novelify.Editor
                 : value;
         }
 
-        private float ResolveOpacity(TransformSpeakerPortraitNode node)
+        private float ResolveOpacity(
+            TransformSpeakerPortraitNode node,
+            int number = 1)
         {
-            IPort port = node.GetInputPortByName("Opacity");
+            IPort port = node.GetInputPortByName(
+                "Opacity" + TargetSuffix(number));
             return port == null ? 1f : Mathf.Clamp01(NovelGraphValues.Resolve<float>(_graph, port));
         }
 
@@ -1363,6 +1658,17 @@ namespace Novelify.Editor
             _animateTransformToggle?.SetValueWithoutNotify(_animateTransform);
             _animateOpacityToggle?.SetValueWithoutNotify(_animateOpacity);
             _instanceIDField?.SetValueWithoutNotify(_instanceID ?? string.Empty);
+            if (_instanceIDField != null && _composerTargets.Count > 0)
+            {
+                string suffix = TargetSuffix(
+                    _composerTargets[_selectedComposerTarget].Number);
+                _instanceIDField.SetEnabled(
+                    _node.GetInputPortByName(
+                        "Character Reference" + suffix)?.IsConnected != true);
+            }
+            if (_targetSelector != null && _composerTargets.Count > 0)
+                _targetSelector.SetValueWithoutNotify(
+                    GetComposerTargetNames()[_selectedComposerTarget]);
             _marginOpacitySlider?.SetValueWithoutNotify(_marginOpacity);
             _viewportZoomSlider?.SetValueWithoutNotify(_viewportZoom);
             _easingDropdown?.SetValueWithoutNotify(EasingName(_easing));
@@ -1401,13 +1707,17 @@ namespace Novelify.Editor
 
         private void RefreshConnectedHelp()
         {
+            string suffix = _composerTargets.Count > 0
+                ? TargetSuffix(
+                    _composerTargets[_selectedComposerTarget].Number)
+                : string.Empty;
             var connected = new List<string>();
-            if (_node.GetInputPortByName("Position")?.IsConnected == true) connected.Add("Position");
-            if (_node.GetInputPortByName("Rotation")?.IsConnected == true) connected.Add("Rotation");
-            if (_node.GetInputPortByName("Scale")?.IsConnected == true) connected.Add("Scale");
-            if (_node.GetInputPortByName("Margin")?.IsConnected == true) connected.Add("Margin");
-            if (_node.GetInputPortByName("Opacity")?.IsConnected == true) connected.Add("Opacity");
-            if (_node.GetInputPortByName("Character Reference")?.IsConnected == true) connected.Add("Character Reference / Instance ID");
+            if (_node.GetInputPortByName("Position" + suffix)?.IsConnected == true) connected.Add("Position" + suffix);
+            if (_node.GetInputPortByName("Rotation" + suffix)?.IsConnected == true) connected.Add("Rotation" + suffix);
+            if (_node.GetInputPortByName("Scale" + suffix)?.IsConnected == true) connected.Add("Scale" + suffix);
+            if (_node.GetInputPortByName("Margin" + suffix)?.IsConnected == true) connected.Add("Margin" + suffix);
+            if (_node.GetInputPortByName("Opacity" + suffix)?.IsConnected == true) connected.Add("Opacity" + suffix);
+            if (_node.GetInputPortByName("Character Reference" + suffix)?.IsConnected == true) connected.Add("Character Reference / Instance ID" + suffix);
             bool visible = connected.Count > 0;
             _connectedHelp.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (visible)
@@ -1498,7 +1808,6 @@ namespace Novelify.Editor
         private void RefreshPortraits()
         {
             if (_screen == null || _ghost == null || _targetPortrait == null) return;
-            ApplyVisualState(_ghost, _start);
             float progress = _timeline?.value ?? 0f;
             RefreshPreviewPose(progress);
         }
@@ -1507,16 +1816,35 @@ namespace Novelify.Editor
         {
             progress = Mathf.Clamp01(progress);
             float eased = PortraitTweenEasingUtility.Evaluate(_easing, _customCurve, progress);
-            PortraitState pose = PortraitState.Lerp(_start, _target, eased);
-            // The screen receives its real dimensions one layout pass after the
-            // window is built. Reapply START here so it can never remain at the
-            // UI Toolkit default top-left position after an early zero-size pass.
-            ApplyVisualState(_ghost, _start);
-            ApplyVisualState(_targetPortrait, pose);
-            if (_targetPortrait != null)
-                _targetPortrait.style.opacity = _animateOpacity
-                    ? Mathf.LerpUnclamped(_startOpacity, _targetOpacity, eased)
-                    : _startOpacity;
+            StoreActiveComposerTarget();
+            PortraitState pose = PortraitState.Lerp(
+                _start, _target, eased);
+            foreach (ComposerTarget target in _composerTargets.OrderBy(
+                         item => _composerTargets.IndexOf(item) ==
+                                 _selectedComposerTarget
+                             ? 1
+                             : 0))
+            {
+                PortraitState targetPose = PortraitState.Lerp(
+                    target.Start, target.Target, eased);
+                ApplyVisualState(
+                    target.GhostVisual, target.Start, target);
+                ApplyVisualState(
+                    target.TargetVisual, targetPose, target);
+                if (target.TargetVisual != null)
+                {
+                    float opacity = _animateOpacity
+                        ? Mathf.LerpUnclamped(
+                            target.StartOpacity,
+                            target.TargetOpacity,
+                            eased)
+                        : target.StartOpacity;
+                    bool selected = _composerTargets.IndexOf(target) ==
+                                    _selectedComposerTarget;
+                    target.TargetVisual.style.opacity = opacity *
+                        (selected ? 1f : 0.72f);
+                }
+            }
             RefreshGhostVisibility();
             RefreshTransformFrame(progress);
 
@@ -1533,20 +1861,56 @@ namespace Novelify.Editor
             Repaint();
         }
 
-        private void ApplyVisualState(VisualElement portrait, PortraitState state)
+        private void ApplyVisualState(
+            VisualElement portrait,
+            PortraitState state,
+            ComposerTarget target)
         {
             if (portrait == null || _screen == null) return;
             float screenWidth = _screen.resolvedStyle.width;
             float screenHeight = _screen.resolvedStyle.height;
             if (screenWidth <= 0f || screenHeight <= 0f) return;
 
-            Vector2 baseSize = GetPortraitBaseSize();
+            Vector2 baseSize = GetPortraitBaseSize(target);
+            Vector2 pivot = GetPortraitVisualPivot(
+                target?.ContentRect ??
+                new Rect(0f, 0f, 1f, 1f));
+            Vector2 pivotPosition = new Vector2(
+                (state.Position.x * 0.5f + 0.5f) * screenWidth,
+                (0.5f - state.Position.y * 0.5f) * screenHeight);
             portrait.style.width = baseSize.x;
             portrait.style.height = baseSize.y;
-            portrait.style.left = (screenWidth - baseSize.x) * 0.5f + state.Position.x * screenWidth * 0.5f;
-            portrait.style.top = (screenHeight - baseSize.y) * 0.5f - state.Position.y * screenHeight * 0.5f;
+            portrait.style.left = pivotPosition.x -
+                                  pivot.x * baseSize.x;
+            portrait.style.top = pivotPosition.y -
+                                 pivot.y * baseSize.y;
+            portrait.style.transformOrigin = new TransformOrigin(
+                Length.Percent(pivot.x * 100f),
+                Length.Percent(pivot.y * 100f),
+                0f);
             portrait.style.rotate = new Rotate(new Angle(state.Rotation, AngleUnit.Degree));
             portrait.style.scale = new Scale(new Vector3(state.Scale.x, state.Scale.y, 1f));
+        }
+
+        private static Vector2 GetPortraitVisualPivot(Rect contentRect) =>
+            new Vector2(
+                Mathf.Clamp01(contentRect.center.x),
+                Mathf.Clamp01(contentRect.yMax));
+
+        private Vector2 GetPortraitBaseSize(ComposerTarget target)
+        {
+            if (target == null)
+                return GetPortraitBaseSize();
+            Vector2 viewportSize = GetPreviewScreenSize();
+            Vector2 stageSize = new Vector2(
+                Mathf.Max(1f, target.StageCanvasSize.x),
+                Mathf.Max(1f, target.StageCanvasSize.y));
+            Vector2 nativeSize = new Vector2(
+                Mathf.Max(1f, target.PortraitCanvasSize.x),
+                Mathf.Max(1f, target.PortraitCanvasSize.y));
+            return new Vector2(
+                nativeSize.x / stageSize.x * viewportSize.x,
+                nativeSize.y / stageSize.y * viewportSize.y);
         }
 
         private Vector2 GetPortraitBaseSize()
@@ -1575,9 +1939,11 @@ namespace Novelify.Editor
         {
             Vector2 baseSize = GetPortraitBaseSize();
             Vector2 center = _portraitContentRect.center;
+            Vector2 pivot = GetPortraitVisualPivot(
+                _portraitContentRect);
             return new Vector2(
-                (center.x - 0.5f) * baseSize.x,
-                (center.y - 0.5f) * baseSize.y);
+                (center.x - pivot.x) * baseSize.x,
+                (center.y - pivot.y) * baseSize.y);
         }
 
         private void GetPortraitContentGeometry(
@@ -1619,20 +1985,32 @@ namespace Novelify.Editor
 
         private void RefreshGhostVisibility()
         {
-            if (_ghost == null) return;
             bool previewMode = _playingPreview || _previewPaused;
-            _ghost.style.display = previewMode ? DisplayStyle.None : DisplayStyle.Flex;
+            foreach (ComposerTarget target in _composerTargets)
+                if (target.GhostVisual != null)
+                    target.GhostVisual.style.display = previewMode
+                        ? DisplayStyle.None
+                        : DisplayStyle.Flex;
         }
 
         private VisualElement CreatePortraitGroup(float opacity, Color accent, string tag)
+            => CreatePortraitGroup(
+                _character, opacity, accent, tag, true);
+
+        private VisualElement CreatePortraitGroup(
+            NovelCharacter character,
+            float opacity,
+            Color accent,
+            string tag,
+            bool trackActiveTags)
         {
             VisualElement group = new VisualElement();
             group.style.position = UnityEngine.UIElements.Position.Absolute;
             group.style.opacity = opacity;
             group.style.transformOrigin = new TransformOrigin(Length.Percent(50f), Length.Percent(50f), 0f);
 
-            CharacterPortrait portrait = _character != null
-                ? _character.GetPortrait(CharacterEmotion.Neutral)
+            CharacterPortrait portrait = character != null
+                ? character.GetPortrait(CharacterEmotion.Neutral)
                 : default;
             AddPortraitLayer(group, portrait.Body);
             AddPortraitLayer(group, portrait.Eyes);
@@ -1641,13 +2019,17 @@ namespace Novelify.Editor
 
             Label label = Badge(tag, accent);
             label.style.position = UnityEngine.UIElements.Position.Absolute;
-            if (tag == "START") _startTag = label;
-            else if (tag == "TARGET") _targetTag = label;
+            if (trackActiveTags &&
+                tag.StartsWith("START", StringComparison.Ordinal))
+                _startTag = label;
+            else if (trackActiveTags &&
+                     tag.StartsWith("TARGET", StringComparison.Ordinal))
+                _targetTag = label;
             AnchorPortraitTag(label);
             label.pickingMode = PickingMode.Ignore;
             group.Add(label);
 
-            if (_character == null)
+            if (character == null)
             {
                 Label missing = new Label("No character assigned");
                 missing.style.position = UnityEngine.UIElements.Position.Absolute;
@@ -1659,6 +2041,70 @@ namespace Novelify.Editor
                 group.Add(missing);
             }
             return group;
+        }
+
+        private void RebuildComposerPortraitVisuals()
+        {
+            if (_screen == null)
+                return;
+            foreach (ComposerTarget target in _composerTargets.OrderBy(
+                         item => _composerTargets.IndexOf(item) ==
+                                 _selectedComposerTarget
+                             ? 1
+                             : 0))
+            {
+                target.GhostVisual?.RemoveFromHierarchy();
+                target.TargetVisual?.RemoveFromHierarchy();
+                bool selected = _composerTargets.IndexOf(target) ==
+                                _selectedComposerTarget;
+                string characterName = target.Character != null &&
+                    !string.IsNullOrWhiteSpace(target.Character.SpeakerName)
+                        ? target.Character.SpeakerName
+                        : $"Character {target.Number}";
+                Color targetAccent = selected
+                    ? Accent
+                    : new Color32(52, 211, 153, 255);
+                target.GhostVisual = CreatePortraitGroup(
+                    target.Character,
+                    0.20f,
+                    StartAccent,
+                    selected ? "START" : $"START {target.Number}",
+                    selected);
+                target.TargetVisual = CreatePortraitGroup(
+                    target.Character,
+                    selected ? 1f : 0.72f,
+                    targetAccent,
+                    selected
+                        ? $"TARGET {target.Number}: {characterName}"
+                        : $"TARGET {target.Number}: {characterName}",
+                    selected);
+                target.GhostVisual.pickingMode = PickingMode.Ignore;
+                target.TargetVisual.pickingMode = PickingMode.Position;
+                int targetIndex = _composerTargets.IndexOf(target);
+                target.TargetVisual.tooltip = selected
+                    ? $"Drag {characterName} to edit Character {target.Number}."
+                    : $"Click or drag {characterName} to select and edit Character {target.Number}.";
+                target.TargetVisual.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (_selectedComposerTarget != targetIndex)
+                        SelectComposerTarget(targetIndex);
+                    // Start the move here instead of relying on bubbling from
+                    // a visual that is rebuilt when selection changes.
+                    OnStagePointerDown(evt);
+                }, TrickleDown.TrickleDown);
+
+                int insertAt = _uiPreviewOverlay != null &&
+                               _uiPreviewOverlay.parent == _screen
+                    ? _screen.IndexOf(_uiPreviewOverlay)
+                    : _screen.childCount;
+                _screen.Insert(insertAt, target.GhostVisual);
+                _screen.Insert(insertAt + 1, target.TargetVisual);
+                if (selected)
+                {
+                    _ghost = target.GhostVisual;
+                    _targetPortrait = target.TargetVisual;
+                }
+            }
         }
 
         private void AnchorPortraitTag(Label label)
@@ -2472,11 +2918,13 @@ namespace Novelify.Editor
             }
 
             if (!found) return;
-            const float handlePadding = 0.006f;
-            float xMin = Mathf.Clamp01(combined.xMin - handlePadding);
-            float yMin = Mathf.Clamp01(combined.yMin - handlePadding);
-            float xMax = Mathf.Clamp01(combined.xMax + handlePadding);
-            float yMax = Mathf.Clamp01(combined.yMax + handlePadding);
+            // Keep this rect exact: its horizontal center and lower edge are
+            // also the logical portrait baseline. Visual handles add their own
+            // outward size and must not introduce a gap above the camera edge.
+            float xMin = Mathf.Clamp01(combined.xMin);
+            float yMin = Mathf.Clamp01(combined.yMin);
+            float xMax = Mathf.Clamp01(combined.xMax);
+            float yMax = Mathf.Clamp01(combined.yMax);
             if (xMax > xMin && yMax > yMin)
                 _portraitContentRect = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             RefreshPortraitTagAnchors();
@@ -3140,7 +3588,17 @@ namespace Novelify.Editor
         private Vector2 CanvasToNormalized(Vector2 canvas)
         {
             Vector2 extent = GetCanvasExtent(_margin);
-            return new Vector2(canvas.x / extent.x, canvas.y / extent.y);
+            return new Vector2(
+                canvas.x / extent.x,
+                canvas.y / extent.y - 1f);
+        }
+
+        private Vector2 CanvasOffsetToNormalized(Vector2 canvas)
+        {
+            Vector2 extent = GetCanvasExtent(_margin);
+            return new Vector2(
+                canvas.x / extent.x,
+                canvas.y / extent.y);
         }
 
         private Vector2 SourceNormalizedToVisual(Vector2 normalized, float sourceMargin)
@@ -3155,7 +3613,9 @@ namespace Novelify.Editor
         private Vector2 AuthoredToVisualPosition(Vector2 authored)
         {
             Vector2 position = _positionSpace == CharacterPositionSpace.Canvas
-                ? CanvasToNormalized(authored)
+                ? _relative
+                    ? CanvasOffsetToNormalized(authored)
+                    : CanvasToNormalized(authored)
                 : authored;
             return _relative ? _start.Position + position : position;
         }
@@ -3163,9 +3623,14 @@ namespace Novelify.Editor
         private Vector2 VisualToAuthoredPosition(Vector2 visual)
         {
             Vector2 value = _relative ? visual - _start.Position : visual;
-            return _positionSpace == CharacterPositionSpace.Canvas
-                ? Vector2.Scale(value, GetCanvasExtent(_margin))
-                : value;
+            if (_positionSpace != CharacterPositionSpace.Canvas)
+                return value;
+            Vector2 extent = GetCanvasExtent(_margin);
+            return _relative
+                ? Vector2.Scale(value, extent)
+                : new Vector2(
+                    value.x * extent.x,
+                    (value.y + 1f) * extent.y);
         }
 
         private void SetMargin(float value)
@@ -3294,17 +3759,45 @@ namespace Novelify.Editor
             _graph.UndoBeginRecordGraph("Compose Portrait Tween");
             try
             {
-                _authoredPosition = VisualToAuthoredPosition(_target.Position);
-                TrySetUnconnected(_node.GetInputPortByName("Position"), _authoredPosition);
-                TrySetUnconnected(_node.GetInputPortByName("Rotation"), _target.Rotation);
-                TrySetUnconnected(_node.GetInputPortByName("Scale"), _target.Scale);
-                TrySetUnconnected(_node.GetInputPortByName("Margin"), _margin);
-                TrySetUnconnected(_node.GetInputPortByName("Opacity"), _targetOpacity);
+                StoreActiveComposerTarget();
+                int selected = _selectedComposerTarget;
+                for (int index = 0;
+                     index < _composerTargets.Count;
+                     index++)
+                {
+                    _selectedComposerTarget = index;
+                    ComposerTarget composerTarget =
+                        _composerTargets[index];
+                    LoadComposerTarget(composerTarget);
+                    string suffix = TargetSuffix(composerTarget.Number);
+                    _authoredPosition = VisualToAuthoredPosition(
+                        _target.Position);
+                    composerTarget.AuthoredPosition = _authoredPosition;
+                    TrySetUnconnected(
+                        _node.GetInputPortByName("Position" + suffix),
+                        _authoredPosition);
+                    TrySetUnconnected(
+                        _node.GetInputPortByName("Rotation" + suffix),
+                        _target.Rotation);
+                    TrySetUnconnected(
+                        _node.GetInputPortByName("Scale" + suffix),
+                        _target.Scale);
+                    TrySetUnconnected(
+                        _node.GetInputPortByName("Margin" + suffix),
+                        _margin);
+                    TrySetUnconnected(
+                        _node.GetInputPortByName("Opacity" + suffix),
+                        _targetOpacity);
+                    _node.GetNodeOptionByName("Instance ID" + suffix)
+                        ?.TrySetValue(_instanceID ?? string.Empty);
+                    StoreActiveComposerTarget();
+                }
+                _selectedComposerTarget = selected;
+                LoadComposerTarget(_composerTargets[selected]);
                 _node.GetNodeOptionByName("Coordinate Space")?.TrySetValue(_positionSpace);
                 _node.GetNodeOptionByName("Relative")?.TrySetValue(_relative);
                 _node.GetNodeOptionByName("Animate Transform")?.TrySetValue(_animateTransform);
                 _node.GetNodeOptionByName("Animate Transparency")?.TrySetValue(_animateOpacity);
-                _node.GetNodeOptionByName("Instance ID")?.TrySetValue(_instanceID ?? string.Empty);
                 _node.GetNodeOptionByName("Duration")?.TrySetValue(Mathf.Max(0f, _durationField.value));
                 _node.GetNodeOptionByName("Easing")?.TrySetValue(_easing);
                 _node.GetNodeOptionByName("Custom Easing Curve")?.TrySetValue(CloneCurve(_customCurve));
@@ -3390,8 +3883,13 @@ namespace Novelify.Editor
                 _durationField.tooltip = _animateTransform || _animateOpacity
                     ? "Tween time in real-time seconds."
                     : "Stored on the node, but no animation channel is currently enabled.";
+            string suffix = _composerTargets.Count > 0
+                ? TargetSuffix(
+                    _composerTargets[_selectedComposerTarget].Number)
+                : string.Empty;
             _opacitySlider?.SetEnabled(
-                _animateOpacity && _node.GetInputPortByName("Opacity")?.IsConnected != true);
+                _animateOpacity && _node.GetInputPortByName(
+                    "Opacity" + suffix)?.IsConnected != true);
         }
 
         private void RefreshPositionFieldLabel()

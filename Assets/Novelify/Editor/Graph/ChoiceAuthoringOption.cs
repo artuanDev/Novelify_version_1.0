@@ -128,4 +128,89 @@ namespace Novelify.Editor
             return root;
         }
     }
+
+    [Serializable]
+    public sealed class TransformTargetAuthoringList
+    {
+        public List<TransformTargetAuthoringEntry> Targets = new();
+
+        public static TransformTargetAuthoringList CreateDefault(int count = 2)
+        {
+            var result = new TransformTargetAuthoringList();
+            for (int index = 0; index < Math.Max(1, count); index++)
+                result.Targets.Add(new TransformTargetAuthoringEntry());
+            return result;
+        }
+    }
+
+    [Serializable]
+    public sealed class TransformTargetAuthoringEntry
+    {
+        // Graph Toolkit drops lists whose elements contain no serialized data.
+        // A real field keeps every target entry persistent across graph saves.
+        public int SerializationMarker = 1;
+    }
+
+    [CustomPropertyDrawer(typeof(TransformTargetAuthoringList))]
+    internal sealed class TransformTargetAuthoringListDrawer : PropertyDrawer
+    {
+        public override VisualElement CreatePropertyGUI(
+            SerializedProperty property)
+        {
+            SerializedProperty targets = property.FindPropertyRelative(
+                nameof(TransformTargetAuthoringList.Targets));
+            var root = new VisualElement();
+            root.style.flexDirection = FlexDirection.Row;
+            root.style.alignItems = Align.Center;
+
+            var count = new Label();
+            count.style.flexGrow = 1f;
+            root.Add(count);
+
+            Button remove = null;
+            remove = new Button(() =>
+            {
+                if (targets == null || targets.arraySize <= 1)
+                    return;
+                Undo.RecordObject(
+                    property.serializedObject.targetObject,
+                    "Remove Transform Character");
+                targets.DeleteArrayElementAtIndex(targets.arraySize - 1);
+                property.serializedObject.ApplyModifiedProperties();
+                Refresh();
+            }) { text = "- Remove last" };
+            remove.tooltip =
+                "Remove the last character transform group and its ports.";
+            root.Add(remove);
+
+            var add = new Button(() =>
+            {
+                if (targets == null)
+                    return;
+                Undo.RecordObject(
+                    property.serializedObject.targetObject,
+                    "Add Transform Character");
+                targets.InsertArrayElementAtIndex(targets.arraySize);
+                property.serializedObject.ApplyModifiedProperties();
+                Refresh();
+            }) { text = "+ Add character" };
+            add.tooltip =
+                "Add another independently positioned character to this synchronized transform.";
+            root.Add(add);
+
+            void Refresh()
+            {
+                int value = Math.Max(1, targets?.arraySize ?? 1);
+                count.text = value == 1
+                    ? "1 animated character"
+                    : $"{value} animated characters";
+                remove.SetEnabled(value > 1);
+            }
+
+            Refresh();
+            if (targets != null)
+                root.TrackPropertyValue(targets, _ => Refresh());
+            return root;
+        }
+    }
 }

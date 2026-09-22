@@ -108,56 +108,40 @@ namespace Novelify
                 switch (node)
                 {
                     case RuntimeTransformSpeakerPortraitNode move:
-                        NovelCharacterReference movingTarget = ResolveCharacterReference(
-                            move.CharacterReferenceValue, move.CharacterValue, move.Character, move.InstanceID);
-                        CharacterInfo moving = ShowCharacter(movingTarget.Character, movingTarget.InstanceID);
+                        var movingCharacters = new List<CharacterInfo>();
+                        CharacterInfo moving = ApplyPortraitTransform(
+                            move, PrimaryTransformTarget(move));
                         if (moving != null)
+                            movingCharacters.Add(moving);
+                        if (move.AdditionalTargets != null &&
+                            move.AdditionalTargets.Count > 0)
                         {
-                            Vector2 offset = move.PositionValue != null
-                                ? AsVector2(Evaluate(move.PositionValue), new Vector2(move.OffsetX, move.OffsetY))
-                                : new Vector2(move.OffsetX, move.OffsetY);
-                            float margin = Mathf.Max(0f, AsFloat(Evaluate(move.MarginValue), move.Margin));
-                            float rotation = AsFloat(Evaluate(move.RotationValue), move.Rotation);
-                            Vector2 scale = AsVector2(Evaluate(move.ScaleValue), move.Scale);
-                            float opacity = Mathf.Clamp01(AsFloat(Evaluate(move.OpacityValue), move.Opacity));
-                            bool normalizedPosition = move.PositionSpace == CharacterPositionSpace.Normalized;
-                            Vector2 target = normalizedPosition
-                                ? moving.NormalizedToAnchoredPosition(offset, margin)
-                                : offset;
-                            if (move.Relative) target += moving.Position;
-                            if (normalizedPosition)
-                                target = moving.ClampToStageBounds(target, margin);
-                            if (move is not RuntimeTranslateSpeakerPortraitNode)
+                            foreach (RuntimePortraitTransformTarget target in
+                                     move.AdditionalTargets)
                             {
-                                moving.TransformTo(
-                                    target,
-                                    rotation,
-                                    scale,
-                                    move.SmoothMovement,
-                                    move.Duration,
-                                    move.UseEasingPreset
-                                        ? move.Easing
-                                        : move.EaseInOut
-                                            ? PortraitTweenEasing.EaseInOut
-                                            : PortraitTweenEasing.None,
-                                    move.CustomEasingCurve,
-                                    move.AnimateOpacity,
-                                    opacity);
+                                CharacterInfo additional =
+                                    ApplyPortraitTransform(move, target);
+                                if (additional != null)
+                                    movingCharacters.Add(additional);
                             }
-                            else
-                            {
-                                moving.MoveTo(
-                                    target,
-                                    move.SmoothMovement,
-                                    move.Duration,
-                                    move.EaseInOut);
-                            }
-                            if (move.WaitForCompletion && moving.IsMoving)
-                            {
-                                _isWaiting = true;
-                                _waitCoroutine = StartCoroutine(WaitThenContinue(node, version, 0f, moving));
-                                return;
-                            }
+                        }
+                        else if (move.TransformSecondCharacter)
+                        {
+                            CharacterInfo legacySecond =
+                                ApplyPortraitTransform(
+                                    move, LegacySecondTransformTarget(move));
+                            if (legacySecond != null)
+                                movingCharacters.Add(legacySecond);
+                        }
+                        if (move.WaitForCompletion &&
+                            movingCharacters.Exists(character =>
+                                character != null && character.IsMoving))
+                        {
+                            _isWaiting = true;
+                            _waitCoroutine = StartCoroutine(WaitThenContinue(
+                                node, version, 0f,
+                                movingCharacters.ToArray()));
+                            return;
                         }
                         break;
                     case RuntimeFlipCharacterNode flip:
@@ -250,6 +234,11 @@ namespace Novelify
                         GeneratedPresentation.ChangeSpeechBubble(changeBubble);
                         break;
 
+                    case RuntimeSetBackgroundNode background:
+                        if (BeginGeneratedBackground(background, version))
+                            return;
+                        break;
+
                     case RuntimeFadeNode fade:
                         if (BeginGeneratedFade(fade, version))
                             return;
@@ -336,6 +325,116 @@ namespace Novelify
                 nodeID = node.NextNodeID;
             }
             StopGraphInternal();
+        }
+
+        private static RuntimePortraitTransformTarget PrimaryTransformTarget(
+            RuntimeTransformSpeakerPortraitNode move) => new()
+        {
+            Character = move.Character,
+            InstanceID = move.InstanceID,
+            OffsetX = move.OffsetX,
+            OffsetY = move.OffsetY,
+            Rotation = move.Rotation,
+            Scale = move.Scale,
+            Margin = move.Margin,
+            Opacity = move.Opacity,
+            CharacterValue = move.CharacterValue,
+            CharacterReferenceValue = move.CharacterReferenceValue,
+            PositionValue = move.PositionValue,
+            RotationValue = move.RotationValue,
+            ScaleValue = move.ScaleValue,
+            MarginValue = move.MarginValue,
+            OpacityValue = move.OpacityValue
+        };
+
+        private static RuntimePortraitTransformTarget
+            LegacySecondTransformTarget(
+                RuntimeTransformSpeakerPortraitNode move) => new()
+        {
+            Character = move.SecondCharacter,
+            InstanceID = move.SecondInstanceID,
+            OffsetX = move.SecondOffsetX,
+            OffsetY = move.SecondOffsetY,
+            Rotation = move.SecondRotation,
+            Scale = move.SecondScale,
+            Margin = move.SecondMargin,
+            Opacity = move.SecondOpacity,
+            CharacterValue = move.SecondCharacterValue,
+            CharacterReferenceValue = move.SecondCharacterReferenceValue,
+            PositionValue = move.SecondPositionValue,
+            RotationValue = move.SecondRotationValue,
+            ScaleValue = move.SecondScaleValue,
+            MarginValue = move.SecondMarginValue,
+            OpacityValue = move.SecondOpacityValue
+        };
+
+        private CharacterInfo ApplyPortraitTransform(
+            RuntimeTransformSpeakerPortraitNode move,
+            RuntimePortraitTransformTarget transformTarget)
+        {
+            NovelCharacterReference targetReference = ResolveCharacterReference(
+                transformTarget.CharacterReferenceValue,
+                transformTarget.CharacterValue,
+                transformTarget.Character,
+                transformTarget.InstanceID);
+            CharacterInfo character = ShowCharacter(
+                targetReference.Character, targetReference.InstanceID);
+            if (character == null)
+                return null;
+
+            Vector2 fallbackPosition = new Vector2(
+                transformTarget.OffsetX, transformTarget.OffsetY);
+            RuntimeValueExpression positionValue =
+                transformTarget.PositionValue;
+            Vector2 offset = positionValue != null
+                ? AsVector2(Evaluate(positionValue), fallbackPosition)
+                : fallbackPosition;
+            float margin = Mathf.Max(0f, AsFloat(Evaluate(
+                transformTarget.MarginValue), transformTarget.Margin));
+            float rotation = AsFloat(Evaluate(
+                transformTarget.RotationValue), transformTarget.Rotation);
+            Vector2 scale = AsVector2(Evaluate(
+                transformTarget.ScaleValue), transformTarget.Scale);
+            float opacity = Mathf.Clamp01(AsFloat(Evaluate(
+                transformTarget.OpacityValue), transformTarget.Opacity));
+            bool normalized = move.PositionSpace == CharacterPositionSpace.Normalized;
+            Vector2 target;
+            if (normalized && move.Relative)
+                target = character.Position +
+                         character.NormalizedToAnchoredOffset(offset, margin);
+            else
+            {
+                target = normalized
+                    ? character.NormalizedToAnchoredPosition(offset, margin)
+                    : offset;
+                if (move.Relative)
+                    target += character.Position;
+            }
+            if (normalized)
+                target = character.ClampToStageBounds(target, margin);
+
+            if (move is RuntimeTranslateSpeakerPortraitNode)
+            {
+                character.MoveTo(target, move.SmoothMovement,
+                    move.Duration, move.EaseInOut);
+                return character;
+            }
+
+            character.TransformTo(
+                target,
+                rotation,
+                scale,
+                move.SmoothMovement,
+                move.Duration,
+                move.UseEasingPreset
+                    ? move.Easing
+                    : move.EaseInOut
+                        ? PortraitTweenEasing.EaseInOut
+                        : PortraitTweenEasing.None,
+                move.CustomEasingCurve,
+                move.AnimateOpacity,
+                opacity);
+            return character;
         }
 
         private bool TryReturnFromGraph(out string nodeID)

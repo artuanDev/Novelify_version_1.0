@@ -2,17 +2,11 @@ using Novelify;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using TMPro;
-using Unity.Burst.CompilerServices;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
-using UnityEditor.Graphs;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UI;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify
 {
@@ -21,6 +15,7 @@ namespace Novelify
     {
         private NovelGraphRunner _runner;
         private Canvas _canvas;
+        private RectTransform _backgroundLayer;
         private RectTransform _generatedRoot;
         private RectTransform _dialogueLayer;
         private RectTransform _bubbleLayer;
@@ -68,6 +63,8 @@ namespace Novelify
             new RectTransform[3];
         private readonly NovelRoundedGraphic[] _thoughtDots =
             new NovelRoundedGraphic[3];
+        private readonly List<GameObject> _heldBubbles =
+            new List<GameObject>();
 
         private NovelTriangleGraphic _tailOutline;
         private NovelTriangleGraphic _tailFill;
@@ -107,6 +104,12 @@ namespace Novelify
         private CanvasGroup _fadeGroup;
         private Coroutine _fadeCoroutine;
         private int _fadeGeneration;
+        private readonly Image[] _backgroundImages = new Image[2];
+        private readonly AspectRatioFitter[] _backgroundFitters =
+            new AspectRatioFitter[2];
+        private Coroutine _backgroundCoroutine;
+        private int _backgroundGeneration;
+        private int _activeBackground = -1;
 
         private readonly Dictionary<NovelAudioChannel, AudioSource> _audioSources =
              new Dictionary<NovelAudioChannel, AudioSource>();
@@ -152,7 +155,7 @@ namespace Novelify
         public void CreateDialogueBox(RuntimeCreateDialogueBoxNode node)
         {
             EnsureReady();
-            _dialogueStyle = node.Style.Validated();
+            _dialogueStyle = node.ResolvedStyle;
             _dialogueTextAlignment = node.TextAlignment;
             _dialogueAnchor = node.Anchor;
             _dialogueHeight = Mathf.Max(80f, node.Height);
@@ -176,7 +179,7 @@ namespace Novelify
         public void CreateSpeakerBox(RuntimeCreateDialogueSpeakerBoxNode node)
         {
             EnsureReady();
-            _speakerStyle = node.Style.Validated();
+            _speakerStyle = node.ResolvedStyle;
             _speakerAnchor = node.Anchor;
             _speakerAlongEdgeOffset = node.HorizontalOffset;
             _speakerOverlap = node.VerticalOverlap;
@@ -211,7 +214,7 @@ namespace Novelify
             if (node == null)
                 return;
             EnsureReady();
-            _bubbleStyle = node.BubbleStyle.Validated();
+            _bubbleStyle = node.ResolvedStyle;
             _bubblePlacement = node.Placement;
             _bubbleScreenAnchor = node.ScreenAnchor;
             _bubbleHorizontalOffset = node.HorizontalOffset;
@@ -285,17 +288,16 @@ namespace Novelify
         public void ChangeStyle(RuntimeChangeDialogueStyleNode node)
         {
             EnsureReady();
-            NovelBoxStyle value = node.Style.Validated();
             if (node.Target == NovelBoxTarget.Dialogue ||
                 node.Target == NovelBoxTarget.Both)
             {
-                _dialogueStyle = value;
+                _dialogueStyle = node.Resolve(NovelBoxTarget.Dialogue);
                 ApplyStyle(_standardPanel.gameObject, _dialogueStyle);
             }
             if (node.Target == NovelBoxTarget.Speaker ||
                 node.Target == NovelBoxTarget.Both)
             {
-                _speakerStyle = value;
+                _speakerStyle = node.Resolve(NovelBoxTarget.Speaker);
                 ApplyStyle(_standardSpeakerBox, _speakerStyle);
             }
         }
@@ -322,13 +324,21 @@ namespace Novelify
             EnsureReady();
             if (node is RuntimeSpeechBubbleNode bubble)
             {
+                if (bubble.OverlapMode == NovelSpeechBubbleOverlapMode.KeepPrevious &&
+                    _trackedBubble != null)
+                    HoldCurrentBubble();
+                else
+                    ClearHeldBubbles();
                 EnsureBubble();
                 ConfigureBubble(bubble);
                 BindBubbleSurface();
                 return;
             }
 
+            ClearHeldBubbles();
             StopTrackingSpeechBubble();
+            if (_bubbleWrapper != null)
+                _bubbleWrapper.gameObject.SetActive(false);
             BindStandardSurface();
         }
 
@@ -346,6 +356,41 @@ namespace Novelify
             _trackedBubble = null;
             _trackedCharacter = null;
             SetTailVisible(false);
+        }
+
+        private void HoldCurrentBubble()
+        {
+            if (_bubbleWrapper == null)
+                return;
+            GameObject held = Instantiate(
+                _bubbleWrapper.gameObject, _bubbleLayer, false);
+            held.name = "Held Speech Bubble";
+            held.SetActive(true);
+            CanvasGroup group = held.GetComponent<CanvasGroup>();
+            if (group != null)
+            {
+                group.alpha = 1f;
+                group.interactable = false;
+                group.blocksRaycasts = false;
+            }
+            foreach (TextMeshProUGUI text in held.GetComponentsInChildren<TextMeshProUGUI>(true))
+                text.maxVisibleCharacters = int.MaxValue;
+            _heldBubbles.Add(held);
+            while (_heldBubbles.Count > 4)
+            {
+                GameObject oldest = _heldBubbles[0];
+                _heldBubbles.RemoveAt(0);
+                if (oldest != null)
+                    Destroy(oldest);
+            }
+        }
+
+        public void ClearHeldBubbles()
+        {
+            foreach (GameObject held in _heldBubbles)
+                if (held != null)
+                    Destroy(held);
+            _heldBubbles.Clear();
         }
 
         public void PlayAudio(
@@ -389,6 +434,107 @@ namespace Novelify
             source.clip = null;
             source.loop = false;
         }
+
+        public void SetBackground(
+            Sprite sprite,
+            Color tint,
+            NovelBackgroundScaleMode scaleMode,
+            float duration,
+            Action completed = null)
+        {
+            EnsureReady();
+            EnsureBackgroundLayer();
+            int generation = ++_backgroundGeneration;
+            if (_backgroundCoroutine != null)
+                StopCoroutine(_backgroundCoroutine);
+            _backgroundCoroutine = null;
+
+            duration = Mathf.Max(0f, duration);
+            int outgoingIndex = _activeBackground;
+            int incomingIndex = outgoingIndex == 0 ? 1 : 0;
+            Image outgoing = outgoingIndex >= 0
+                ? _backgroundImages[outgoingIndex]
+                : null;
+            Image incoming = _backgroundImages[incomingIndex];
+
+            if (sprite != null)
+            {
+                ConfigureBackgroundImage(
+                    incomingIndex, sprite, tint, scaleMode);
+                incoming.transform.SetAsLastSibling();
+                incoming.gameObject.SetActive(true);
+                Color transparent = tint;
+                transparent.a = 0f;
+                incoming.color = duration > 0f ? transparent : tint;
+                _activeBackground = incomingIndex;
+            }
+            else
+            {
+                incoming.gameObject.SetActive(false);
+                _activeBackground = -1;
+            }
+
+            if (duration <= 0f)
+            {
+                if (outgoing != null && outgoing != incoming)
+                    outgoing.gameObject.SetActive(false);
+                completed?.Invoke();
+                return;
+            }
+
+            _backgroundCoroutine = StartCoroutine(BackgroundTransition(
+                generation,
+                outgoing,
+                sprite != null ? incoming : null,
+                tint,
+                duration,
+                completed));
+        }
+
+        private IEnumerator BackgroundTransition(
+            int generation,
+            Image outgoing,
+            Image incoming,
+            Color incomingTint,
+            float duration,
+            Action completed)
+        {
+            Color outgoingStart = outgoing != null
+                ? outgoing.color
+                : Color.clear;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                yield return null;
+                if (generation != _backgroundGeneration)
+                    yield break;
+                elapsed += _runner.TimeMode == DialogueTimeMode.Unscaled
+                    ? Time.unscaledDeltaTime
+                    : Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                t = t * t * (3f - 2f * t);
+                if (outgoing != null)
+                {
+                    Color color = outgoingStart;
+                    color.a = Mathf.Lerp(outgoingStart.a, 0f, t);
+                    outgoing.color = color;
+                }
+                if (incoming != null)
+                {
+                    Color color = incomingTint;
+                    color.a = Mathf.Lerp(0f, incomingTint.a, t);
+                    incoming.color = color;
+                }
+            }
+
+            if (outgoing != null && outgoing != incoming)
+                outgoing.gameObject.SetActive(false);
+            if (incoming != null)
+                incoming.color = incomingTint;
+            _backgroundCoroutine = null;
+            completed?.Invoke();
+        }
+
         public void BeginFade(
             bool fadeOut,
             float seconds,
@@ -437,11 +583,20 @@ namespace Novelify
             if (_fadeCoroutine != null)
                 StopCoroutine(_fadeCoroutine);
             _fadeCoroutine = null;
+            ++_backgroundGeneration;
+            if (_backgroundCoroutine != null)
+                StopCoroutine(_backgroundCoroutine);
+            _backgroundCoroutine = null;
             StopTrackingSpeechBubble();
+            ClearHeldBubbles();
+            if (_bubbleWrapper != null)
+                _bubbleWrapper.gameObject.SetActive(false);
         }
 
         private void LateUpdate()
         {
+            if (_backgroundLayer != null)
+                _backgroundLayer.SetAsFirstSibling();
             if (_trackedBubble != null &&
                 _bubbleWrapper != null &&
                 _bubbleWrapper.gameObject.activeInHierarchy)
@@ -461,6 +616,9 @@ namespace Novelify
                 if (_canvas == null)
                     CreateCanvas();
             }
+
+            ConfigureCanvasScaler();
+            EnsureBackgroundLayer();
 
             if (_generatedRoot == null)
             {
@@ -502,11 +660,26 @@ namespace Novelify
             _canvas = canvasObject.GetComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = 100;
-            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            ConfigureCanvasScaler();
             _ownsCanvas = true;
+        }
+
+        private void ConfigureCanvasScaler()
+        {
+            if (_canvas == null || !_runner.ScalePresentationWithScreenSize ||
+                _canvas.renderMode == RenderMode.WorldSpace)
+                return;
+            CanvasScaler scaler = _canvas.GetComponent<CanvasScaler>();
+            if (scaler == null)
+                scaler = _canvas.gameObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            Vector2 reference = _runner.PresentationReferenceResolution;
+            scaler.referenceResolution = new Vector2(
+                Mathf.Max(1f, reference.x), Mathf.Max(1f, reference.y));
+            scaler.screenMatchMode =
+                CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = Mathf.Clamp01(
+                _runner.PresentationMatchWidthOrHeight);
         }
         private void EnsureDialogueBox()
         {
@@ -824,10 +997,24 @@ namespace Novelify
             dialogueRect.offsetMax = new Vector2(
                 -horizontal, -(vertical + speakerHeight));
 
-            _tailOutline.color = style.OutlineEnabled
-                ? style.OutlineColor
-                : style.EffectiveFillColor;
-            _tailFill.color = style.EffectiveFillColor;
+            _tailOutline.ApplyAppearance(
+                style.OutlineEnabled
+                    ? style.OutlineTexture
+                    : style.FillTexture,
+                style.OutlineEnabled
+                    ? style.EffectiveOutlineColor
+                    : style.EffectiveFillColor,
+                style.OutlineEnabled
+                    ? style.OutlineTiling
+                    : style.FillTiling,
+                style.OutlineEnabled
+                    ? style.OutlineOffset
+                    : style.FillOffset);
+            _tailFill.ApplyAppearance(
+                style.FillTexture,
+                style.EffectiveFillColor,
+                style.FillTiling,
+                style.FillOffset);
             NovelBoxStyle thoughtDotStyle = style;
             thoughtDotStyle.CornerRadius = 999f;
             for (int index = 0; index < _thoughtDots.Length; index++)
@@ -1042,6 +1229,60 @@ namespace Novelify
                 dot.anchoredPosition = attachment + direction *
                     (tailLength * progress[index]);
             }
+        }
+
+        private void EnsureBackgroundLayer()
+        {
+            if (_canvas == null)
+                return;
+            if (_backgroundLayer == null)
+            {
+                _backgroundLayer = CreateRect(
+                    "Novelify Background Layer", _canvas.transform);
+                Stretch(_backgroundLayer);
+                _backgroundLayer.SetAsFirstSibling();
+            }
+            for (int index = 0; index < _backgroundImages.Length; index++)
+            {
+                if (_backgroundImages[index] != null)
+                    continue;
+                RectTransform rect = CreateRect(
+                    $"Background {index + 1}", _backgroundLayer);
+                Stretch(rect);
+                Image image = rect.gameObject.AddComponent<Image>();
+                image.raycastTarget = false;
+                image.gameObject.SetActive(false);
+                _backgroundImages[index] = image;
+                _backgroundFitters[index] =
+                    rect.gameObject.AddComponent<AspectRatioFitter>();
+            }
+        }
+
+        private void ConfigureBackgroundImage(
+            int index,
+            Sprite sprite,
+            Color tint,
+            NovelBackgroundScaleMode scaleMode)
+        {
+            Image image = _backgroundImages[index];
+            AspectRatioFitter fitter = _backgroundFitters[index];
+            RectTransform rect = image.rectTransform;
+            fitter.aspectMode = AspectRatioFitter.AspectMode.None;
+            image.sprite = sprite;
+            image.color = tint;
+            image.preserveAspect = false;
+            Stretch(rect);
+
+            if (scaleMode == NovelBackgroundScaleMode.Stretch ||
+                sprite == null || sprite.rect.height <= 0f)
+            {
+                return;
+            }
+
+            fitter.aspectRatio = sprite.rect.width / sprite.rect.height;
+            fitter.aspectMode = scaleMode == NovelBackgroundScaleMode.Contain
+                ? AspectRatioFitter.AspectMode.FitInParent
+                : AspectRatioFitter.AspectMode.EnvelopeParent;
         }
 
         private static float GetTailBodyOverlap(float tailLength) =>

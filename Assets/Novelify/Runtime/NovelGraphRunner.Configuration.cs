@@ -20,6 +20,15 @@ namespace Novelify
         [Tooltip("Unscaled keeps conversations, waits, reveals, and character transitions running while gameplay is paused. Scaled pauses them with Time.timeScale.")]
         public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
 
+        [Header("Responsive Presentation")]
+        [Tooltip("Scale generated dialogue, bubbles, backgrounds, and portraits from one reference resolution.")]
+        public bool ScalePresentationWithScreenSize = true;
+        [Tooltip("Author canvas-unit sizes at this resolution. Normalized character positions remain resolution independent.")]
+        public Vector2 PresentationReferenceResolution = new Vector2(1920f, 1080f);
+        [Range(0f, 1f)]
+        [Tooltip("0 matches width, 1 matches height, and 0.5 balances both across desktop and mobile aspect ratios.")]
+        public float PresentationMatchWidthOrHeight = 0.5f;
+
         private readonly Stack<GraphCallFrame> _graphCalls = new Stack<GraphCallFrame>();
         private RuntimeValueScope _valueScope = new RuntimeValueScope();
 
@@ -37,6 +46,14 @@ namespace Novelify
         [Tooltip("Optional portrait parent outside the dialogue panel. Defaults to a separate stage under the canvas.")]
         public Transform CharacterContainer;
         public bool HideCharactersOnEnd = true;
+
+        [Header("Speaker Focus")]
+        [Tooltip("Darken every visible portrait except the character currently speaking.")]
+        public bool DimInactiveCharacters = true;
+        [Tooltip("RGB multiplier applied to non-speaking portraits.")]
+        public Color InactiveCharacterTint = new Color(0.42f, 0.42f, 0.48f, 1f);
+        [Min(0f)]
+        public float SpeakerFocusTransitionDuration = 0.15f;
 
         [Header("UI Components")]
         public GameObject DialoguePanel;
@@ -72,6 +89,7 @@ namespace Novelify
         private RuntimeNode _currentNode;
         private Coroutine _textRevealCoroutine;
         private Coroutine _waitCoroutine;
+        private Coroutine _autoAdvanceCoroutine;
         private bool _isTextRevealing, _isWaiting;
         private bool _hasStartedGraph, _isGraphRunning, _ownsContainer;
         private int _nodeEnteredFrame = -1;

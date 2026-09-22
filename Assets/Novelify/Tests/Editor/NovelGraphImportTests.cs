@@ -578,7 +578,15 @@ namespace Novelify.Tests
             SpeechBubbleNode bubble = Add<SpeechBubbleNode>();
             ChangeSpeechBubbleNode change = Add<ChangeSpeechBubbleNode>();
             EndNode end = Add<EndNode>();
-            bubble.GetInputPortByName("Speaker").TrySetValue(_character);
+            Assert.That(create.GetInputPortByName("Preview Character"),
+                Is.Not.Null);
+            Assert.That(create.GetInputPortByName(
+                "Preview Character Reference"), Is.Not.Null);
+            create.GetInputPortByName("Preview Character")
+                .TrySetValue(_character);
+            Assert.That(bubble.GetInputPortByName("Character"), Is.Not.Null);
+            Assert.That(bubble.GetInputPortByName("Character Reference"), Is.Not.Null);
+            bubble.GetInputPortByName("Character").TrySetValue(_character);
             bubble.GetNodeOptionByName("Dialogue").TrySetValue(
                 new RichDialogueText("A saved speech-bubble line."));
             bubble.GetNodeOptionByName("Thinking").TrySetValue(true);
@@ -603,6 +611,19 @@ namespace Novelify.Tests
                 new Vector2(0.42f, 0.81f));
             create.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
             create.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
+            create.GetNodeOptionByName("Fill Texture").TrySetValue(
+                Texture2D.whiteTexture);
+            create.GetNodeOptionByName("Fill Tiling").TrySetValue(
+                new Vector2(3f, 2f));
+            create.GetNodeOptionByName("Fill Offset").TrySetValue(
+                new Vector2(0.2f, -0.1f));
+            create.GetNodeOptionByName("Outline").TrySetValue(true);
+            create.GetNodeOptionByName("Outline Transparency").TrySetValue(
+                0.35f);
+            create.GetNodeOptionByName("Outline Texture").TrySetValue(
+                Texture2D.grayTexture);
+            create.GetNodeOptionByName("Outline Tiling").TrySetValue(
+                new Vector2(5f, 1.5f));
             change.GetNodeOptionByName("Tail Length").TrySetValue(42f);
             Connect(start, create);
             Connect(create, bubble);
@@ -649,11 +670,94 @@ namespace Novelify.Tests
                 Is.EqualTo(new Vector2(0.5f, 0.5f)));
             Assert.That(runtimeCreate.BubbleStyle.CornerRadius, Is.EqualTo(31f));
             Assert.That(runtimeCreate.BubbleStyle.Opacity, Is.EqualTo(0.43f));
+            Assert.That(runtimeCreate.BubbleStyle.FillTexture,
+                Is.EqualTo(Texture2D.whiteTexture));
+            Assert.That(runtimeCreate.BubbleStyle.FillTiling,
+                Is.EqualTo(new Vector2(3f, 2f)));
+            Assert.That(runtimeCreate.BubbleStyle.FillOffset,
+                Is.EqualTo(new Vector2(0.2f, -0.1f)));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineEnabled, Is.True);
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTransparency,
+                Is.EqualTo(0.35f));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTexture,
+                Is.EqualTo(Texture2D.grayTexture));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTiling,
+                Is.EqualTo(new Vector2(5f, 1.5f)));
             Assert.That(runtimeChange.TailLength, Is.EqualTo(42f));
             Assert.That(runtimeCreate.NextNodeID,
                 Is.EqualTo(runtimeDialogue.NodeID));
             Assert.That(runtimeDialogue.NextNodeID,
                 Is.EqualTo(runtimeChange.NodeID));
+        }
+
+        [Test]
+        public void TransformPortraitExpandsAndImportsAnyAuthoredTargetCount()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform =
+                Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetNodeOptionByName(
+                    TransformSpeakerPortraitNode.TargetsOptionID)
+                .TrySetValue(
+                    TransformTargetAuthoringList.CreateDefault(5));
+            transform.DefineNode();
+            transform.GetInputPortByName("Character")
+                .TrySetValue(_character);
+            for (int target = 2; target <= 5; target++)
+            {
+                transform.GetInputPortByName($"Character {target}")
+                    .TrySetValue(_character);
+                transform.GetInputPortByName($"Position {target}")
+                    .TrySetValue(new Vector2(target * 0.1f, 0f));
+                transform.GetNodeOptionByName($"Instance ID {target}")
+                    .TrySetValue($"target-{target}");
+            }
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single();
+            Assert.That(result.AdditionalTargets, Has.Count.EqualTo(4));
+            Assert.That(result.AdditionalTargets[3].InstanceID,
+                Is.EqualTo("target-5"));
+            Assert.That(result.AdditionalTargets[3].OffsetX,
+                Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void TransformPortraitRecoversNumberedPortsWhenTargetMetadataIsEmpty()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform =
+                Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetInputPortByName("Character")
+                .TrySetValue(_character);
+            transform.GetInputPortByName("Character 2")
+                .TrySetValue(_character);
+            transform.GetInputPortByName("Position 2")
+                .TrySetValue(new Vector2(0.64f, -1f));
+
+            // Reproduces graphs saved while the authoring-list entry type was
+            // empty: numbered ports survived, but Targets serialized as [].
+            transform.GetNodeOptionByName(
+                    TransformSpeakerPortraitNode.TargetsOptionID)
+                .TrySetValue(new TransformTargetAuthoringList());
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single();
+            Assert.That(result.AdditionalTargets, Has.Count.EqualTo(1));
+            Assert.That(result.AdditionalTargets[0].Character,
+                Is.EqualTo(_character));
+            Assert.That(result.AdditionalTargets[0].OffsetX,
+                Is.EqualTo(0.64f).Within(0.001f));
+            Assert.That(result.AdditionalTargets[0].OffsetY,
+                Is.EqualTo(-1f).Within(0.001f));
         }
 
         [Test]

@@ -130,7 +130,7 @@ namespace Novelify.Editor
                 return "novelify-node-character";
             if (node is SpeechBubblePresentationNode || node is CreateDialogueBoxNode ||
                 node is CreateDialogueSpeakerBoxNode || node is ChangeDialogueBackgroundStyleNode ||
-                node is ResetDialogueStyleNode)
+                node is ResetDialogueStyleNode || node is SetBackgroundNode)
                 return "novelify-node-presentation";
             if (node is PlaySoundNode || node is PlayMusicNode || node is StopSoundNode ||
                 node is StopAudioChannelNode)

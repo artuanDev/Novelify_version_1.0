@@ -686,7 +686,7 @@ namespace Novelify.Tests
             yield return new WaitForSecondsRealtime(0.3f);
 
             Assert.That(info.Position.x, Is.EqualTo(250f).Within(0.01f));
-            Assert.That(info.Position.y, Is.EqualTo(-200f).Within(0.01f));
+            Assert.That(info.Position.y, Is.EqualTo(100f).Within(0.01f));
             Assert.That(Mathf.DeltaAngle(info.Rotation, 90f), Is.Zero.Within(0.01f));
             Assert.That(info.Scale.x, Is.EqualTo(2f).Within(0.01f));
             Assert.That(info.Scale.y, Is.EqualTo(0.5f).Within(0.01f));
@@ -1357,6 +1357,360 @@ namespace Novelify.Tests
             {
                 Object.DestroyImmediate(music);
                 Object.DestroyImmediate(ambience);
+            }
+        }
+
+        [Test]
+        public void TransformPortraitCanMoveTwoCharacterInstancesTogether()
+        {
+            Play(
+                new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "pair",
+                    NextNodeID = "line",
+                    Character = _character,
+                    OffsetX = -0.5f,
+                    TransformSecondCharacter = true,
+                    SecondCharacter = _character,
+                    SecondInstanceID = "partner",
+                    SecondOffsetX = 0.5f,
+                    SmoothMovement = false
+                },
+                new RuntimeDialogueNode
+                {
+                    NodeID = "line",
+                    ShowTextImmediately = true
+                });
+
+            Assert.That(_manager.ShowCharacter(_character).Position.x,
+                Is.EqualTo(-200f).Within(0.01f));
+            Assert.That(_manager.ShowCharacter(_character, "partner").Position.x,
+                Is.EqualTo(200f).Within(0.01f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+        }
+
+        [Test]
+        public void TransformPortraitCanMoveAnExpandableCharacterCollection()
+        {
+            var targets = new List<RuntimePortraitTransformTarget>();
+            for (int index = 1; index <= 5; index++)
+                targets.Add(new RuntimePortraitTransformTarget
+                {
+                    Character = _character,
+                    InstanceID = $"extra-{index}",
+                    OffsetX = index * 0.1f,
+                    Scale = Vector2.one,
+                    Opacity = 1f
+                });
+
+            Play(
+                new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "group",
+                    NextNodeID = "line",
+                    Character = _character,
+                    InstanceID = "first",
+                    OffsetX = -0.5f,
+                    Scale = Vector2.one,
+                    Opacity = 1f,
+                    SmoothMovement = false,
+                    AdditionalTargets = targets
+                },
+                new RuntimeDialogueNode
+                {
+                    NodeID = "line",
+                    ShowTextImmediately = true
+                });
+
+            Assert.That(_manager.ShowCharacter(
+                    _character, "first").Position.x,
+                Is.EqualTo(-200f).Within(0.01f));
+            Assert.That(_manager.ShowCharacter(
+                    _character, "extra-5").Position.x,
+                Is.EqualTo(200f).Within(0.01f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+        }
+
+        [UnityTest]
+        public IEnumerator TransformPortraitTweensEveryTargetAtTheSameTime()
+        {
+            Play(
+                new RuntimeTransformSpeakerPortraitNode
+                {
+                    NodeID = "group-tween",
+                    NextNodeID = "line",
+                    Character = _character,
+                    InstanceID = "daisy",
+                    OffsetX = -0.5f,
+                    OffsetY = -1f,
+                    Scale = Vector2.one,
+                    Opacity = 1f,
+                    SmoothMovement = true,
+                    Duration = 0.15f,
+                    WaitForCompletion = true,
+                    AdditionalTargets = new List<RuntimePortraitTransformTarget>
+                    {
+                        new RuntimePortraitTransformTarget
+                        {
+                            Character = _character,
+                            InstanceID = "hoki",
+                            OffsetX = 0.5f,
+                            OffsetY = -1f,
+                            Scale = Vector2.one,
+                            Opacity = 1f
+                        }
+                    }
+                },
+                new RuntimeDialogueNode
+                {
+                    NodeID = "line",
+                    ShowTextImmediately = true
+                });
+
+            CharacterInfo daisy = _manager.ShowCharacter(
+                _character, "daisy");
+            CharacterInfo hoki = _manager.ShowCharacter(
+                _character, "hoki");
+            Assert.That(daisy.IsMoving, Is.True);
+            Assert.That(hoki.IsMoving, Is.True);
+            Assert.That(_manager.IsWaiting, Is.True);
+
+            yield return new WaitForSecondsRealtime(0.06f);
+            Assert.That(daisy.Position.x, Is.LessThan(-0.01f));
+            Assert.That(hoki.Position.x, Is.GreaterThan(0.01f));
+
+            yield return new WaitForSecondsRealtime(0.2f);
+            Assert.That(daisy.Position.x, Is.EqualTo(-200f).Within(0.05f));
+            Assert.That(hoki.Position.x, Is.EqualTo(200f).Within(0.05f));
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("line"));
+        }
+
+        [Test]
+        public void PresentationStyleAssetOverridesInlineStylesBySurface()
+        {
+            NovelPresentationStyle asset =
+                ScriptableObject.CreateInstance<NovelPresentationStyle>();
+            try
+            {
+                NovelBoxStyle dialogue = NovelBoxStyle.DialogueDefault;
+                dialogue.FillColor = Color.magenta;
+                NovelBoxStyle speaker = NovelBoxStyle.SpeakerDefault;
+                speaker.FillColor = Color.yellow;
+                NovelBoxStyle bubble = NovelBoxStyle.BubbleDefault;
+                bubble.FillColor = Color.cyan;
+                asset.DialogueBox = dialogue;
+                asset.SpeakerBox = speaker;
+                asset.SpeechBubble = bubble;
+
+                Assert.That(new RuntimeCreateDialogueBoxNode
+                    { StyleAsset = asset }.ResolvedStyle.FillColor,
+                    Is.EqualTo(Color.magenta));
+                Assert.That(new RuntimeCreateDialogueSpeakerBoxNode
+                    { StyleAsset = asset }.ResolvedStyle.FillColor,
+                    Is.EqualTo(Color.yellow));
+                Assert.That(new RuntimeCreateSpeechBubbleNode
+                    { StyleAsset = asset }.ResolvedStyle.FillColor,
+                    Is.EqualTo(Color.cyan));
+            }
+            finally
+            {
+                Object.DestroyImmediate(asset);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator SpeechBubblesCanAutoAdvanceAndRemainVisibleTogether()
+        {
+            Play(
+                new RuntimeCreateSpeechBubbleNode
+                {
+                    NodeID = "create",
+                    NextNodeID = "first"
+                },
+                new RuntimeSpeechBubbleNode
+                {
+                    NodeID = "first",
+                    NextNodeID = "second",
+                    NovelCharacter = _character,
+                    DialogueText = "Wait!",
+                    ShowTextImmediately = true,
+                    AutoAdvanceDelay = 0.01f
+                },
+                new RuntimeSpeechBubbleNode
+                {
+                    NodeID = "second",
+                    NovelCharacter = _character,
+                    InstanceID = "partner",
+                    DialogueText = "No!",
+                    ShowTextImmediately = true,
+                    OverlapMode = NovelSpeechBubbleOverlapMode.KeepPrevious
+                });
+
+            yield return new WaitForSecondsRealtime(0.08f);
+
+            Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("second"));
+            int held = Object.FindObjectsByType<RectTransform>(
+                    FindObjectsInactive.Include)
+                .Count(rect => rect.name == "Held Speech Bubble");
+            Assert.That(held, Is.EqualTo(1));
+            Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Speech Bubble"));
+        }
+
+        [Test]
+        public void NewPortraitsUseBottomCenterAsTheirResponsiveBase()
+        {
+            CharacterInfo info = _manager.ShowCharacter(_character);
+            RectTransform rect = (RectTransform)info.transform;
+
+            Assert.That(rect.anchorMin, Is.EqualTo(new Vector2(0.5f, 0f)));
+            Assert.That(rect.anchorMax, Is.EqualTo(new Vector2(0.5f, 0f)));
+            Assert.That(rect.pivot, Is.EqualTo(new Vector2(0.5f, 0f)));
+            Assert.That(rect.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(info.AnchoredToNormalizedPosition(Vector2.zero).y,
+                Is.EqualTo(-1f).Within(0.001f));
+        }
+
+        [Test]
+        public void ComposedPortraitVisibleLowerBoundDefinesTheStageBaseline()
+        {
+            Texture2D texture = new Texture2D(8, 8);
+            Color[] pixels = Enumerable.Repeat(Color.white, 64).ToArray();
+            texture.SetPixels(pixels);
+            texture.Apply();
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, 8f, 8f),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect);
+            GameObject layerObject = new GameObject(
+                "PortraitBackground",
+                typeof(RectTransform),
+                typeof(UnityEngine.UI.Image));
+            try
+            {
+                RectTransform layerRect =
+                    layerObject.GetComponent<RectTransform>();
+                layerRect.SetParent(_prefab.transform, false);
+                layerRect.anchorMin = new Vector2(0.5f, 0.5f);
+                layerRect.anchorMax = new Vector2(0.5f, 0.5f);
+                layerRect.pivot = new Vector2(0.5f, 0.5f);
+                layerRect.sizeDelta = new Vector2(200f, 300f);
+                layerRect.anchoredPosition = new Vector2(30f, 80f);
+                UnityEngine.UI.Image image =
+                    layerObject.GetComponent<UnityEngine.UI.Image>();
+                image.preserveAspect = false;
+                _prefab.GetComponent<CharacterInfo>().Body = image;
+                _character.PortraitBody = sprite;
+
+                CharacterInfo info = _manager.ShowCharacter(_character);
+                RectTransform root = (RectTransform)info.transform;
+                RectTransform visibleLayer = info.Body.rectTransform;
+                var corners = new Vector3[4];
+                visibleLayer.GetWorldCorners(corners);
+                float minimumY = float.PositiveInfinity;
+                float minimumX = float.PositiveInfinity;
+                float maximumX = float.NegativeInfinity;
+                foreach (Vector3 corner in corners)
+                {
+                    Vector3 local = root.InverseTransformPoint(corner);
+                    minimumY = Mathf.Min(minimumY, local.y);
+                    minimumX = Mathf.Min(minimumX, local.x);
+                    maximumX = Mathf.Max(maximumX, local.x);
+                }
+
+                Assert.That(minimumY, Is.Zero.Within(0.01f));
+                Assert.That((minimumX + maximumX) * 0.5f,
+                    Is.Zero.Within(0.01f));
+                Assert.That(root.anchoredPosition, Is.EqualTo(Vector2.zero));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Test]
+        public void DialogueDimsEveryLayerOfInactiveCharacters()
+        {
+            GameObject layerObject = new GameObject(
+                "PortraitBackground", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            layerObject.transform.SetParent(_prefab.transform, false);
+            _prefab.GetComponent<CharacterInfo>().Body =
+                layerObject.GetComponent<UnityEngine.UI.Image>();
+            _manager.SpeakerFocusTransitionDuration = 0f;
+
+            CharacterInfo speaker = _manager.ShowCharacter(_character, "speaker");
+            CharacterInfo listener = _manager.ShowCharacter(_character, "listener");
+            Play(new RuntimeDialogueNode
+            {
+                NodeID = "line",
+                NovelCharacter = _character,
+                InstanceID = "speaker",
+                DialogueText = "I am speaking.",
+                ShowTextImmediately = true
+            });
+
+            Assert.That(speaker.Body.color, Is.EqualTo(Color.white));
+            Assert.That(listener.Body.color.r,
+                Is.EqualTo(_manager.InactiveCharacterTint.r).Within(0.001f));
+            Assert.That(listener.Body.color.g,
+                Is.EqualTo(_manager.InactiveCharacterTint.g).Within(0.001f));
+            Assert.That(listener.Body.color.b,
+                Is.EqualTo(_manager.InactiveCharacterTint.b).Within(0.001f));
+        }
+
+        [Test]
+        public void SetBackgroundCreatesAResponsiveBackgroundLayer()
+        {
+            Texture2D texture = new Texture2D(8, 4);
+            Sprite sprite = Sprite.Create(
+                texture, new Rect(0f, 0f, 8f, 4f),
+                new Vector2(0.5f, 0.5f));
+            try
+            {
+                Play(
+                    new RuntimeSetBackgroundNode
+                    {
+                        NodeID = "background",
+                        NextNodeID = "line",
+                        Background = sprite,
+                        Tint = Color.white,
+                        ScaleMode = NovelBackgroundScaleMode.Cover,
+                        TransitionDuration = 0f
+                    },
+                    new RuntimeDialogueNode
+                    {
+                        NodeID = "line",
+                        ShowTextImmediately = true
+                    });
+
+                UnityEngine.UI.Image background =
+                    Object.FindObjectsByType<UnityEngine.UI.Image>(
+                            FindObjectsInactive.Include)
+                        .Single(image => image.sprite == sprite);
+                Assert.That(background.transform.parent.name,
+                    Is.EqualTo("Novelify Background Layer"));
+                Assert.That(background.raycastTarget, Is.False);
+                Assert.That(background.GetComponent<UnityEngine.UI.AspectRatioFitter>()
+                    .aspectMode,
+                    Is.EqualTo(UnityEngine.UI.AspectRatioFitter.AspectMode.EnvelopeParent));
+                UnityEngine.UI.CanvasScaler scaler = background
+                    .GetComponentInParent<Canvas>()
+                    .GetComponent<UnityEngine.UI.CanvasScaler>();
+                Assert.That(scaler.uiScaleMode,
+                    Is.EqualTo(UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize));
+                Assert.That(scaler.referenceResolution,
+                    Is.EqualTo(_manager.PresentationReferenceResolution));
+                Assert.That(scaler.matchWidthOrHeight,
+                    Is.EqualTo(_manager.PresentationMatchWidthOrHeight).Within(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
             }
         }
     }
