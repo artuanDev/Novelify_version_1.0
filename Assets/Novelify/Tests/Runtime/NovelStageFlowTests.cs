@@ -622,35 +622,6 @@ namespace Novelify.Tests
             return panel;
         }
 
-#if UNITY_EDITOR
-        [UnityTest]
-        public IEnumerator ExampleStoryPlaysMusicAndReachesBothCharacters()
-        {
-            CreateNestedManagerPanel();
-            RuntimeNovelGraph example = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(
-                "Assets/Novelify/Samples/NovelGraphs/ExampleStory.novelgraph");
-            Assert.That(example, Is.Not.Null);
-            _manager.PlayGraph(example);
-            Assert.That(_manager.CurrentNode, Is.TypeOf<RuntimeDialogueNode>());
-            Assert.That(((RuntimeDialogueNode)_manager.CurrentNode).NovelCharacter, Is.Null, "The opening line is narration.");
-            Assert.That(_manager.PlaySoundSource.clip, Is.Not.Null, "Resolve the MusicToPlay graph variable.");
-            Assert.That(_manager.PlaySoundSource.isPlaying, Is.True);
-            yield return null;
-            _manager.Advance();
-            Assert.That(((RuntimeDialogueNode)_manager.CurrentNode).NovelCharacter.name, Is.EqualTo("Hoki"));
-            yield return null;
-            _manager.Advance();
-            Assert.That(_manager.IsWaiting, Is.True, "Hoki must pass through Translate before Daisy's line.");
-            yield return new WaitForSecondsRealtime(0.8f);
-            Assert.That(((RuntimeDialogueNode)_manager.CurrentNode).NovelCharacter.name, Is.EqualTo("Daisy"));
-            Assert.That(_manager.AllCharacters.Count, Is.EqualTo(2));
-            Assert.That(_manager.PlaySoundSource.isPlaying, Is.True);
-            _manager.Advance();
-            Assert.That(_manager.CurrentNode, Is.Null);
-            Assert.That(_manager.PlaySoundSource.isPlaying, Is.False);
-        }
-#endif
-
         [UnityTest]
         public IEnumerator EventListenersCanStopTheGraphWithoutExecutingFollowingNodes()
         {

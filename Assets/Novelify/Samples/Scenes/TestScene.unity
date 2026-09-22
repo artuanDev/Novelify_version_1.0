@@ -267,7 +267,7 @@ GameObject:
   - component: {fileID: 728397537}
   - component: {fileID: 728397538}
   m_Layer: 5
-  m_Name: ButtonContainer
+  m_Name: Choice Buttons
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -329,7 +329,7 @@ GameObject:
   - component: {fileID: 791819472}
   - component: {fileID: 791819473}
   m_Layer: 5
-  m_Name: DialogueUI
+  m_Name: Novelify Runner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -403,7 +403,7 @@ GameObject:
   - component: {fileID: 1338702001}
   - component: {fileID: 1338702000}
   m_Layer: 5
-  m_Name: BackgroundChoices
+  m_Name: Choice Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -478,7 +478,7 @@ GameObject:
   - component: {fileID: 1934502828}
   - component: {fileID: 1934502827}
   m_Layer: 0
-  m_Name: EventSystem
+  m_Name: Event System
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -558,7 +558,7 @@ GameObject:
   - component: {fileID: 2075244355}
   - component: {fileID: 2075244354}
   m_Layer: 5
-  m_Name: Canvas
+  m_Name: Novelify Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

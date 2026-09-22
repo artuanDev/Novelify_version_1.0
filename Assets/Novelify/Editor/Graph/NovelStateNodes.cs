@@ -6,7 +6,7 @@ namespace Novelify.Editor
 {
     public enum NovelNumericType { Integer, Float }
 
-    [Serializable, Node("Novelify/Values", null, "Random Number"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Values, null, "Random Number"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class RandomNumberNode : Node
     {
         public override void OnEnable()
@@ -70,7 +70,7 @@ namespace Novelify.Editor
 
     }
 
-    [Serializable, Node("Novelify/State", null, "Get Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.State, null, "Get Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class GetNovelVariableNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -90,7 +90,7 @@ namespace Novelify.Editor
                 .WithTooltip("Must match the selected variable definition.").Build();
     }
 
-    [Serializable, Node("Novelify/State", null, "Set Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.State, null, "Set Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SetNovelVariableNode : ActionNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -111,7 +111,7 @@ namespace Novelify.Editor
                 .WithTooltip("Must match the selected variable definition.").Build();
     }
 
-    [Serializable, Node("Novelify/State", null, "Modify Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.State, null, "Modify Variable"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class ModifyNovelVariableNode : ActionNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -133,7 +133,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Logic", null, "Compare"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Logic, null, "Compare"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class CompareNovelValuesNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -169,7 +169,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Logic", null, "And"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Logic, null, "And"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class AndNovelValuesNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -180,7 +180,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Logic", null, "Or"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Logic, null, "Or"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class OrNovelValuesNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -191,7 +191,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Logic", null, "Not"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Logic, null, "Not"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class NotNovelValueNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -201,7 +201,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Flow", null, "Branch"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow, null, "Branch"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class BranchNovelNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)

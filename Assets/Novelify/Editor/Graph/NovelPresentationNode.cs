@@ -59,7 +59,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Create Dialogue Box")]
+    [Node(NovelNodeCategories.Presentation, null, "Create Dialogue Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class CreateDialogueBoxNode : ActionNode
     {
@@ -92,7 +92,7 @@ namespace Novelify.Editor
         }
     }
     [Serializable]
-    [Node("Novelify/Presentation", null, "Create Dialogue Speaker Box")]
+    [Node(NovelNodeCategories.Presentation, null, "Create Dialogue Speaker Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class CreateDialogueSpeakerBoxNode : ActionNode
     {
@@ -126,7 +126,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Change Dialogue Background Style")]
+    [Node(NovelNodeCategories.Presentation, null, "Change Dialogue Background Style")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class ChangeDialogueBackgroundStyleNode : ActionNode
     {
@@ -141,7 +141,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Reset Dialogue Style")]
+    [Node(NovelNodeCategories.Presentation, null, "Reset Dialogue Style")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class ResetDialogueStyleNode : ActionNode
     {
@@ -154,7 +154,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Audio", null, "Play Music")]
+    [Node(NovelNodeCategories.Audio, null, "Play Music")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class PlayMusicNode : ActionNode
     {
@@ -181,7 +181,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Audio", null, "Stop Audio Channel")]
+    [Node(NovelNodeCategories.Audio, null, "Stop Audio Channel")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class StopAudioChannelNode : ActionNode
     {
@@ -278,13 +278,13 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Create Speech Bubble Box")]
+    [Node(NovelNodeCategories.Presentation, null, "Create Speech Bubble Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class CreateSpeechBubbleNode :
         SpeechBubblePresentationNode { }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Change Speech Bubble Box")]
+    [Node(NovelNodeCategories.Presentation, null, "Change Speech Bubble Box")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class ChangeSpeechBubbleNode :
         SpeechBubblePresentationNode { }
@@ -319,18 +319,18 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Transitions", null, "Fade In")]
+    [Node(NovelNodeCategories.PresentationTransitions, null, "Fade In")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class FadeInNode : FadeAuthoringNode { }
 
     [Serializable]
-    [Node("Novelify/Transitions", null, "Fade Out")]
+    [Node(NovelNodeCategories.PresentationTransitions, null, "Fade Out")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class FadeOutNode : FadeAuthoringNode { }
 
     //Node for speech bubbles
     [Serializable]
-    [Node("Novelify/Story", null, "Speech Bubble")]
+    [Node(NovelNodeCategories.Story, null, "Speech Bubble")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SpeechBubbleNode : DialogueNode
     {
@@ -369,7 +369,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Presentation", null, "Set Background")]
+    [Node(NovelNodeCategories.Presentation, null, "Set Background")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SetBackgroundNode : ActionNode
     {

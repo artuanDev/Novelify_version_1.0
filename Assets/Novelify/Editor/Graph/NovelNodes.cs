@@ -7,11 +7,26 @@ using System.Linq;
 
 namespace Novelify.Editor
 {
-    /*Nodes CAN´T be accesed by normal monobehaviours, we instead need
-    to make a runtime version of the nodes in the graph*/
+    internal static class NovelNodeCategories
+    {
+        public const string Flow = "Novelify/Flow";
+        public const string Story = "Novelify/Story";
+        public const string Characters = "Novelify/Characters";
+        public const string Presentation = "Novelify/Presentation";
+        public const string PresentationTransitions = Presentation + "/Transitions";
+        public const string Audio = "Novelify/Audio";
+        public const string State = "Novelify/State";
+        public const string Logic = "Novelify/Logic";
+        public const string Values = "Novelify/Values";
+        public const string CharacterValues = Values + "/Characters";
+        public const string FloatMath = Values + "/Math/Float";
+        public const string Vector2Math = Values + "/Math/Vector2";
+    }
+
+    // Authoring nodes are editor-only; the importer creates their runtime equivalents.
 
     [Serializable]
-    [Node("Novelify/Flow", "d_PlayButton", "Start",
+    [Node(NovelNodeCategories.Flow, "d_PlayButton", "Start",
         "Assets/Novelify/Editor/Graph/Styles/StartNode.uss")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class StartNode: Node
@@ -37,7 +52,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Characters", null, "Transform Characters")]
+    [Node(NovelNodeCategories.Audio, null, "Play Sound")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class PlaySoundNode : Node
     {
@@ -46,9 +61,9 @@ namespace Novelify.Editor
             base.OnEnable();
             NovelNodePresentation.Apply(
                 this,
-                "Story entry",
-                "The first beat in this narrative path.",
-                new Color32(52, 211, 153, 255));
+                "Play sound",
+                "Plays an audio clip with per-node loop, volume, priority, and pitch settings.",
+                new Color32(96, 165, 250, 255));
         }
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -69,7 +84,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Utilities")]
+    [Node(NovelNodeCategories.Characters, null, "Transform Characters")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class TransformSpeakerPortraitNode : CharacterActionNode
     {
@@ -258,7 +273,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Utilities")]
+    [Node(NovelNodeCategories.Characters, null, "Flip Character")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class FlipCharacterNode : CharacterActionNode
     {
@@ -286,7 +301,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Characters", null, "Set Facing")]
+    [Node(NovelNodeCategories.Characters, null, "Set Facing")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SetCharacterFacingNode : CharacterActionNode
     {
@@ -311,7 +326,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Flow", "d_console.erroricon", "End",
+    [Node(NovelNodeCategories.Flow, "d_console.erroricon", "End",
         "Assets/Novelify/Editor/Graph/Styles/EndNode.uss")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class EndNode: Node
@@ -336,7 +351,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Story", "d_console.infoicon", "SimpleDialogue",
+    [Node(NovelNodeCategories.Story, "d_console.infoicon", "Simple Dialogue",
         "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SimpleDialogueNode : Node
@@ -388,7 +403,7 @@ namespace Novelify.Editor
 
 
     [Serializable]
-    [Node("Novelify/Story", "d_console.infoicon", "Dialogue",
+    [Node(NovelNodeCategories.Story, "d_console.infoicon", "Dialogue",
         "Assets/Novelify/Editor/Graph/Styles/DialogueNode.uss")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DialogueNode: SimpleDialogueNode
@@ -468,7 +483,7 @@ namespace Novelify.Editor
     }
 
     [Serializable]
-    [Node("Novelify/Story", "d_TreeEditor.Duplicate", "Choice",
+    [Node(NovelNodeCategories.Story, "d_TreeEditor.Duplicate", "Choice",
         "Assets/Novelify/Editor/Graph/Styles/ChoiceNode.uss")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class ChoiceNode: Node

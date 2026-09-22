@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Novelify.Editor
 {
-    [Serializable, Node("Novelify/Flow", "d_UnityEditor.Graphs.AnimatorControllerTool", "Call Novel Page"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow, "d_UnityEditor.Graphs.AnimatorControllerTool", "Call Novel Page"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class CallNovelPageNode : ActionNode, ISubgraphNode
     {
         public const string GraphPortName = "Novel Graph";
@@ -70,7 +70,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class LabelNode : ActionNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -84,7 +84,7 @@ namespace Novelify.Editor
 
     }
 
-    [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class JumpNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -98,7 +98,7 @@ namespace Novelify.Editor
 
     }
 
-    [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Characters), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class ShowCharacterNode : CharacterActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -113,7 +113,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Characters), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class HideCharacterNode : CharacterActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -146,10 +146,10 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Characters), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class HideAllCharactersNode : ActionNode { }
 
-    [Serializable, Node("Novelify/Characters"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Characters), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SetCharacterEmotionNode : CharacterActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -159,7 +159,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Flow"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class WaitNode : ActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -169,7 +169,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Flow", null, "Checkpoint"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow, null, "Checkpoint"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class CheckpointNode : ActionNode
     {
         public override void OnEnable()
@@ -202,7 +202,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Utilities"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Flow), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DialogueEventNode : ActionNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
@@ -212,7 +212,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Utilities"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Audio), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class StopSoundNode : ActionNode { }
 
     [Serializable]
@@ -241,31 +241,31 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Math/Float", null, "Add"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.FloatMath, null, "Add"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class AddFloatNode : FloatBinaryNode { }
 
-    [Serializable, Node("Novelify/Math/Float", null, "Subtract"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.FloatMath, null, "Subtract"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SubtractFloatNode : FloatBinaryNode { }
 
-    [Serializable, Node("Novelify/Math/Float", null, "Multiply"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.FloatMath, null, "Multiply"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class MultiplyFloatNode : FloatBinaryNode { protected override float DefaultB => 1f; }
 
-    [Serializable, Node("Novelify/Math/Float", null, "Divide"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.FloatMath, null, "Divide"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DivideFloatNode : FloatBinaryNode { protected override float DefaultB => 1f; }
 
-    [Serializable, Node("Novelify/Math/Vector 2", null, "Add"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Vector2Math, null, "Add"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class AddVector2Node : Vector2BinaryNode { }
 
-    [Serializable, Node("Novelify/Math/Vector 2", null, "Subtract"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Vector2Math, null, "Subtract"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SubtractVector2Node : Vector2BinaryNode { }
 
-    [Serializable, Node("Novelify/Math/Vector 2", null, "Multiply"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Vector2Math, null, "Multiply"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class MultiplyVector2Node : Vector2BinaryNode { protected override Vector2 DefaultB => Vector2.one; }
 
-    [Serializable, Node("Novelify/Math/Vector 2", null, "Divide"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.Vector2Math, null, "Divide"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DivideVector2Node : Vector2BinaryNode { protected override Vector2 DefaultB => Vector2.one; }
 
-    [Serializable, Node("Novelify/Characters", null, "Split Novel Character"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.CharacterValues, null, "Split Novel Character"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SplitNovelCharacterNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -291,7 +291,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Characters", null, "Make Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.CharacterValues, null, "Make Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class MakeNovelCharacterReferenceNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -303,7 +303,7 @@ namespace Novelify.Editor
         }
     }
 
-    [Serializable, Node("Novelify/Characters", null, "Split Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    [Serializable, Node(NovelNodeCategories.CharacterValues, null, "Split Novel Character Reference"), UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class SplitNovelCharacterReferenceNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)

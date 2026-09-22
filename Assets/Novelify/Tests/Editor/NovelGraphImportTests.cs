@@ -517,28 +517,20 @@ namespace Novelify.Tests
         }
 
         [Test]
-        public void ExampleStoryImportsMusicThenNarrationHokiTranslateDaisyAndEnd()
+        public void SampleGraphImportsItsSpeechBubbleFlowAndCharacters()
         {
-            const string path = "Assets/Novelify/Samples/NovelGraphs/ExampleStory.novelgraph";
+            const string path = "Assets/Novelify/Samples/NovelGraphs/Example.novelgraph";
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             RuntimeNovelGraph runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(path);
+
             Assert.That(runtime, Is.Not.Null);
-            var lookup = runtime.AllNodes.ToDictionary(node => node.NodeID);
-            RuntimeNode current = lookup[runtime.EntryNodeID];
-            Assert.That(current, Is.TypeOf<RuntimePlaySoundNode>());
-            Assert.That(((RuntimePlaySoundNode)current).ClipSound, Is.Not.Null);
-            current = lookup[current.NextNodeID];
-            Assert.That(current, Is.TypeOf<RuntimeDialogueNode>());
-            Assert.That(((RuntimeDialogueNode)current).NovelCharacter, Is.Null);
-            current = lookup[current.NextNodeID];
-            Assert.That(((RuntimeDialogueNode)current).NovelCharacter.name, Is.EqualTo("Hoki"));
-            current = lookup[current.NextNodeID];
-            Assert.That(current, Is.TypeOf<RuntimeTransformSpeakerPortraitNode>());
-            Assert.That(((RuntimeTransformSpeakerPortraitNode)current).OffsetX, Is.EqualTo(-0.5f));
-            current = lookup[current.NextNodeID];
-            Assert.That(((RuntimeDialogueNode)current).NovelCharacter.name, Is.EqualTo("Daisy"));
-            current = lookup[current.NextNodeID];
-            Assert.That(current.NextNodeID, Is.Null.Or.Empty);
+            Assert.That(runtime.AllNodes.OfType<RuntimeCreateSpeechBubbleNode>().Count(), Is.EqualTo(2));
+            Assert.That(runtime.AllNodes.OfType<RuntimeSpeechBubbleNode>().Count(), Is.EqualTo(2));
+            Assert.That(runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Count(), Is.EqualTo(1));
+            Assert.That(
+                runtime.AllNodes.OfType<RuntimeSpeechBubbleNode>()
+                    .Select(node => node.NovelCharacter?.name),
+                Is.EquivalentTo(new[] { "Hoki", "Daisy" }));
         }
 
         [Test]
@@ -834,46 +826,51 @@ namespace Novelify.Tests
         [Test]
         public void PlayMusicAndFadePortsCompileToRuntimeExpressions()
         {
-            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(
-                "Assets/Novelify/Samples/Music/1586421_FLOWER-MAN.mp3");
-            Assert.That(clip, Is.Not.Null);
-            StartNode start = Add<StartNode>();
-            PlayMusicNode music = Add<PlayMusicNode>();
-            FadeOutNode fade = Add<FadeOutNode>();
-            EndNode end = Add<EndNode>();
-            music.GetInputPortByName(PlayMusicNode.ClipPort)
-                .TrySetValue(clip);
-            music.GetInputPortByName(PlayMusicNode.VolumePort)
-                .TrySetValue(0.63f);
-            music.GetInputPortByName(PlayMusicNode.PitchPort)
-                .TrySetValue(1.17f);
-            music.GetNodeOptionByName("Channel")
-                .TrySetValue(NovelAudioChannel.Ambience);
-            fade.GetInputPortByName(FadeAuthoringNode.DurationPort)
-                .TrySetValue(2f);
-            fade.GetInputPortByName(FadeAuthoringNode.SpeedPort)
-                .TrySetValue(4f);
-            Connect(start, music);
-            Connect(music, fade);
-            Connect(fade, end);
+            AudioClip clip = AudioClip.Create("Test music", 1, 1, 44100, false);
+            try
+            {
+                StartNode start = Add<StartNode>();
+                PlayMusicNode music = Add<PlayMusicNode>();
+                FadeOutNode fade = Add<FadeOutNode>();
+                EndNode end = Add<EndNode>();
+                music.GetInputPortByName(PlayMusicNode.ClipPort)
+                    .TrySetValue(clip);
+                music.GetInputPortByName(PlayMusicNode.VolumePort)
+                    .TrySetValue(0.63f);
+                music.GetInputPortByName(PlayMusicNode.PitchPort)
+                    .TrySetValue(1.17f);
+                music.GetNodeOptionByName("Channel")
+                    .TrySetValue(NovelAudioChannel.Ambience);
+                fade.GetInputPortByName(FadeAuthoringNode.DurationPort)
+                    .TrySetValue(2f);
+                fade.GetInputPortByName(FadeAuthoringNode.SpeedPort)
+                    .TrySetValue(4f);
+                Connect(start, music);
+                Connect(music, fade);
+                Connect(fade, end);
 
-            RuntimeNovelGraph runtime = Import();
-            RuntimePlayMusicNode runtimeMusic = runtime.AllNodes
-                .OfType<RuntimePlayMusicNode>().Single();
-            RuntimeFadeOutNode runtimeFade = runtime.AllNodes
-                .OfType<RuntimeFadeOutNode>().Single();
+                RuntimeNovelGraph runtime = Import();
+                RuntimePlayMusicNode runtimeMusic = runtime.AllNodes
+                    .OfType<RuntimePlayMusicNode>().Single();
+                RuntimeFadeOutNode runtimeFade = runtime.AllNodes
+                    .OfType<RuntimeFadeOutNode>().Single();
 
-            Assert.That(runtimeMusic.Clip, Is.EqualTo(clip));
-            Assert.That(runtimeMusic.Volume, Is.EqualTo(0.63f));
-            Assert.That(runtimeMusic.Pitch, Is.EqualTo(1.17f));
-            Assert.That(runtimeMusic.Channel,
-                Is.EqualTo(NovelAudioChannel.Ambience));
-            Assert.That(runtimeMusic.ClipValue,
-                Is.TypeOf<RuntimeConstantExpression>());
-            Assert.That(runtimeFade.Duration, Is.EqualTo(2f));
-            Assert.That(runtimeFade.Speed, Is.EqualTo(4f));
-            Assert.That(runtimeFade.DurationValue,
-                Is.TypeOf<RuntimeConstantExpression>());
+                Assert.That(runtimeMusic.Clip, Is.EqualTo(clip));
+                Assert.That(runtimeMusic.Volume, Is.EqualTo(0.63f));
+                Assert.That(runtimeMusic.Pitch, Is.EqualTo(1.17f));
+                Assert.That(runtimeMusic.Channel,
+                    Is.EqualTo(NovelAudioChannel.Ambience));
+                Assert.That(runtimeMusic.ClipValue,
+                    Is.TypeOf<RuntimeConstantExpression>());
+                Assert.That(runtimeFade.Duration, Is.EqualTo(2f));
+                Assert.That(runtimeFade.Speed, Is.EqualTo(4f));
+                Assert.That(runtimeFade.DurationValue,
+                    Is.TypeOf<RuntimeConstantExpression>());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(clip);
+            }
         }
     }
 }
