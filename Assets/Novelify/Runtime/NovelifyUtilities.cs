@@ -1,14 +1,13 @@
 using UnityEngine;
 using System;
 using System.Collections;
-using TMPro;
 
 namespace Novelify
 {
     public class NovelifyUtilities : MonoBehaviour
     {
         public static IEnumerator ShowTextLetterByLetter(
-            string text, TextMeshProUGUI textDisplay,
+            string text, NovelText textDisplay,
             AudioClip talkSound, AudioSource talkSoundSource,
             float minPitchVariation = 0, float maxPitchVariation = 0,
             float charactersPerSecond = 30f,
@@ -20,9 +19,7 @@ namespace Novelify
             textDisplay.richText = true;
             textDisplay.SetText(text);
             textDisplay.maxVisibleCharacters = 0;
-            textDisplay.ForceMeshUpdate();
-
-            int visibleCharacterCount = textDisplay.textInfo.characterCount;
+            int visibleCharacterCount = textDisplay.visibleCharacterCount;
             float characterDelay = 1f / Mathf.Max(1f, charactersPerSecond);
             float talkSoundCooldown = 0f;
 
@@ -30,9 +27,9 @@ namespace Novelify
                  characterIndex < visibleCharacterCount;
                  characterIndex++)
             {
-                // TMP's character data excludes rich-text markup. Revealing through
-                // maxVisibleCharacters keeps tags intact and never displays them.
-                char letter = textDisplay.textInfo.characterInfo[characterIndex].character;
+                // NovelText's parsed character data excludes formatting/control
+                // tags, so tags remain hidden throughout the reveal.
+                char letter = textDisplay.CharacterAt(characterIndex);
 
                 if (talkSoundCooldown <= 0f &&
                     talkSoundSource != null &&

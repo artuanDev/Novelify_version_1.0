@@ -11,7 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(22, NovelGraph.AssetExtension)]
+    [ScriptedImporter(23, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -1688,7 +1688,7 @@ namespace Novelify.Editor
             runtimeNode.DialogueFontAssets = dialogue.FontAssets?
                 .Where(font => font != null)
                 .Distinct()
-                .ToList() ?? new List<TMPro.TMP_FontAsset>();
+                .ToList() ?? new List<Font>();
             runtimeNode.PlaySoundCharacterIndex = FindSoundCueCharacterIndex(runtimeNode.DialogueText);
 
             runtimeNode.Emotion =
@@ -1800,7 +1800,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(14, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(15, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

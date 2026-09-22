@@ -1,12 +1,11 @@
 using System.Collections;
-using TMPro;
 using UnityEngine;
 
 namespace Novelify
 {
     public partial class NovelGraphRunner
     {
-        private TMP_FontAsset _defaultDialogueFont;
+        private Font _defaultDialogueFont;
 
         private void InitializePresentation()
         {
@@ -189,25 +188,9 @@ namespace Novelify
                 return;
             }
 
-            if (node.DialogueFont != null)
-            {
-                MaterialReferenceManager.AddFontAsset(node.DialogueFont);
-            }
-
-            if (node.DialogueFontAssets != null)
-            {
-                foreach (TMP_FontAsset font in node.DialogueFontAssets)
-                {
-                    if (font != null)
-                    {
-                        MaterialReferenceManager.AddFontAsset(font);
-                    }
-                }
-            }
-
-            DialogueText.font = node.DialogueFont != null
-                ? node.DialogueFont
-                : _defaultDialogueFont;
+            DialogueText.SetFontAssets(
+                node.DialogueFont != null ? node.DialogueFont : _defaultDialogueFont,
+                node.DialogueFontAssets);
         }
 
         private void OnCustomRevealCompleted(RuntimeDialogueNode node)

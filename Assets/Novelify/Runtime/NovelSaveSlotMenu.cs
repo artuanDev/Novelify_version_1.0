@@ -1,5 +1,4 @@
 using System;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,13 +9,13 @@ namespace Novelify
     {
         public NovelGraphRunner Manager;
         [Tooltip("Existing slots are listed here for resume/delete actions.")]
-        public TMP_Dropdown SlotDropdown;
+        public Dropdown SlotDropdown;
         [Tooltip("Optional slot name for a new save. Blank uses the selected slot or 'slot_1'.")]
-        public TMP_InputField SlotNameInput;
+        public InputField SlotNameInput;
         public Button SaveButton;
         public Button LoadButton;
         public Button DeleteButton;
-        public TextMeshProUGUI StatusText;
+        public Text StatusText;
 
         private void OnEnable()
         {
@@ -94,7 +93,7 @@ namespace Novelify
 
         private void Show(string message)
         {
-            if (StatusText != null) StatusText.SetText(message ?? string.Empty);
+            if (StatusText != null) StatusText.text = message ?? string.Empty;
         }
     }
 }

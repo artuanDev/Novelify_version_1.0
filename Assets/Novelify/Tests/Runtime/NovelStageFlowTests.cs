@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -323,7 +322,7 @@ namespace Novelify.Tests
             NovelVariableDefinition hasKey = CreateVariable("Has Key", NovelVariableType.Boolean, NovelVariableScope.Story);
             GameObject containerObject = new GameObject("Choices", typeof(RectTransform));
             GameObject buttonObject = new GameObject("Choice Button", typeof(RectTransform), typeof(UnityEngine.UI.Button));
-            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text));
             labelObject.transform.SetParent(buttonObject.transform, false);
             _manager.ChoiceButtonContainer = containerObject.transform;
             _manager.ChoiceButtonPrefab = buttonObject.GetComponent<UnityEngine.UI.Button>();
@@ -389,7 +388,7 @@ namespace Novelify.Tests
                 UnityEngine.UI.Button[] buttons = containerObject.GetComponentsInChildren<UnityEngine.UI.Button>();
                 Assert.That(buttons.Length, Is.EqualTo(3), "The hidden first option must not create a button.");
                 Assert.That(buttons[0].interactable, Is.False);
-                StringAssert.Contains("Need 20 coins", buttons[0].GetComponentInChildren<TextMeshProUGUI>().text);
+                StringAssert.Contains("Need 20 coins", buttons[0].GetComponentInChildren<UnityEngine.UI.Text>().text);
 
                 buttons[1].onClick.Invoke();
                 buttons[1].onClick.Invoke();
@@ -409,7 +408,7 @@ namespace Novelify.Tests
                 Assert.That(_manager.StateStore.TrySet(coins, RuntimeValue.From(20), out stateError), Is.True, stateError);
                 buttons = containerObject.GetComponentsInChildren<UnityEngine.UI.Button>();
                 UnityEngine.UI.Button buy = buttons.Single(button =>
-                    button.GetComponentInChildren<TextMeshProUGUI>().text.StartsWith("Buy the key"));
+                    button.GetComponentInChildren<UnityEngine.UI.Text>().text.StartsWith("Buy the key"));
                 Assert.That(buy.interactable, Is.True, "An open menu must refresh when relevant state changes.");
                 buy.onClick.Invoke();
                 buy.onClick.Invoke();
@@ -1100,7 +1099,7 @@ namespace Novelify.Tests
             Assert.That(_manager.DialoguePanel, Is.Not.Null);
             Assert.That(_manager.DialogueText, Is.Not.Null);
             Assert.That(_manager.DialogueText.alignment,
-                Is.EqualTo(TextAlignmentOptions.BottomRight));
+                Is.EqualTo(TextAnchor.LowerRight));
             Assert.That(_manager.DialogueText.enableAutoSizing, Is.True);
             Assert.That(_manager.DialogueText.fontSizeMin, Is.EqualTo(17f));
             Assert.That(_manager.DialogueText.fontSizeMax, Is.EqualTo(38f));
@@ -1126,7 +1125,7 @@ namespace Novelify.Tests
             Assert.That(speakerRect.pivot,
                 Is.EqualTo(new Vector2(0.5f, 0.5f)));
             Assert.That(_manager.SpeakerNameText.alignment,
-                Is.EqualTo(TextAlignmentOptions.Center));
+                Is.EqualTo(TextAnchor.MiddleCenter));
             Assert.That(_manager.SpeakerNameText.fontSize,
                 Is.EqualTo(31f));
             Assert.That(_manager.SpeakerNameText.enableAutoSizing,
@@ -1262,7 +1261,7 @@ namespace Novelify.Tests
             Assert.That(graphic.color,
                 Is.EqualTo(initial.EffectiveFillColor));
             Assert.That(_manager.DialogueText.alignment,
-                Is.EqualTo(TextAlignmentOptions.Center));
+                Is.EqualTo(TextAnchor.MiddleCenter));
 
             _manager.Advance();
 
@@ -1273,7 +1272,7 @@ namespace Novelify.Tests
                 .GetComponent<RectTransform>().sizeDelta.x,
                 Is.EqualTo(410f).Within(0.01f));
             Assert.That(_manager.DialogueText.alignment,
-                Is.EqualTo(TextAlignmentOptions.BottomRight));
+                Is.EqualTo(TextAnchor.LowerRight));
         }
 
         [UnityTest]

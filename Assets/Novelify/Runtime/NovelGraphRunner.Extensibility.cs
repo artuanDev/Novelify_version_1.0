@@ -56,7 +56,7 @@ namespace Novelify
         internal bool IsExternallyPausedInternal => _externallyPaused;
 
         /// <summary>
-        /// Replaces the built-in TMP/portrait presentation. Configure this before starting a graph.
+        /// Replaces the built-in NovelText/portrait presentation. Configure this before starting a graph.
         /// Pass null to return to Novelify's built-in presentation.
         /// </summary>
         public void UsePresentation(INovelPresentation presentation)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Novelify.Editor;
 using NUnit.Framework;
-using TMPro;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -177,8 +176,8 @@ namespace Novelify.Tests
         [Test]
         public void DialogueFontsAndFontMarkupSurviveImport()
         {
-            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
-                "Assets/Novelify/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset");
+            Font font = AssetDatabase.LoadAssetAtPath<Font>(
+                "Assets/Novelify/Fonts/LiberationSans.ttf");
             Assert.That(font, Is.Not.Null);
 
             StartNode start = Add<StartNode>();
@@ -187,7 +186,7 @@ namespace Novelify.Tests
                 $"Hello <font=\"{font.name}\">friend</font>.")
             {
                 DefaultFont = font,
-                FontAssets = new List<TMP_FontAsset> { font }
+                FontAssets = new List<Font> { font }
             };
             Assert.That(dialogue.GetNodeOptionByName("Dialogue").TrySetValue(authored), Is.True);
             Connect(start, dialogue);

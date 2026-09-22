@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -60,8 +59,8 @@ namespace Novelify
         [HideInInspector] public GameObject CharacterPortrait;
         public GameObject BackgroundChoicesPanel;
         public GameObject NameBackground;
-        public TextMeshProUGUI SpeakerNameText;
-        public TextMeshProUGUI DialogueText;
+        public NovelText SpeakerNameText;
+        public NovelText DialogueText;
 
         [Header("Choice Button UI")]
         public Button ChoiceButtonPrefab;
@@ -72,7 +71,7 @@ namespace Novelify
         public UnityEvent<string> OnDialogueEvent = new UnityEvent<string>();
 
         [Header("Extensibility")]
-        [Tooltip("Optional component implementing INovelPresentation. Leave empty to use the built-in TMP/portrait presentation.")]
+        [Tooltip("Optional component implementing INovelPresentation. Leave empty to use the built-in Novelify text/portrait presentation.")]
         [SerializeField] private MonoBehaviour presentationBehaviour;
 
         public IReadOnlyDictionary<string, CharacterInfo> AllCharacters => Stage.Characters;

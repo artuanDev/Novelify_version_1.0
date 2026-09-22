@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using TMPro;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -13,14 +12,14 @@ namespace Novelify.Editor
     public struct RichDialogueText
     {
         public string Text;
-        public TMP_FontAsset DefaultFont;
-        public List<TMP_FontAsset> FontAssets;
+        public Font DefaultFont;
+        public List<Font> FontAssets;
 
         public RichDialogueText(string text)
         {
             Text = text;
             DefaultFont = null;
-            FontAssets = new List<TMP_FontAsset>();
+            FontAssets = new List<Font>();
         }
     }
 
@@ -317,10 +316,10 @@ namespace Novelify.Editor
             StyleToolbarButton(applyColor);
             optionRow.Add(applyColor);
 
-            AddToolbarCaption(fontRow, "Default TMP font");
+            AddToolbarCaption(fontRow, "Default font");
             var defaultFont = new ObjectField
             {
-                objectType = typeof(TMP_FontAsset),
+                objectType = typeof(Font),
                 allowSceneObjects = false,
                 value = defaultFontProperty?.objectReferenceValue,
                 tooltip = "Font used for dialogue that has no per-selection font override."
@@ -332,9 +331,9 @@ namespace Novelify.Editor
             AddToolbarCaption(fontRow, "Selected text font");
             var selectedFont = new ObjectField
             {
-                objectType = typeof(TMP_FontAsset),
+                objectType = typeof(Font),
                 allowSceneObjects = false,
-                tooltip = "Choose a TMP font, then apply it to the selected text. None removes the override."
+                tooltip = "Choose a Unity font, then apply it to the selected text. None removes the override."
             };
             selectedFont.style.width = 150f;
             selectedFont.style.marginRight = 3f;
@@ -343,7 +342,7 @@ namespace Novelify.Editor
             var applyFont = new Button
             {
                 text = "Apply font",
-                tooltip = "Apply this TMP font to the selected text"
+                tooltip = "Apply this font to the selected text"
             };
             StyleToolbarButton(applyFont);
             fontRow.Add(applyFont);
@@ -535,9 +534,9 @@ namespace Novelify.Editor
                 Undo.RecordObject(
                     defaultFontProperty.serializedObject.targetObject,
                     "Change Dialogue Default Font");
-                defaultFontProperty.objectReferenceValue = evt.newValue as TMP_FontAsset;
+                defaultFontProperty.objectReferenceValue = evt.newValue as Font;
                 defaultFontProperty.serializedObject.ApplyModifiedProperties();
-                ApplySourceFont(source, evt.newValue as TMP_FontAsset);
+                ApplySourceFont(source, evt.newValue as Font);
                 RefreshPreview(textProperty?.stringValue ?? string.Empty);
             });
             applySize.clicked += () =>
@@ -573,7 +572,7 @@ namespace Novelify.Editor
             };
             applyFont.clicked += () =>
             {
-                TMP_FontAsset font = selectedFont.value as TMP_FontAsset;
+                Font font = selectedFont.value as Font;
                 if (font != null)
                 {
                     EnsureFontTracked(fontAssetsProperty, font);
@@ -668,7 +667,7 @@ namespace Novelify.Editor
             source.SetValueWithoutNotify(initialDocument.GetPlainText());
             ApplySourceFont(
                 source,
-                defaultFontProperty?.objectReferenceValue as TMP_FontAsset);
+                defaultFontProperty?.objectReferenceValue as Font);
             RefreshPreview(textProperty?.stringValue ?? string.Empty);
 
             if (textProperty != null)
@@ -701,7 +700,7 @@ namespace Novelify.Editor
             {
                 root.TrackPropertyValue(defaultFontProperty, changedProperty =>
                 {
-                    var font = changedProperty.objectReferenceValue as TMP_FontAsset;
+                    var font = changedProperty.objectReferenceValue as Font;
                     defaultFont.SetValueWithoutNotify(font);
                     ApplySourceFont(source, font);
                     RefreshPreview(textProperty?.stringValue ?? string.Empty);
@@ -743,7 +742,7 @@ namespace Novelify.Editor
             float height,
             string placeholderText,
             Action<int> characterCountChanged,
-            Func<string, TMP_FontAsset> resolveFont,
+            Func<string, Font> resolveFont,
             Func<bool> previewEffectsEnabled,
             out Action<string> refreshPreview)
         {
@@ -923,10 +922,10 @@ namespace Novelify.Editor
                     {
                         glyph.style.color = glyphColor;
                     }
-                    TMP_FontAsset font = resolveFont?.Invoke(character.Style.Font);
-                    if (font?.sourceFontFile != null)
+                    Font font = resolveFont?.Invoke(character.Style.Font);
+                    if (font != null)
                     {
-                        glyph.style.unityFont = font.sourceFontFile;
+                        glyph.style.unityFont = font;
                     }
                     textFlow.Add(glyph);
                     previewGlyphs.Add(new AnimatedPreviewGlyph
@@ -1326,7 +1325,7 @@ namespace Novelify.Editor
             return preview;
         }
 
-        private static TMP_FontAsset ResolveFontAsset(
+        private static Font ResolveFontAsset(
             SerializedProperty fontAssetsProperty,
             SerializedProperty defaultFontProperty,
             string fontName)
@@ -1336,7 +1335,7 @@ namespace Novelify.Editor
                 for (int index = 0; index < fontAssetsProperty.arraySize; index++)
                 {
                     var font = fontAssetsProperty.GetArrayElementAtIndex(index)
-                        .objectReferenceValue as TMP_FontAsset;
+                        .objectReferenceValue as Font;
                     if (font != null && string.Equals(font.name, fontName, StringComparison.Ordinal))
                     {
                         return font;
@@ -1344,12 +1343,12 @@ namespace Novelify.Editor
                 }
             }
 
-            return defaultFontProperty?.objectReferenceValue as TMP_FontAsset;
+            return defaultFontProperty?.objectReferenceValue as Font;
         }
 
         private static void EnsureFontTracked(
             SerializedProperty fontAssetsProperty,
-            TMP_FontAsset font)
+            Font font)
         {
             if (fontAssetsProperty?.isArray != true || font == null)
             {
@@ -1373,11 +1372,11 @@ namespace Novelify.Editor
             fontAssetsProperty.serializedObject.ApplyModifiedProperties();
         }
 
-        private static void ApplySourceFont(TextField source, TMP_FontAsset font)
+        private static void ApplySourceFont(TextField source, Font font)
         {
-            if (font?.sourceFontFile != null)
+            if (font != null)
             {
-                source.style.unityFont = font.sourceFontFile;
+                source.style.unityFont = font;
             }
             else
             {

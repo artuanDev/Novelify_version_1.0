@@ -71,7 +71,7 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Git LFS, required for image and other binary assets.
 - Universal Render Pipeline.
 - Input System.
-- TextMesh Pro.
+- Unity UI (`com.unity.ugui`); no TextMesh Pro dependency is required.
 
 If the Graph Toolkit package is not available in the project after opening it, install the compatible package through Unity's Package Manager before opening or creating a Novelify graph.
 
@@ -103,7 +103,7 @@ Press **Play**. The sample scene uses:
 - `Assets/Novelify/Samples/NovelGraphs/Example.novelgraph`.
 - The `Hoki` and `Daisy` character assets from `Assets/Novelify/Samples/Characters/`.
 - A configured `NovelManager`.
-- A TextMesh Pro dialogue interface.
+- A dependency-free Novelify dialogue interface using standard Unity fonts.
 - A choice button prefab and choice container.
 
 The sample graph demonstrates speech-bubble presentation, two speakers, layered portrait animation and synchronized character transforms in a short conversation.
@@ -275,7 +275,7 @@ Add a **Checkpoint** flow node with a stable Checkpoint ID. It passes through im
 
 Each story slot stores graph/content identity, current boundary, nested graph/function frames, return and call-site IDs, inputs, locals, cached outputs, story variables, selected choices, visits, read-line IDs, bounded history, and visible character instances with emotion and transform. The generated runtime catalogue now includes graphs, characters and variable definitions. General Unity object values remain intentionally unsupported until they have stable asset-ID serializers.
 
-Slots are checksum-protected JSON beneath `Application.persistentDataPath/Novelify`. Writes use a temporary file, replace the active slot only after verification, and retain `.bak` as the last-good copy. `NovelSaveSlotMenu` can bind an existing TMP dropdown/input, Save/Load/Delete buttons and status label into a resume menu without imposing a visual style.
+Slots are checksum-protected JSON beneath `Application.persistentDataPath/Novelify`. Writes use a temporary file, replace the active slot only after verification, and retain `.bak` as the last-good copy. `NovelSaveSlotMenu` can bind standard Unity UI dropdown/input, Save/Load/Delete buttons and a status label into a resume menu without imposing a visual style.
 
 ## Gameplay Scripting API
 
@@ -317,7 +317,7 @@ Use `Play(graphID)` and `SetVariable(variableID, value)` when content must be se
 
 ### Custom Presentation
 
-Implement `INovelPresentation` and either assign that component to **Presentation Behaviour** in the runner inspector or install it before playback with `runner.UsePresentation(presentation)`. The presenter receives `NovelDialoguePresentation` and read-only `NovelChoicePresentation` models, renders them however the game needs, and calls `dialogue.NotifyRevealCompleted()` when its own typewriter animation finishes. Choice UI selects an option through `dialogue.Session.TryChoose(choiceID, out error)`. Passing `null` restores Novelify's built-in TextMesh Pro and portrait presentation.
+Implement `INovelPresentation` and either assign that component to **Presentation Behaviour** in the runner inspector or install it before playback with `runner.UsePresentation(presentation)`. The presenter receives `NovelDialoguePresentation` and read-only `NovelChoicePresentation` models, renders them however the game needs, and calls `dialogue.NotifyRevealCompleted()` when its own typewriter animation finishes. Choice UI selects an option through `dialogue.Session.TryChoose(choiceID, out error)`. Passing `null` restores Novelify's built-in `NovelText` and portrait presentation.
 
 ### Custom Node Behaviour
 
@@ -346,15 +346,15 @@ Dialogue text can be formatted from the custom inspector. Select text and use th
 - Shake motion.
 - Sound start: select a word and click this button to play the dialogue node's **Sound** clip when that word begins revealing. A dialogue contains one sound-start marker; applying it again moves the marker.
 
-The built-in presentation enables TextMesh Pro rich text automatically. The `NovelTextEffects` component animates ranges marked with the wave or shake effect.
+The built-in presentation uses `NovelText`, which adapts the editor's markup to Unity UI rich text without a third-party text dependency. The `NovelTextEffects` component animates ranges marked with the wave or shake effect. Assign any imported `.ttf` or `.otf` Unity `Font` as the default dialogue font; selection-level font choices are preserved in both the dialogue editor preview and runtime rendering.
 
 ## Using the Built-In NovelManager Example
 
 Add a `NovelManager` component to a GameObject and assign:
 
 - The imported `RuntimeGraph` from your `.novelgraph` asset.
-- A TextMesh Pro object for `DialogueText`.
-- A TextMesh Pro object for `SpeakerNameText`.
+- A `NovelText` object for `DialogueText`.
+- A `NovelText` object for `SpeakerNameText`.
 - A **Portrait Prefab** with `CharacterInfo` and layered portrait Images, plus **Canvas Dialogue** or an explicit **Character Container**.
 - A dialogue panel and a choices panel.
 - A `Button` prefab and a container transform for generated choices.
@@ -381,7 +381,7 @@ Assets/Novelify/
 ├── Resources/                 # Runtime graph catalog and generated UI shader
 ├── Settings/                  # Render-pipeline and input assets used by the sample
 ├── Tests/                     # Editor and runtime regression tests
-├── TextMesh Pro/              # Font resources used by the sample UI
+├── Fonts/                     # Standard Unity fonts used by the sample UI
 └── Samples/
     ├── BoxesStyles/           # Reusable NovelPresentationStyle asset
     ├── Characters/            # Daisy, Hoki and the layered Template character

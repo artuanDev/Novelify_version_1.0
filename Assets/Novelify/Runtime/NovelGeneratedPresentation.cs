@@ -2,7 +2,6 @@ using Novelify;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -25,9 +24,9 @@ namespace Novelify
         private GameObject _ownedEventSystem;
 
         private RectTransform _standardPanel;
-        private TextMeshProUGUI _standardDialogueText;
+        private NovelText _standardDialogueText;
         private GameObject _standardSpeakerBox;
-        private TextMeshProUGUI _standardSpeakerText;
+        private NovelText _standardSpeakerText;
         private GameObject _standardChoicesPanel;
         private Transform _standardChoiceContainer;
         private Button _standardChoicePrefab;
@@ -55,8 +54,8 @@ namespace Novelify
         private RectTransform _bubbleWrapper;
         private RectTransform _bubbleBody;
         private NovelRoundedGraphic _bubbleGraphic;
-        private TextMeshProUGUI _bubbleDialogueText;
-        private TextMeshProUGUI _bubbleSpeakerText;
+        private NovelText _bubbleDialogueText;
+        private NovelText _bubbleSpeakerText;
         private RectTransform _tailOutlineRect;
         private RectTransform _tailFillRect;
         private readonly RectTransform[] _thoughtDotRects =
@@ -190,8 +189,7 @@ namespace Novelify
             _standardSpeakerText.fontSize =
                 Mathf.Max(1f, node.FontSize);
             _standardSpeakerText.enableAutoSizing = false;
-            _standardSpeakerText.alignment =
-                TextAlignmentOptions.Center;
+            _standardSpeakerText.alignment = TextAnchor.MiddleCenter;
             ApplyStyle(_standardSpeakerBox, _speakerStyle);
             if (!string.IsNullOrEmpty(_standardSpeakerText.text))
                 RefreshSpeakerNameLayout();
@@ -261,8 +259,7 @@ namespace Novelify
                 0f, _speakerHorizontalPadding);
             float vertical = Mathf.Max(
                 0f, _speakerVerticalPadding);
-            _standardSpeakerText.alignment =
-                TextAlignmentOptions.Center;
+            _standardSpeakerText.alignment = TextAnchor.MiddleCenter;
             _standardSpeakerText.enableAutoSizing = false;
             RectTransform textRect =
                 _standardSpeakerText.rectTransform;
@@ -362,6 +359,9 @@ namespace Novelify
         {
             if (_bubbleWrapper == null)
                 return;
+            foreach (NovelText text in
+                     _bubbleWrapper.GetComponentsInChildren<NovelText>(true))
+                text.ClearTransientFontOverlays();
             GameObject held = Instantiate(
                 _bubbleWrapper.gameObject, _bubbleLayer, false);
             held.name = "Held Speech Bubble";
@@ -373,8 +373,18 @@ namespace Novelify
                 group.interactable = false;
                 group.blocksRaycasts = false;
             }
-            foreach (TextMeshProUGUI text in held.GetComponentsInChildren<TextMeshProUGUI>(true))
+            foreach (NovelText text in held.GetComponentsInChildren<NovelText>(true))
+            {
                 text.maxVisibleCharacters = int.MaxValue;
+                if (text.name == "Dialogue Text" && _trackedBubble != null)
+                {
+                    text.SetFontAssets(
+                        _trackedBubble.DialogueFont != null
+                            ? _trackedBubble.DialogueFont
+                            : text.font,
+                        _trackedBubble.DialogueFontAssets);
+                }
+            }
             _heldBubbles.Add(held);
             while (_heldBubbles.Count > 4)
             {
@@ -700,7 +710,7 @@ namespace Novelify
                     "Dialogue Text", _standardPanel);
                 Stretch(textRect);
                 _standardDialogueText = CreateText(
-                    textRect.gameObject, 30f, TextAlignmentOptions.TopLeft);
+                    textRect.gameObject, 30f, TextAnchor.UpperLeft);
             }
 
             ApplyDialogueLayout();
@@ -763,7 +773,7 @@ namespace Novelify
                 textRect.offsetMax = new Vector2(-16f, -6f);
                 _standardSpeakerText = CreateText(
                     textRect.gameObject, 25f,
-                    TextAlignmentOptions.Center);
+                    TextAnchor.MiddleCenter);
             }
             RectTransform speakerRect = _standardSpeakerBox.GetComponent<RectTransform>();
 
@@ -830,7 +840,7 @@ namespace Novelify
             Stretch(labelRect);
             labelRect.offsetMin = new Vector2(18f, 10f);
             labelRect.offsetMax = new Vector2(-18f, -10f);
-            CreateText(labelRect.gameObject, 24f, TextAlignmentOptions.Center);
+            CreateText(labelRect.gameObject, 24f, TextAnchor.MiddleCenter);
             return button;
         }
 
@@ -929,12 +939,12 @@ namespace Novelify
             RectTransform speakerRect = CreateRect(
                 "Speaker Name", _bubbleBody);
             _bubbleSpeakerText = CreateText(
-                speakerRect.gameObject, 21f, TextAlignmentOptions.Left);
+                speakerRect.gameObject, 21f, TextAnchor.MiddleLeft);
 
             RectTransform dialogueRect = CreateRect(
                 "Dialogue Text", _bubbleBody);
             _bubbleDialogueText = CreateText(
-                dialogueRect.gameObject, 24f, TextAlignmentOptions.TopLeft);
+                dialogueRect.gameObject, 24f, TextAnchor.UpperLeft);
             _bubbleDialogueText.gameObject.AddComponent<NovelTextEffects>();
 
             _bubbleWrapper.gameObject.SetActive(false);
@@ -955,7 +965,8 @@ namespace Novelify
                     ? NovelTextAlignment.CenterCenter
                     : _bubbleTextAlignment);
             _bubbleSpeakerText.fontSize = _bubbleSpeakerFontSize;
-            _bubbleDialogueText.overflowMode = TextOverflowModes.Ellipsis;
+            _bubbleDialogueText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _bubbleDialogueText.verticalOverflow = VerticalWrapMode.Truncate;
             _bubbleDialogueText.ForceMeshUpdate();
 
             float horizontal = _bubbleHorizontalPadding;
@@ -1438,7 +1449,7 @@ namespace Novelify
         }
 
         private static void ApplyTextAlignment(
-            TextMeshProUGUI text,
+            NovelText text,
             NovelTextAlignment alignment)
         {
             if (text == null) return;
@@ -1448,20 +1459,20 @@ namespace Novelify
              */
             text.alignment = alignment switch
             {
-                NovelTextAlignment.TopCenter => TextAlignmentOptions.Top,
-                NovelTextAlignment.TopRight => TextAlignmentOptions.TopRight,
-                NovelTextAlignment.CenterLeft => TextAlignmentOptions.Left,
-                NovelTextAlignment.CenterCenter => TextAlignmentOptions.Center,
-                NovelTextAlignment.CenterRight => TextAlignmentOptions.Right,
-                NovelTextAlignment.BottomLeft => TextAlignmentOptions.BottomLeft,
-                NovelTextAlignment.BottomCenter => TextAlignmentOptions.Bottom,
-                NovelTextAlignment.BottomRight => TextAlignmentOptions.BottomRight,
-                _ => TextAlignmentOptions.TopLeft
+                NovelTextAlignment.TopCenter => TextAnchor.UpperCenter,
+                NovelTextAlignment.TopRight => TextAnchor.UpperRight,
+                NovelTextAlignment.CenterLeft => TextAnchor.MiddleLeft,
+                NovelTextAlignment.CenterCenter => TextAnchor.MiddleCenter,
+                NovelTextAlignment.CenterRight => TextAnchor.MiddleRight,
+                NovelTextAlignment.BottomLeft => TextAnchor.LowerLeft,
+                NovelTextAlignment.BottomCenter => TextAnchor.LowerCenter,
+                NovelTextAlignment.BottomRight => TextAnchor.LowerRight,
+                _ => TextAnchor.UpperLeft
             };
         }
 
         private static void ApplyTextSizing(
-            TextMeshProUGUI text,
+            NovelText text,
             float baseFontSize,
             bool autoSize,
             float minimumFontSize,
@@ -1508,17 +1519,17 @@ namespace Novelify
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = Vector2.zero;
         }
-        private static TextMeshProUGUI CreateText(
+        private static NovelText CreateText(
             GameObject target,
             float size,
-            TextAlignmentOptions alignment)
+            TextAnchor alignment)
         {
-            TextMeshProUGUI text = target.AddComponent<TextMeshProUGUI>();
-            text.font = TMP_Settings.defaultFontAsset;
+            NovelText text = target.AddComponent<NovelText>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = size;
             text.color = Color.white;
             text.alignment = alignment;
-            text.textWrappingMode = TextWrappingModes.Normal;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.richText = true;
             text.raycastTarget = false;
             return text;

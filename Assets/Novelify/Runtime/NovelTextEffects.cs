@@ -1,92 +1,66 @@
-using System;
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Novelify
 {
-    /// <summary>
-    /// Animates character ranges marked by the Novelify dialogue editor. Effects
-    /// use TMP link ranges so the control tags remain invisible at runtime.
-    /// </summary>
+    /// <summary>Animates dialogue ranges marked with Novelify wave/shake tags.</summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(TMP_Text))]
-    public sealed class NovelTextEffects : MonoBehaviour
+    [RequireComponent(typeof(NovelText))]
+    public sealed class NovelTextEffects : BaseMeshEffect
     {
-        private const string WaveEffect = "novelify-wave";
-        private const string ShakeEffect = "novelify-shake";
-
         [SerializeField, Min(0f)] private float waveHeight = 2.5f;
         [SerializeField, Min(0f)] private float waveSpeed = 7f;
         [SerializeField, Min(0f)] private float shakeStrength = 1.5f;
         [SerializeField, Min(1f)] private float shakeFrequency = 24f;
 
-        private TMP_Text _text;
+        private NovelText _text;
 
-        private void Awake()
+        protected override void Awake()
         {
-            _text = GetComponent<TMP_Text>();
+            base.Awake();
+            _text = GetComponent<NovelText>();
         }
 
         private void LateUpdate()
         {
-            if (_text == null ||
-                string.IsNullOrEmpty(_text.text) ||
-                _text.text.IndexOf("novelify-", StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                return;
-            }
+            if (_text != null && _text.hasAnimatedEffects)
+                graphic.SetVerticesDirty();
+        }
 
-            // Rebuild the unmodified geometry before applying this frame's offsets.
-            _text.ForceMeshUpdate();
-            TMP_TextInfo textInfo = _text.textInfo;
-            bool verticesChanged = false;
+        public override void ModifyMesh(VertexHelper vertices)
+        {
+            if (!IsActive()) return;
+            _text ??= GetComponent<NovelText>();
+            if (_text == null || !_text.hasAnimatedEffects) return;
 
-            for (int linkIndex = 0; linkIndex < textInfo.linkCount; linkIndex++)
+            int characterCount = Mathf.Min(
+                _text.visibleCharacterCount,
+                vertices.currentVertCount / 4);
+            int visibleLimit = _text.maxVisibleCharacters < 0
+                ? characterCount
+                : Mathf.Min(_text.maxVisibleCharacters, characterCount);
+            var vertex = new UIVertex();
+            for (int characterIndex = 0;
+                 characterIndex < visibleLimit;
+                 characterIndex++)
             {
-                TMP_LinkInfo link = textInfo.linkInfo[linkIndex];
-                string effect = link.GetLinkID();
-                bool isWave = effect.Equals(
-                    WaveEffect,
-                    StringComparison.OrdinalIgnoreCase);
-                bool isShake = effect.Equals(
-                    ShakeEffect,
-                    StringComparison.OrdinalIgnoreCase);
-                if (!isWave && !isShake)
-                {
+                NovelTextEffect effect = _text.EffectAt(characterIndex);
+                if (effect == NovelTextEffect.None ||
+                    char.IsWhiteSpace(_text.CharacterAt(characterIndex)))
                     continue;
-                }
 
-                int firstCharacter = link.linkTextfirstCharacterIndex;
-                int lastCharacter = Mathf.Min(
-                    firstCharacter + link.linkTextLength,
-                    textInfo.characterCount);
-                for (int characterIndex = firstCharacter;
-                     characterIndex < lastCharacter;
-                     characterIndex++)
+                Vector3 offset = effect == NovelTextEffect.Wave
+                    ? GetWaveOffset(characterIndex)
+                    : GetShakeOffset(characterIndex);
+                int firstVertex = characterIndex * 4;
+                for (int vertexIndex = firstVertex;
+                     vertexIndex < firstVertex + 4;
+                     vertexIndex++)
                 {
-                    TMP_CharacterInfo character = textInfo.characterInfo[characterIndex];
-                    if (!character.isVisible ||
-                        characterIndex >= _text.maxVisibleCharacters)
-                    {
-                        continue;
-                    }
-
-                    Vector3 offset = isWave
-                        ? GetWaveOffset(characterIndex)
-                        : GetShakeOffset(characterIndex);
-                    Vector3[] vertices = textInfo.meshInfo[character.materialReferenceIndex].vertices;
-                    int vertexIndex = character.vertexIndex;
-                    vertices[vertexIndex] += offset;
-                    vertices[vertexIndex + 1] += offset;
-                    vertices[vertexIndex + 2] += offset;
-                    vertices[vertexIndex + 3] += offset;
-                    verticesChanged = true;
+                    vertices.PopulateUIVertex(ref vertex, vertexIndex);
+                    vertex.position += offset;
+                    vertices.SetUIVertex(vertex, vertexIndex);
                 }
-            }
-
-            if (verticesChanged)
-            {
-                _text.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
             }
         }
 

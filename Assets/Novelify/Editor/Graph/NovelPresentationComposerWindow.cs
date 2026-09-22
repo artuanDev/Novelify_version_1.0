@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using TMPro;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -111,7 +110,7 @@ namespace Novelify.Editor
         private Label _status;
         private Button _applyButton;
         private GameObject _measurementObject;
-        private TextMeshProUGUI _measurementText;
+        private NovelText _measurementText;
         private CreateDialogueBoxNode DialogueNode =>
             _dialogueIndex >= 0 && _dialogueIndex < _dialogueNodes.Count
                 ? _dialogueNodes[_dialogueIndex]
@@ -1500,13 +1499,15 @@ namespace Novelify.Editor
                     "Novelify Preview Text",
                     typeof(RectTransform),
                     typeof(CanvasRenderer),
-                    typeof(TextMeshProUGUI));
+                    typeof(NovelText));
                 _measurementObject.hideFlags = HideFlags.HideAndDontSave;
                 _measurementText =
-                    _measurementObject.GetComponent<TextMeshProUGUI>();
-                _measurementText.font = TMP_Settings.defaultFontAsset;
+                    _measurementObject.GetComponent<NovelText>();
+                _measurementText.font = Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
                 _measurementText.enableAutoSizing = false;
-                _measurementText.textWrappingMode = TextWrappingModes.NoWrap;
+                _measurementText.horizontalOverflow =
+                    UnityEngine.HorizontalWrapMode.Overflow;
                 _measurementText.richText = true;
             }
             _measurementText.fontSize = Mathf.Max(1f, fontSize);

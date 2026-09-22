@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -58,11 +57,11 @@ namespace Novelify
                 if (!availability.Available && choice.UnavailablePolicy == NovelChoiceUnavailablePolicy.Hide)
                     continue;
                 Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
-                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+                Text label = button.GetComponentInChildren<Text>();
                 string text = AsString(Evaluate(choice.ChoiceTextValue), choice.ChoiceText ?? string.Empty);
                 if (!availability.Available && !string.IsNullOrWhiteSpace(availability.Reason))
                     text += $"\n<color=#A0A0A0>{availability.Reason}</color>";
-                if (label != null) label.SetText(text);
+                if (label != null) label.text = text;
                 button.interactable = availability.Available;
                 if (availability.Available)
                 {

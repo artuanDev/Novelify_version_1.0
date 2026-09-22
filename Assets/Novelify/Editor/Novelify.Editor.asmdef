@@ -1,7 +1,7 @@
 {
 	"name": "Novelify.Editor",
 	"rootNamespace": "Novelify.Editor",
-	"references": [ "Novelify.Runtime", "Unity.TextMeshPro" ],
+	"references": [ "Novelify.Runtime", "UnityEngine.UI" ],
 	"includePlatforms": [ "Editor" ],
 	"excludePlatforms": [],
 	"allowUnsafeCode": false,
