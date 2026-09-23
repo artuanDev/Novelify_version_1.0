@@ -217,6 +217,10 @@ namespace Novelify
                     case RuntimeResetDialogueStyleNode resetStyle:
                         GeneratedPresentation.ResetStyle(resetStyle);
                         break;
+
+                    case RuntimeCreateChoiceLayoutNode createChoices:
+                        GeneratedPresentation.CreateChoiceLayout(createChoices);
+                        break;
                         
                     case RuntimePlayMusicNode music:
                         ExecuteGeneratedPlayMusic(music);

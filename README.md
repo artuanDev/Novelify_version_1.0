@@ -227,6 +227,16 @@ Story **Speech Bubble** nodes expose explicit **Character** and **Character Refe
 
 For interruptions, set the incoming Speech Bubble line's **When Another Bubble Is Visible** to **Keep Previous**. The earlier bubble remains visible beside the new one. Enable **Continue Automatically** and set **Auto Continue Delay** (for example, `0.05` to `0.2` seconds) on the earlier line when the second bubble should appear without another click. **Replace Previous** keeps the traditional one-bubble-at-a-time behavior.
 
+### Choice Styling and Layout
+
+Player choices no longer require a `Button` prefab. Create a reusable appearance asset with **Assets > Create > Novelify > Choice Style**; it owns the generated buttons' background, typography, size, padding, state tints, disabled text colour, and an optional styled background behind the complete choice panel. **Button Width** and **Button Height** size the entire generated button body, not only its text area. Vertical text inset is safely limited when it would otherwise collapse or cut the label area.
+
+Place a **Create Choice Layout** presentation node before the Choice nodes that should use it. The node selects the style asset and independently controls screen anchor, panel size and offset, spacing, grouping, and **Vertical**, **Horizontal**, or **Circular** arrangement. **Choices Per Group** means choices per column for Vertical, per row for Horizontal, and per ring for Circular; `0` keeps all choices in one group. Circular layouts also expose radius, start angle, and arc. The configuration remains active until another Create Choice Layout node changes it.
+
+Choice panels are constrained to the viewport. When the complete group would exceed its panel, Novelify uniformly scales the buttons, spacing, text, and interaction geometry to keep every choice visible with an inner margin. The composer reports both the authored and effective button size and can resize the panel to its preview choices at 100%, so unusually dense menus can still be regrouped intentionally.
+
+Double-click a Choice Style asset to edit it with normal, highlighted, pressed, selected, and unavailable previews. Double-click a **Create Choice Layout** node to open the Choice Layout Composer, where every placement and grouping option can be edited before applying it to the graph. The composer supports Game View, landscape, portrait, square, and custom resolutions; zoom and safe-area guides; clickable focused-state previews; group labels; custom sample text; and warnings when choices overflow their panel or screen.
+
 Use **Set Background** to create, replace, tint, cross-fade, or clear the scene background. Its **Cover** mode fills wide and tall displays without distortion, **Contain** shows the complete image, and **Stretch** fills the viewport directly. Leave Background Image empty to clear it; enable Wait For Completion when story flow must pause for the transition.
 
 `NovelGraphRunner`'s **Responsive Presentation** settings make one authored layout serve desktop and mobile. **Presentation Reference Resolution** defaults to `1920×1080`; **Presentation Match Width Or Height** defaults to `0.5`, balancing both axes as aspect ratios change. Generated and supplied screen-space canvases use Unity's Scale With Screen Size behavior, so dialogue boxes, bubbles, fonts, portrait sizes, canvas-unit movement, and normalized tweens retain proportional results across resolutions.
@@ -357,7 +367,7 @@ Add a `NovelManager` component to a GameObject and assign:
 - A `NovelText` object for `SpeakerNameText`.
 - A **Portrait Prefab** with `CharacterInfo` and layered portrait Images, plus **Canvas Dialogue** or an explicit **Character Container**.
 - A dialogue panel and a choices panel.
-- A `Button` prefab and a container transform for generated choices.
+- Optionally, a container transform for generated choices. When omitted, Novelify creates the complete choice surface.
 - Optional audio sources for talking sounds and node sounds.
 
 This example manager builds its node lookup at startup and begins at the graph's Start node. Normal dialogue advances with a left mouse click; Choice nodes create their buttons at runtime. Use `NovelGraphRunner` instead when the game owns input or presentation.

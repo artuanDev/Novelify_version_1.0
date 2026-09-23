@@ -15,6 +15,7 @@ Shader "Novelify/UI/Styled Box"
         _CornerRadius ("Corner Radius", Float) = 0
         _OutlineThickness ("Outline Thickness", Float) = 0
         _OutlineEnabled ("Outline Enabled", Float) = 0
+        _PreserveFillOpacity ("Preserve Fill Opacity", Float) = 0
 
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -89,6 +90,7 @@ Shader "Novelify/UI/Styled Box"
             float _CornerRadius;
             float _OutlineThickness;
             float _OutlineEnabled;
+            float _PreserveFillOpacity;
             float4 _ClipRect;
 
             v2f vert(appdata_t input)
@@ -120,7 +122,16 @@ Shader "Novelify/UI/Styled Box"
 
                 float2 fillUv = frac(input.uv * _FillTiling.xy + _FillOffset.xy);
                 float2 outlineUv = frac(input.uv * _OutlineTiling.xy + _OutlineOffset.xy);
-                fixed4 fill = tex2D(_FillTex, fillUv) * _FillColor;
+                fixed4 fillSample = tex2D(_FillTex, fillUv);
+                fixed4 fill = fillSample * _FillColor;
+                if (_PreserveFillOpacity > 0.5)
+                {
+                    fill.rgb = lerp(
+                        _FillColor.rgb,
+                        fillSample.rgb * _FillColor.rgb,
+                        fillSample.a);
+                    fill.a = _FillColor.a;
+                }
                 fixed4 outline = tex2D(_OutlineTex, outlineUv) * _OutlineColor;
                 float fillAlpha = fill.a * fillCoverage;
                 float outlineAlpha = outline.a * outlineCoverage;

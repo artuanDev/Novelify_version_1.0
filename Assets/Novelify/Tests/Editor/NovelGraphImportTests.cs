@@ -823,6 +823,57 @@ namespace Novelify.Tests
         }
 
         [Test]
+        public void ChoiceLayoutImportsStylePlacementGroupingAndArrangement()
+        {
+            NovelChoiceStyle choiceStyle =
+                ScriptableObject.CreateInstance<NovelChoiceStyle>();
+            AssetDatabase.CreateAsset(
+                choiceStyle, _folder + "/ChoiceStyle.asset");
+            StartNode start = Add<StartNode>();
+            CreateChoiceLayoutNode layout = Add<CreateChoiceLayoutNode>();
+            EndNode end = Add<EndNode>();
+            layout.GetNodeOptionByName("Style Asset")
+                .TrySetValue(choiceStyle);
+            layout.GetNodeOptionByName("Screen Anchor")
+                .TrySetValue(NovelDialogueAnchor.BottomLeft);
+            layout.GetNodeOptionByName("Offset")
+                .TrySetValue(new Vector2(25f, 35f));
+            layout.GetNodeOptionByName("Panel Size")
+                .TrySetValue(new Vector2(900f, 500f));
+            layout.GetNodeOptionByName("Arrangement")
+                .TrySetValue(NovelChoiceArrangement.Circular);
+            layout.GetNodeOptionByName("Choices Per Group")
+                .TrySetValue(4);
+            layout.GetNodeOptionByName("Group Spacing")
+                .TrySetValue(55f);
+            layout.GetNodeOptionByName("Circle Radius")
+                .TrySetValue(240f);
+            layout.GetNodeOptionByName("Circle Start Angle")
+                .TrySetValue(45f);
+            layout.GetNodeOptionByName("Circle Arc")
+                .TrySetValue(180f);
+            Connect(start, layout);
+            Connect(layout, end);
+
+            RuntimeCreateChoiceLayoutNode runtime = Import().AllNodes
+                .OfType<RuntimeCreateChoiceLayoutNode>().Single();
+            Assert.That(runtime.Style, Is.SameAs(choiceStyle));
+            Assert.That(runtime.Anchor,
+                Is.EqualTo(NovelDialogueAnchor.BottomLeft));
+            Assert.That(runtime.Offset,
+                Is.EqualTo(new Vector2(25f, 35f)));
+            Assert.That(runtime.PanelSize,
+                Is.EqualTo(new Vector2(900f, 500f)));
+            Assert.That(runtime.Arrangement,
+                Is.EqualTo(NovelChoiceArrangement.Circular));
+            Assert.That(runtime.ChoicesPerGroup, Is.EqualTo(4));
+            Assert.That(runtime.GroupSpacing, Is.EqualTo(55f));
+            Assert.That(runtime.CircleRadius, Is.EqualTo(240f));
+            Assert.That(runtime.CircleStartAngle, Is.EqualTo(45f));
+            Assert.That(runtime.CircleArc, Is.EqualTo(180f));
+        }
+
+        [Test]
         public void PlayMusicAndFadePortsCompileToRuntimeExpressions()
         {
             AudioClip clip = AudioClip.Create("Test music", 1, 1, 44100, false);

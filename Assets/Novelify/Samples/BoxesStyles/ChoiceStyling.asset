@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4ccdc56108f4bb6a81df74e5e24a6d0, type: 3}
+  m_Name: ChoiceStyling
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelChoiceStyle
+  Background:
+    FillColor: {r: 0.25111252, g: 0.27118194, b: 0.31132078, a: 1}
+    Opacity: 1
+    FillTexture: {fileID: 0}
+    FillTiling: {x: 1, y: 1}
+    FillOffset: {x: 0, y: 0}
+    CornerRadius: 18.2
+    OutlineEnabled: 1
+    OutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    OutlineTransparency: 0
+    OutlineThickness: 6.76
+    OutlineTexture: {fileID: 0}
+    OutlineTiling: {x: 1, y: 1}
+    OutlineOffset: {x: 0, y: 0}
+  Font: {fileID: 12800000, guid: e3265ab4bf004d28a9537516768c1c75, type: 3}
+  FontStyle: 0
+  TextAlignment: 1
+  TextColor: {r: 1, g: 1, b: 1, a: 1}
+  DisabledTextColor: {r: 0.62, g: 0.65, b: 0.72, a: 1}
+  FontSize: 24
+  AutoSize: 1
+  MinimumFontSize: 16
+  MaximumFontSize: 24
+  ButtonWidth: 266
+  ButtonHeight: 128.4
+  HorizontalPadding: 12
+  VerticalPadding: 0
+  ShowPanelBackground: 1
+  PanelBackground:
+    FillColor: {r: 0.2990833, g: 0.3594323, b: 0.4433962, a: 1}
+    Opacity: 1
+    FillTexture: {fileID: 10300, guid: 0000000000000000f000000000000000, type: 0}
+    FillTiling: {x: 1, y: 1}
+    FillOffset: {x: 0, y: 0}
+    CornerRadius: 24
+    OutlineEnabled: 1
+    OutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    OutlineTransparency: 0
+    OutlineThickness: 2
+    OutlineTexture: {fileID: 0}
+    OutlineTiling: {x: 1, y: 1}
+    OutlineOffset: {x: 0, y: 0}
+  HighlightedTint: {r: 0.88, g: 0.94, b: 1, a: 1}
+  PressedTint: {r: 0.72, g: 0.82, b: 0.94, a: 1}
+  SelectedTint: {r: 0.82, g: 0.9, b: 1, a: 1}
+  DisabledTint: {r: 0.45, g: 0.48, b: 0.55, a: 0.7}
+  TransitionDuration: 0.1

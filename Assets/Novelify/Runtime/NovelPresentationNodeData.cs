@@ -49,6 +49,28 @@ namespace Novelify
         Stretch
     }
 
+    /// <summary>
+    /// Configures the generated choice surface. The style asset owns appearance;
+    /// this node owns placement, grouping, and arrangement.
+    /// </summary>
+    [Serializable]
+    public sealed class RuntimeCreateChoiceLayoutNode : RuntimeNode
+    {
+        public NovelChoiceStyle Style;
+        public NovelDialogueAnchor Anchor = NovelDialogueAnchor.CenterCenter;
+        public Vector2 Offset;
+        public Vector2 PanelSize = new Vector2(1440f, 720f);
+        public NovelChoiceArrangement Arrangement =
+            NovelChoiceArrangement.Vertical;
+        [Tooltip("0 keeps every choice in one group. Vertical groups become columns, horizontal groups become rows, and circular groups become rings.")]
+        public int ChoicesPerGroup;
+        public float ChoiceSpacing = 14f;
+        public float GroupSpacing = 24f;
+        public float CircleRadius = 210f;
+        public float CircleStartAngle = 90f;
+        public float CircleArc = 360f;
+    }
+
     //Alignment of the text inside the dialogue box
     public enum NovelTextAlignment
     {

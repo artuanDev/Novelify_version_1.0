@@ -15,11 +15,17 @@ namespace Novelify
 
         private NovelBoxStyle _style = NovelBoxStyle.DialogueDefault;
         private Material _styleMaterial;
+        private bool _preserveFillOpacity;
 
-        public void Apply(NovelBoxStyle style)
+        public void Apply(NovelBoxStyle style) => Apply(style, false);
+
+        public void Apply(
+            NovelBoxStyle style,
+            bool preserveFillOpacity)
         {
             NovelBoxStyle value = style.Validated();
             _style = value;
+            _preserveFillOpacity = preserveFillOpacity;
             color = value.EffectiveFillColor;
             cornerRadius = value.CornerRadius;
             outlineEnabled = value.OutlineEnabled;
@@ -131,6 +137,9 @@ namespace Novelify
                 "_OutlineThickness", style.OutlineThickness);
             _styleMaterial.SetFloat(
                 "_OutlineEnabled", style.OutlineEnabled ? 1f : 0f);
+            _styleMaterial.SetFloat(
+                "_PreserveFillOpacity",
+                _preserveFillOpacity ? 1f : 0f);
         }
 
         private static void AddQuad(

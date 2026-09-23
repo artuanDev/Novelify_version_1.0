@@ -63,7 +63,10 @@ namespace Novelify
         public NovelText DialogueText;
 
         [Header("Choice Button UI")]
+        [HideInInspector]
+        [Tooltip("Legacy field retained for serialized-scene compatibility. Generated choices no longer use a prefab.")]
         public Button ChoiceButtonPrefab;
+        [Tooltip("Optional existing parent for generated choice buttons. Leave empty to let Novelify create it.")]
         public Transform ChoiceButtonContainer;
 
         [Header("Story Events")]

@@ -1062,6 +1062,43 @@ namespace Novelify.Editor
                             node.GetNodeOptionByName("Target"),
                             NovelBoxTarget.Both)
                     };
+                case CreateChoiceLayoutNode _:
+                {
+                    Vector2 choicePanelSize = GetOptionValue(
+                        node.GetNodeOptionByName("Panel Size"),
+                        new Vector2(1440f, 720f));
+                    return new RuntimeCreateChoiceLayoutNode
+                    {
+                        Style = GetOptionValue(
+                            node.GetNodeOptionByName("Style Asset"),
+                            (NovelChoiceStyle)null),
+                        Anchor = GetOptionValue(
+                            node.GetNodeOptionByName("Screen Anchor"),
+                            NovelDialogueAnchor.CenterCenter),
+                        Offset = GetOptionValue(
+                            node.GetNodeOptionByName("Offset"),
+                            Vector2.zero),
+                        PanelSize = new Vector2(
+                            Mathf.Max(1f, choicePanelSize.x),
+                            Mathf.Max(1f, choicePanelSize.y)),
+                        Arrangement = GetOptionValue(
+                            node.GetNodeOptionByName("Arrangement"),
+                            NovelChoiceArrangement.Vertical),
+                        ChoicesPerGroup = Mathf.Max(0, GetOptionValue(
+                            node.GetNodeOptionByName("Choices Per Group"), 0)),
+                        ChoiceSpacing = Mathf.Max(0f, GetOptionValue(
+                            node.GetNodeOptionByName("Choice Spacing"), 14f)),
+                        GroupSpacing = Mathf.Max(0f, GetOptionValue(
+                            node.GetNodeOptionByName("Group Spacing"), 24f)),
+                        CircleRadius = Mathf.Max(0f, GetOptionValue(
+                            node.GetNodeOptionByName("Circle Radius"), 210f)),
+                        CircleStartAngle = GetOptionValue(
+                            node.GetNodeOptionByName("Circle Start Angle"), 90f),
+                        CircleArc = Mathf.Clamp(GetOptionValue(
+                            node.GetNodeOptionByName("Circle Arc"), 360f),
+                            -360f, 360f)
+                    };
+                }
                 case PlayMusicNode playMusic:
                     {
                         IPort clip = playMusic.GetInputPortByName(

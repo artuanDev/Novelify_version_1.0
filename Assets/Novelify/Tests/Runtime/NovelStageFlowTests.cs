@@ -321,11 +321,7 @@ namespace Novelify.Tests
             NovelVariableDefinition coins = CreateVariable("Coins", NovelVariableType.Integer, NovelVariableScope.Story);
             NovelVariableDefinition hasKey = CreateVariable("Has Key", NovelVariableType.Boolean, NovelVariableScope.Story);
             GameObject containerObject = new GameObject("Choices", typeof(RectTransform));
-            GameObject buttonObject = new GameObject("Choice Button", typeof(RectTransform), typeof(UnityEngine.UI.Button));
-            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text));
-            labelObject.transform.SetParent(buttonObject.transform, false);
             _manager.ChoiceButtonContainer = containerObject.transform;
-            _manager.ChoiceButtonPrefab = buttonObject.GetComponent<UnityEngine.UI.Button>();
             var events = new List<string>();
             _manager.OnDialogueEvent.AddListener(events.Add);
             try
@@ -436,7 +432,6 @@ namespace Novelify.Tests
             finally
             {
                 Object.DestroyImmediate(containerObject);
-                Object.DestroyImmediate(buttonObject);
                 Object.DestroyImmediate(coins);
                 Object.DestroyImmediate(hasKey);
             }
@@ -1105,7 +1100,7 @@ namespace Novelify.Tests
             Assert.That(_manager.DialogueText.fontSizeMax, Is.EqualTo(38f));
             Assert.That(_manager.NameBackground, Is.Not.Null);
             Assert.That(_manager.SpeakerNameText, Is.Not.Null);
-            Assert.That(_manager.ChoiceButtonPrefab, Is.Not.Null);
+            Assert.That(_manager.ChoiceButtonPrefab, Is.Null);
             Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
             RectTransform dialogueRect = _manager.DialoguePanel.GetComponent<RectTransform>();
             Assert.That(dialogueRect.anchorMin,
@@ -1486,6 +1481,146 @@ namespace Novelify.Tests
             {
                 Object.DestroyImmediate(asset);
             }
+        }
+
+        [Test]
+        public void ChoiceLayoutNodeGeneratesStyledButtonsWithoutPrefab()
+        {
+            NovelChoiceStyle style =
+                ScriptableObject.CreateInstance<NovelChoiceStyle>();
+            style.ButtonWidth = 120f;
+            style.ButtonHeight = 40f;
+            style.FontSize = 19f;
+            style.TextColor = Color.yellow;
+            style.VerticalPadding = 100f;
+            style.ShowPanelBackground = true;
+            NovelBoxStyle panelStyle =
+                NovelChoiceStyle.DefaultPanelBackground;
+            panelStyle.FillColor = Color.magenta;
+            panelStyle.Opacity = 0.5f;
+            style.PanelBackground = panelStyle;
+            try
+            {
+                Play(
+                    new RuntimeCreateChoiceLayoutNode
+                    {
+                        NodeID = "choice-layout",
+                        NextNodeID = "choice",
+                        Style = style,
+                        Anchor = NovelDialogueAnchor.TopRight,
+                        Offset = new Vector2(-30f, -40f),
+                        PanelSize = new Vector2(600f, 300f),
+                        Arrangement = NovelChoiceArrangement.Horizontal,
+                        ChoicesPerGroup = 2,
+                        ChoiceSpacing = 10f,
+                        GroupSpacing = 30f
+                    },
+                    new RuntimeChoiceNode
+                    {
+                        NodeID = "choice",
+                        ShowTextImmediately = true,
+                        Choices = new List<ChoiceData>
+                        {
+                            new ChoiceData { ChoiceID = "a", ChoiceText = "A" },
+                            new ChoiceData { ChoiceID = "b", ChoiceText = "B" },
+                            new ChoiceData { ChoiceID = "c", ChoiceText = "C" },
+                            new ChoiceData { ChoiceID = "d", ChoiceText = "D" }
+                        }
+                    });
+
+                Assert.That(_manager.ChoiceButtonPrefab, Is.Null);
+                Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
+                NovelChoiceLayoutGroup layout = _manager.ChoiceButtonContainer
+                    .GetComponent<NovelChoiceLayoutGroup>();
+                Assert.That(layout, Is.Not.Null);
+                Assert.That(layout.Arrangement,
+                    Is.EqualTo(NovelChoiceArrangement.Horizontal));
+                Assert.That(layout.ChoicesPerGroup, Is.EqualTo(2));
+
+                UnityEngine.UI.Button[] buttons = _manager
+                    .ChoiceButtonContainer
+                    .GetComponentsInChildren<UnityEngine.UI.Button>();
+                Assert.That(buttons.Length, Is.EqualTo(4));
+                RectTransform first =
+                    buttons[0].GetComponent<RectTransform>();
+                RectTransform third =
+                    buttons[2].GetComponent<RectTransform>();
+                Assert.That(first.sizeDelta,
+                    Is.EqualTo(new Vector2(120f, 40f)));
+                Assert.That(first.anchoredPosition,
+                    Is.EqualTo(new Vector2(-65f, 35f)));
+                Assert.That(third.anchoredPosition,
+                    Is.EqualTo(new Vector2(-65f, -35f)));
+                NovelText label = buttons[0]
+                    .GetComponentInChildren<NovelText>();
+                Assert.That(label.fontSize, Is.EqualTo(19f));
+                Assert.That(label.color, Is.EqualTo(Color.yellow));
+                Assert.That(label.rectTransform.offsetMin.y,
+                    Is.LessThanOrEqualTo(
+                        style.EffectiveVerticalPadding + 0.01f));
+                Assert.That(label.rectTransform.rect.height,
+                    Is.GreaterThanOrEqualTo(label.GetPreferredValues(
+                        label.text,
+                        label.rectTransform.rect.width,
+                        10000f).y - 0.01f));
+
+                RectTransform panel = _manager.BackgroundChoicesPanel
+                    .GetComponent<RectTransform>();
+                Assert.That(panel.anchorMin, Is.EqualTo(Vector2.one));
+                Assert.That(panel.pivot, Is.EqualTo(Vector2.one));
+                Assert.That(panel.anchoredPosition,
+                    Is.EqualTo(new Vector2(-30f, -40f)));
+                Transform panelBackground = panel.Find(
+                    "Choice Panel Background");
+                Assert.That(panelBackground, Is.Not.Null);
+                Assert.That(panelBackground.gameObject.activeSelf, Is.True);
+                Assert.That(panelBackground.GetSiblingIndex(),
+                    Is.LessThan(_manager.ChoiceButtonContainer
+                        .GetSiblingIndex()));
+                NovelRoundedGraphic panelGraphic = panelBackground
+                    .GetComponent<NovelRoundedGraphic>();
+                Assert.That(panelGraphic, Is.Not.Null);
+                Assert.That(panelGraphic.color,
+                    Is.EqualTo(panelStyle.EffectiveFillColor));
+                Assert.That(panelGraphic.material.GetFloat(
+                    "_PreserveFillOpacity"), Is.EqualTo(1f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(style);
+            }
+        }
+
+        [Test]
+        public void ExistingUnityLayoutGroupDoesNotBlockGeneratedChoiceLayout()
+        {
+            var existing = _manager.ChoiceButtonContainer.gameObject
+                .AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+
+            Assert.DoesNotThrow(() => Play(
+                new RuntimeCreateChoiceLayoutNode
+                {
+                    NodeID = "layout",
+                    NextNodeID = "choice",
+                    Arrangement = NovelChoiceArrangement.Circular
+                },
+                new RuntimeChoiceNode
+                {
+                    NodeID = "choice",
+                    ShowTextImmediately = true,
+                    Choices = new List<ChoiceData>
+                    {
+                        new ChoiceData { ChoiceID = "one", ChoiceText = "One" },
+                        new ChoiceData { ChoiceID = "two", ChoiceText = "Two" }
+                    }
+                }));
+
+            Assert.That(existing.enabled, Is.False);
+            Assert.That(_manager.ChoiceButtonContainer
+                .GetComponent<NovelChoiceLayoutGroup>(), Is.Not.Null);
+            Assert.That(_manager.ChoiceButtonContainer
+                .GetComponentsInChildren<UnityEngine.UI.Button>().Length,
+                Is.EqualTo(2));
         }
 
         [UnityTest]

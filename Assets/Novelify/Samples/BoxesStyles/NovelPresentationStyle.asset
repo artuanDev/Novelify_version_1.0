@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: NovelPresentationStyle
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelPresentationStyle
   DialogueBox:
-    FillColor: {r: 1, g: 1, b: 1, a: 1}
+    FillColor: {r: 0.2830189, g: 0.2830189, b: 0.2830189, a: 1}
     Opacity: 1
     FillTexture: {fileID: 2800000, guid: 31c572e01ca4ee94cb453979b7cdcdee, type: 3}
     FillTiling: {x: 1, y: 1}
@@ -27,7 +27,7 @@ MonoBehaviour:
     OutlineTiling: {x: 1, y: 1}
     OutlineOffset: {x: 0, y: 0}
   SpeakerBox:
-    FillColor: {r: 0.12, g: 0.42, b: 0.88, a: 1}
+    FillColor: {r: 0.14449094, g: 0.15074675, b: 0.16037738, a: 1}
     Opacity: 1
     FillTexture: {fileID: 0}
     FillTiling: {x: 1, y: 1}

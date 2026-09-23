@@ -29,7 +29,23 @@ namespace Novelify
         private NovelText _standardSpeakerText;
         private GameObject _standardChoicesPanel;
         private Transform _standardChoiceContainer;
-        private Button _standardChoicePrefab;
+        private NovelChoiceLayoutGroup _choiceLayout;
+        private RectTransform _choicePanelBackground;
+        private NovelRoundedGraphic _choicePanelGraphic;
+        private NovelChoiceStyle _choiceStyle;
+        private NovelDialogueAnchor _choiceAnchor =
+            NovelDialogueAnchor.CenterCenter;
+        private Vector2 _choiceOffset;
+        private Vector2 _choicePanelSize = new Vector2(1440f, 720f);
+        private NovelChoiceArrangement _choiceArrangement =
+            NovelChoiceArrangement.Vertical;
+        private int _choicesPerGroup;
+        private float _choiceSpacing = 14f;
+        private float _choiceGroupSpacing = 24f;
+        private float _choiceCircleRadius = 210f;
+        private float _choiceCircleStartAngle = 90f;
+        private float _choiceCircleArc = 360f;
+        private Vector2 _lastChoiceViewportSize = new Vector2(-1f, -1f);
 
         private NovelBoxStyle _dialogueStyle = NovelBoxStyle.DialogueDefault;
         private NovelBoxStyle _speakerStyle = NovelBoxStyle.SpeakerDefault;
@@ -129,7 +145,6 @@ namespace Novelify
             _standardSpeakerText = runner.SpeakerNameText;
             _standardChoicesPanel = runner.BackgroundChoicesPanel;
             _standardChoiceContainer = runner.ChoiceButtonContainer;
-            _standardChoicePrefab = runner.ChoiceButtonPrefab;
         }
 
         //Helper function to ensure everything is set up correctly before continuing
@@ -194,6 +209,148 @@ namespace Novelify
             if (!string.IsNullOrEmpty(_standardSpeakerText.text))
                 RefreshSpeakerNameLayout();
             BindStandardSurface();
+        }
+
+        public void CreateChoiceLayout(RuntimeCreateChoiceLayoutNode node)
+        {
+            if (node == null)
+                return;
+            EnsureReady();
+            _choiceStyle = node.Style;
+            _choiceAnchor = node.Anchor;
+            _choiceOffset = node.Offset;
+            _choicePanelSize = new Vector2(
+                Mathf.Max(1f, node.PanelSize.x),
+                Mathf.Max(1f, node.PanelSize.y));
+            _choiceArrangement = node.Arrangement;
+            _choicesPerGroup = Mathf.Max(0, node.ChoicesPerGroup);
+            _choiceSpacing = Mathf.Max(0f, node.ChoiceSpacing);
+            _choiceGroupSpacing = Mathf.Max(0f, node.GroupSpacing);
+            _choiceCircleRadius = Mathf.Max(0f, node.CircleRadius);
+            _choiceCircleStartAngle = node.CircleStartAngle;
+            _choiceCircleArc = Mathf.Clamp(node.CircleArc, -360f, 360f);
+            ApplyChoiceLayout();
+        }
+
+        public Button CreateChoiceButton()
+        {
+            EnsureReady();
+            RectTransform rect = CreateRect(
+                "Choice Button", _standardChoiceContainer);
+            rect.sizeDelta = ChoiceButtonSize;
+            NovelRoundedGraphic background =
+                rect.gameObject.AddComponent<NovelRoundedGraphic>();
+            background.Apply(_choiceStyle != null
+                ? _choiceStyle.Background
+                : NovelChoiceStyle.DefaultBackground);
+            background.raycastTarget = true;
+
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = _choiceStyle != null
+                ? _choiceStyle.HighlightedTint
+                : new Color(0.88f, 0.94f, 1f, 1f);
+            colors.pressedColor = _choiceStyle != null
+                ? _choiceStyle.PressedTint
+                : new Color(0.72f, 0.82f, 0.94f, 1f);
+            colors.selectedColor = _choiceStyle != null
+                ? _choiceStyle.SelectedTint
+                : new Color(0.82f, 0.9f, 1f, 1f);
+            colors.disabledColor = _choiceStyle != null
+                ? _choiceStyle.DisabledTint
+                : new Color(0.45f, 0.48f, 0.55f, 0.7f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = _choiceStyle != null
+                ? Mathf.Max(0f, _choiceStyle.TransitionDuration)
+                : 0.1f;
+            button.colors = colors;
+
+            float horizontalPadding = _choiceStyle != null
+                ? Mathf.Max(0f, _choiceStyle.HorizontalPadding)
+                : 18f;
+            float verticalPadding = _choiceStyle != null
+                ? _choiceStyle.EffectiveVerticalPadding
+                : 10f;
+            RectTransform labelRect = CreateRect("Label", rect);
+            Stretch(labelRect);
+            labelRect.offsetMin = new Vector2(
+                horizontalPadding, verticalPadding);
+            labelRect.offsetMax = new Vector2(
+                -horizontalPadding, -verticalPadding);
+            NovelText label = CreateText(
+                labelRect.gameObject,
+                _choiceStyle != null
+                    ? Mathf.Max(1f, _choiceStyle.FontSize)
+                    : 24f,
+                TextAnchor.MiddleCenter);
+            if (_choiceStyle != null)
+            {
+                if (_choiceStyle.Font != null)
+                    label.font = _choiceStyle.Font;
+                label.fontStyle = _choiceStyle.FontStyle;
+                label.color = _choiceStyle.TextColor;
+                ApplyTextAlignment(label, _choiceStyle.TextAlignment);
+                ApplyTextSizing(
+                    label,
+                    _choiceStyle.FontSize,
+                    _choiceStyle.AutoSize,
+                    _choiceStyle.MinimumFontSize,
+                    _choiceStyle.MaximumFontSize);
+            }
+            return button;
+        }
+
+        public void ApplyChoiceAvailability(Button button, bool available)
+        {
+            if (button == null)
+                return;
+            NovelText label = button.GetComponentInChildren<NovelText>();
+            if (label != null)
+                label.color = !available && _choiceStyle != null
+                    ? _choiceStyle.DisabledTextColor
+                    : _choiceStyle != null
+                        ? _choiceStyle.TextColor
+                        : Color.white;
+        }
+
+        public void RefreshChoiceTextPadding(Button button)
+        {
+            if (button == null)
+                return;
+            NovelText label = button.GetComponentInChildren<NovelText>();
+            RectTransform buttonRect = button.GetComponent<RectTransform>();
+            if (label == null || buttonRect == null)
+                return;
+
+            float horizontal = _choiceStyle != null
+                ? Mathf.Max(0f, _choiceStyle.HorizontalPadding)
+                : 18f;
+            float vertical = _choiceStyle != null
+                ? _choiceStyle.EffectiveVerticalPadding
+                : 10f;
+            float width = Mathf.Max(
+                1f, buttonRect.sizeDelta.x - horizontal * 2f);
+            bool autoSize = _choiceStyle != null &&
+                _choiceStyle.AutoSize;
+            if (!autoSize && !string.IsNullOrEmpty(label.text))
+            {
+                float requiredHeight = label.GetPreferredValues(
+                    label.text, width, 10000f).y;
+                vertical = Mathf.Min(vertical, Mathf.Max(
+                    0f, (buttonRect.sizeDelta.y - requiredHeight) * 0.5f));
+            }
+            label.rectTransform.offsetMin = new Vector2(
+                horizontal, vertical);
+            label.rectTransform.offsetMax = new Vector2(
+                -horizontal, -vertical);
+        }
+
+        public void RebuildChoiceLayout()
+        {
+            if (_standardChoiceContainer is RectTransform rect)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
 
         public void CreateSpeechBubble(RuntimeCreateSpeechBubbleNode node)
@@ -607,6 +764,14 @@ namespace Novelify
         {
             if (_backgroundLayer != null)
                 _backgroundLayer.SetAsFirstSibling();
+            if (_standardChoicesPanel != null &&
+                _standardChoicesPanel.transform.parent is RectTransform
+                    choiceViewport &&
+                choiceViewport.rect.size != _lastChoiceViewportSize)
+            {
+                ApplyChoiceLayout();
+                RebuildChoiceLayout();
+            }
             if (_trackedBubble != null &&
                 _bubbleWrapper != null &&
                 _bubbleWrapper.gameObject.activeInHierarchy)
@@ -790,6 +955,13 @@ namespace Novelify
 
         private void EnsureChoiceUI()
         {
+            bool createdPanel = false;
+            if (_runner.ChoiceButtonContainer != null &&
+                _runner.ChoiceButtonContainer != _standardChoiceContainer)
+            {
+                _standardChoiceContainer = _runner.ChoiceButtonContainer;
+                _choiceLayout = null;
+            }
             if (_standardChoicesPanel == null)
             {
                 RectTransform panel = CreateRect(
@@ -797,8 +969,9 @@ namespace Novelify
                 panel.anchorMin = new Vector2(0.5f, 0.5f);
                 panel.anchorMax = new Vector2(0.5f, 0.5f);
                 panel.pivot = new Vector2(0.5f, 0.5f);
-                panel.sizeDelta = new Vector2(720f, 500f);
+                panel.sizeDelta = _choicePanelSize;
                 _standardChoicesPanel = panel.gameObject;
+                createdPanel = true;
             }
 
             if (_standardChoiceContainer == null)
@@ -806,42 +979,145 @@ namespace Novelify
                 RectTransform container = CreateRect(
                     "Choice Container", _standardChoicesPanel.transform);
                 Stretch(container);
-                VerticalLayoutGroup layout =
-                    container.gameObject.AddComponent<VerticalLayoutGroup>();
-                layout.spacing = 14f;
-                layout.padding = new RectOffset(24, 24, 24, 24);
-                layout.childControlHeight = true;
-                layout.childControlWidth = true;
-                layout.childForceExpandHeight = false;
-                layout.childForceExpandWidth = true;
                 _standardChoiceContainer = container;
             }
 
-            if (_standardChoicePrefab == null)
-                _standardChoicePrefab = CreateChoiceTemplate();
-            _standardChoicesPanel.SetActive(false);
+            EnsureChoicePanelBackground();
+
+            _choiceLayout = _standardChoiceContainer.GetComponent<
+                NovelChoiceLayoutGroup>();
+            if (_choiceLayout == null)
+                _choiceLayout = _standardChoiceContainer.gameObject
+                    .AddComponent<NovelChoiceLayoutGroup>();
+            foreach (LayoutGroup layout in
+                     _standardChoiceContainer.GetComponents<LayoutGroup>())
+                if (layout != _choiceLayout)
+                    layout.enabled = false;
+            ApplyChoiceLayout();
+            if (createdPanel)
+                _standardChoicesPanel.SetActive(false);
         }
-        private Button CreateChoiceTemplate()
+
+        private Vector2 ChoiceButtonSize => new Vector2(
+            _choiceStyle != null
+                ? Mathf.Max(1f, _choiceStyle.ButtonWidth)
+                : 640f,
+            _choiceStyle != null
+                ? Mathf.Max(1f, _choiceStyle.ButtonHeight)
+                : 64f);
+
+        private void ApplyChoiceLayout()
         {
-            RectTransform rect = CreateRect("Choice Button Template", _templates);
-            rect.sizeDelta = new Vector2(640f, 64f);
-            NovelRoundedGraphic background =
-                rect.gameObject.AddComponent<NovelRoundedGraphic>();
-            NovelBoxStyle style = NovelBoxStyle.DialogueDefault;
-            style.FillColor = new Color(0.10f, 0.16f, 0.28f, 1f);
-            style.CornerRadius = 16f;
-            background.Apply(style);
-            background.raycastTarget = true;
+            if (_standardChoicesPanel == null ||
+                _standardChoiceContainer == null ||
+                _choiceLayout == null)
+                return;
+            RectTransform panel = _standardChoicesPanel.GetComponent<
+                RectTransform>();
+            if (panel != null)
+            {
+                Vector2 anchor = ChoiceAnchorPoint(_choiceAnchor);
+                panel.anchorMin = anchor;
+                panel.anchorMax = anchor;
+                panel.pivot = anchor;
+                panel.anchoredPosition = _choiceOffset;
+                panel.sizeDelta = _choicePanelSize;
+                KeepChoicePanelInsideViewport(panel);
+                if (panel.parent is RectTransform viewport)
+                    _lastChoiceViewportSize = viewport.rect.size;
+            }
+            _choiceLayout.Configure(
+                _choiceArrangement,
+                _choicesPerGroup,
+                _choiceSpacing,
+                _choiceGroupSpacing,
+                ChoiceButtonSize,
+                _choiceCircleRadius,
+                _choiceCircleStartAngle,
+                _choiceCircleArc);
+            ApplyChoicePanelBackground();
+        }
 
-            Button button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = background;
+        private void EnsureChoicePanelBackground()
+        {
+            if (_standardChoicesPanel == null)
+                return;
+            if (_choicePanelBackground != null &&
+                _choicePanelBackground.parent ==
+                _standardChoicesPanel.transform)
+                return;
 
-            RectTransform labelRect = CreateRect("Label", rect);
-            Stretch(labelRect);
-            labelRect.offsetMin = new Vector2(18f, 10f);
-            labelRect.offsetMax = new Vector2(-18f, -10f);
-            CreateText(labelRect.gameObject, 24f, TextAnchor.MiddleCenter);
-            return button;
+            Transform existing = _standardChoicesPanel.transform.Find(
+                "Choice Panel Background");
+            _choicePanelBackground = existing as RectTransform;
+            if (_choicePanelBackground == null)
+            {
+                _choicePanelBackground = CreateRect(
+                    "Choice Panel Background",
+                    _standardChoicesPanel.transform);
+                Stretch(_choicePanelBackground);
+            }
+            _choicePanelBackground.SetAsFirstSibling();
+            _choicePanelGraphic = _choicePanelBackground.GetComponent<
+                NovelRoundedGraphic>();
+            if (_choicePanelGraphic == null)
+                _choicePanelGraphic = _choicePanelBackground.gameObject
+                    .AddComponent<NovelRoundedGraphic>();
+            _choicePanelGraphic.raycastTarget = false;
+        }
+
+        private void ApplyChoicePanelBackground()
+        {
+            EnsureChoicePanelBackground();
+            if (_choicePanelBackground == null)
+                return;
+            bool visible = _choiceStyle != null &&
+                _choiceStyle.ShowPanelBackground;
+            _choicePanelBackground.gameObject.SetActive(visible);
+            if (visible && _choicePanelGraphic != null)
+            {
+                _choicePanelGraphic.Apply(
+                    _choiceStyle.PanelBackground,
+                    preserveFillOpacity: true);
+                _choicePanelGraphic.raycastTarget = false;
+            }
+        }
+
+        private static void KeepChoicePanelInsideViewport(
+            RectTransform panel)
+        {
+            if (panel == null || panel.parent is not RectTransform parent)
+                return;
+            Rect parentRect = parent.rect;
+            if (parentRect.width <= 0f || parentRect.height <= 0f)
+                return;
+
+            Vector2 size = panel.sizeDelta;
+            size.x = Mathf.Min(Mathf.Max(1f, size.x), parentRect.width);
+            size.y = Mathf.Min(Mathf.Max(1f, size.y), parentRect.height);
+            panel.sizeDelta = size;
+
+            Vector2 anchor = panel.anchorMin;
+            Vector2 anchorPoint = new Vector2(
+                Mathf.Lerp(parentRect.xMin, parentRect.xMax, anchor.x),
+                Mathf.Lerp(parentRect.yMin, parentRect.yMax, anchor.y));
+            Vector2 pivot = panel.pivot;
+            float minimumX = parentRect.xMin - anchorPoint.x +
+                pivot.x * size.x;
+            float maximumX = parentRect.xMax - anchorPoint.x -
+                (1f - pivot.x) * size.x;
+            float minimumY = parentRect.yMin - anchorPoint.y +
+                pivot.y * size.y;
+            float maximumY = parentRect.yMax - anchorPoint.y -
+                (1f - pivot.y) * size.y;
+            Vector2 position = panel.anchoredPosition;
+            position.x = minimumX <= maximumX
+                ? Mathf.Clamp(position.x, minimumX, maximumX)
+                : 0f;
+            position.y = minimumY <= maximumY
+                ? Mathf.Clamp(position.y, minimumY, maximumY)
+                : 0f;
+            panel.anchoredPosition = position;
         }
 
         private void EnsurePortraitTemplate()
@@ -1041,7 +1317,6 @@ namespace Novelify
             _runner.SpeakerNameText = _standardSpeakerText;
             _runner.BackgroundChoicesPanel = _standardChoicesPanel;
             _runner.ChoiceButtonContainer = _standardChoiceContainer;
-            _runner.ChoiceButtonPrefab = _standardChoicePrefab;
         }
 
         private void BindBubbleSurface()
@@ -1328,6 +1603,20 @@ namespace Novelify
                 _ => new Vector2(centerX, centerY)
             };
         }
+
+        private static Vector2 ChoiceAnchorPoint(
+            NovelDialogueAnchor anchor) => anchor switch
+        {
+            NovelDialogueAnchor.TopLeft => new Vector2(0f, 1f),
+            NovelDialogueAnchor.TopCenter => new Vector2(0.5f, 1f),
+            NovelDialogueAnchor.TopRight => new Vector2(1f, 1f),
+            NovelDialogueAnchor.CenterLeft => new Vector2(0f, 0.5f),
+            NovelDialogueAnchor.CenterRight => new Vector2(1f, 0.5f),
+            NovelDialogueAnchor.BottomLeft => new Vector2(0f, 0f),
+            NovelDialogueAnchor.BottomCenter => new Vector2(0.5f, 0f),
+            NovelDialogueAnchor.BottomRight => new Vector2(1f, 0f),
+            _ => new Vector2(0.5f, 0.5f)
+        };
 
         private static Vector2 ClampBubbleToViewport(
             Vector2 position,

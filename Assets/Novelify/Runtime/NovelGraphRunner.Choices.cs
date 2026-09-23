@@ -47,28 +47,32 @@ namespace Novelify
                 _customPresentation.PresentChoices(options);
                 return;
             }
-            if (ChoiceButtonPrefab == null || ChoiceButtonContainer == null)
+            if (ChoiceButtonContainer == null)
             {
-                Debug.LogWarning("ChoiceButtonPrefab or ChoiceButtonContainer is missing.", this);
+                Debug.LogWarning("The generated choice container is missing.", this);
                 return;
             }
             foreach ((ChoiceData choice, ChoiceAvailability availability) in evaluated)
             {
                 if (!availability.Available && choice.UnavailablePolicy == NovelChoiceUnavailablePolicy.Hide)
                     continue;
-                Button button = Instantiate(ChoiceButtonPrefab, ChoiceButtonContainer);
+                Button button = GeneratedPresentation.CreateChoiceButton();
                 Text label = button.GetComponentInChildren<Text>();
                 string text = AsString(Evaluate(choice.ChoiceTextValue), choice.ChoiceText ?? string.Empty);
                 if (!availability.Available && !string.IsNullOrWhiteSpace(availability.Reason))
                     text += $"\n<color=#A0A0A0>{availability.Reason}</color>";
                 if (label != null) label.text = text;
+                GeneratedPresentation.RefreshChoiceTextPadding(button);
                 button.interactable = availability.Available;
+                GeneratedPresentation.ApplyChoiceAvailability(
+                    button, availability.Available);
                 if (availability.Available)
                 {
                     button.onClick.AddListener(() => TrySelectChoice(node, choice));
                 }
                 if (!string.IsNullOrEmpty(choice.ChoiceID)) _choiceButtons[choice.ChoiceID] = button;
             }
+            GeneratedPresentation.RebuildChoiceLayout();
 
             if (!string.IsNullOrEmpty(restoreChoiceID) &&
                 _choiceButtons.TryGetValue(restoreChoiceID, out Button restored) && restored.interactable)

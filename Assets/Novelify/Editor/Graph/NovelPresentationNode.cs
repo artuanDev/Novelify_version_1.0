@@ -369,6 +369,66 @@ namespace Novelify.Editor
     }
 
     [Serializable]
+    [Node(NovelNodeCategories.Presentation, null, "Create Choice Layout")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class CreateChoiceLayoutNode : ActionNode
+    {
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            NovelNodePresentation.Apply(
+                this,
+                "Generate and arrange choices",
+                "Double-click to preview placement, grouping, and style.",
+                new Color32(139, 148, 255, 255));
+        }
+
+        protected override void OnDefineOptions(
+            IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<NovelChoiceStyle>("Style Asset")
+                .WithTooltip("Reusable visual and text style for every generated choice button. No prefab is required.")
+                .Build();
+            context.AddOption<NovelDialogueAnchor>("Screen Anchor")
+                .WithDefaultValue(NovelDialogueAnchor.CenterCenter)
+                .WithTooltip("Point on the screen where the choice panel is attached.")
+                .Build();
+            context.AddOption<Vector2>("Offset")
+                .WithDefaultValue(Vector2.zero)
+                .WithTooltip("Canvas-unit offset from the selected screen anchor.")
+                .Build();
+            context.AddOption<Vector2>("Panel Size")
+                .WithDefaultValue(new Vector2(1440f, 720f))
+                .Build();
+            context.AddOption<NovelChoiceArrangement>("Arrangement")
+                .WithDefaultValue(NovelChoiceArrangement.Vertical)
+                .Build();
+            context.AddOption<int>("Choices Per Group")
+                .WithDefaultValue(0)
+                .WithTooltip("0 keeps all choices together. Vertical groups form columns, horizontal groups form rows, and circular groups form rings.")
+                .Build();
+            context.AddOption<float>("Choice Spacing")
+                .WithDefaultValue(14f)
+                .Build();
+            context.AddOption<float>("Group Spacing")
+                .WithDefaultValue(24f)
+                .Build();
+            context.AddOption<float>("Circle Radius")
+                .WithDefaultValue(210f)
+                .Build();
+            context.AddOption<float>("Circle Start Angle")
+                .WithDefaultValue(90f)
+                .WithTooltip("Degrees. 0 starts on the right and 90 starts at the top.")
+                .Build();
+            context.AddOption<float>("Circle Arc")
+                .WithDefaultValue(360f)
+                .WithTooltip("Degrees occupied by each ring. Negative values reverse direction.")
+                .Build();
+        }
+    }
+
+    [Serializable]
     [Node(NovelNodeCategories.Presentation, null, "Set Background")]
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SetBackgroundNode : ActionNode

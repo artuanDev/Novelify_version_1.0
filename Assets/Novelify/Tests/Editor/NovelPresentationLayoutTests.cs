@@ -103,5 +103,88 @@ namespace Novelify.Tests
             Assert.That(layout.AnchorMax, Is.EqualTo(expectedAnchor));
             Assert.That(layout.Pivot, Is.EqualTo(expectedPivot));
         }
+
+        [TestCase(NovelChoiceArrangement.Vertical)]
+        [TestCase(NovelChoiceArrangement.Horizontal)]
+        [TestCase(NovelChoiceArrangement.Circular)]
+        public void OversizedChoiceGroupsFitInsideTheirPanel(
+            NovelChoiceArrangement arrangement)
+        {
+            const int count = 8;
+            const int perGroup = 4;
+            const float padding = 12f;
+            Vector2 choiceSize = new Vector2(640f, 64f);
+            Vector2 panelSize = new Vector2(720f, 260f);
+            int groups = Mathf.CeilToInt(count / (float)perGroup);
+            float fit = NovelChoiceLayoutGroup.CalculateFitScale(
+                arrangement,
+                count,
+                perGroup,
+                choiceSize,
+                14f,
+                24f,
+                210f,
+                90f,
+                360f,
+                panelSize,
+                padding);
+
+            Assert.That(fit, Is.GreaterThan(0f).And.LessThanOrEqualTo(1f));
+            Vector2 halfPanel = panelSize * 0.5f - Vector2.one * padding;
+            Vector2 halfChoice = choiceSize * 0.5f * fit;
+            for (int index = 0; index < count; index++)
+            {
+                Vector2 position = NovelChoiceLayoutGroup
+                    .CalculateChoicePosition(
+                        arrangement,
+                        index,
+                        count,
+                        perGroup,
+                        groups,
+                        choiceSize,
+                        14f,
+                        24f,
+                        210f,
+                        90f,
+                        360f) * fit;
+                Assert.That(position.x - halfChoice.x,
+                    Is.GreaterThanOrEqualTo(-halfPanel.x - 0.01f));
+                Assert.That(position.x + halfChoice.x,
+                    Is.LessThanOrEqualTo(halfPanel.x + 0.01f));
+                Assert.That(position.y - halfChoice.y,
+                    Is.GreaterThanOrEqualTo(-halfPanel.y - 0.01f));
+                Assert.That(position.y + halfChoice.y,
+                    Is.LessThanOrEqualTo(halfPanel.y + 0.01f));
+            }
+        }
+
+        [Test]
+        public void ChoiceContentWidthTracksEntireAuthoredButtonWidth()
+        {
+            Vector2 narrow = NovelChoiceLayoutGroup.CalculateContentSize(
+                NovelChoiceArrangement.Vertical,
+                4,
+                4,
+                new Vector2(320f, 64f),
+                14f,
+                24f,
+                210f,
+                90f,
+                360f);
+            Vector2 wide = NovelChoiceLayoutGroup.CalculateContentSize(
+                NovelChoiceArrangement.Vertical,
+                4,
+                4,
+                new Vector2(760f, 64f),
+                14f,
+                24f,
+                210f,
+                90f,
+                360f);
+
+            Assert.That(narrow.x, Is.EqualTo(320f).Within(0.01f));
+            Assert.That(wide.x, Is.EqualTo(760f).Within(0.01f));
+            Assert.That(wide.y, Is.EqualTo(narrow.y).Within(0.01f));
+        }
     }
 }

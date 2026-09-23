@@ -158,7 +158,6 @@ namespace Novelify.Tests
                 _graph.EntryNodeID = choice.NodeID;
                 _graph.AllNodes = new List<RuntimeNode> { choice, result };
 
-                LogAssert.Expect(LogType.Warning, "ChoiceButtonPrefab or ChoiceButtonContainer is missing.");
                 Assert.That(_manager.Session.Play(_graph.GraphID), Is.True);
                 Assert.That(_manager.Session.TryGetVariable(trust.ID, out NovelVariableDefinition found), Is.True);
                 Assert.That(found, Is.SameAs(trust));

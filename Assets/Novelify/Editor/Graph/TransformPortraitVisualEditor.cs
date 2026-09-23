@@ -82,6 +82,9 @@ namespace Novelify.Editor
                         case ChangeSpeechBubbleNode changeBubble:
                             NovelSpeechBubbleComposerWindow.Open(changeBubble);
                             break;
+                        case CreateChoiceLayoutNode choiceLayout:
+                            NovelChoiceComposerWindow.Open(choiceLayout);
+                            break;
                         default:
                             return;
                     }
