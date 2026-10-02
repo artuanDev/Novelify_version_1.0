@@ -1,0 +1,24 @@
+{
+  "name": "Novelify.InputSystem",
+  "rootNamespace": "Novelify.InputSystem",
+  "references": [
+    "Novelify.Runtime",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "autoReferenced": true,
+  "defineConstraints": [
+    "NOVELIFY_INPUT_SYSTEM"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.inputsystem",
+      "expression": "1.0.0",
+      "define": "NOVELIFY_INPUT_SYSTEM"
+    }
+  ],
+  "noEngineReferences": false
+}

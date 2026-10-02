@@ -21,7 +21,14 @@ Novelify is a visual dialogue framework built for Unity. Stories are authored in
 
 The editor graph and runtime presentation are intentionally separated: graph nodes are used for authoring, while the importer generates a `RuntimeNovelGraph` that can be consumed by normal Unity components during play mode.
 
-This repository is currently a Unity project containing the Novelify framework, its editor tooling and a working sample scene.
+This repository contains a Unity development project and an installable package at
+`Packages/com.artuandev.novelify`. The package sample is a guide; the Setup Wizard
+creates an editable, art-free showcase scene in the consuming project.
+
+The package uses the [Novelify Free Use License 1.0](Packages/com.artuandev.novelify/LICENSE.md):
+commercial finished games are allowed, but the plugin or a Unity project that
+includes its files may not be sold as a development deliverable. This custom
+license applies to the package, not automatically to other repository assets.
 
 Please, note this is just the bare basics, I am working right now on extending the tool and adding everything it is 
 missing for the moment, you can get an idea on what to expect from this tool in the "Roadmap".
@@ -52,6 +59,8 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 - Wave and shake text effects with an animated editor preview.
 - Automatic conversion from editor graphs to runtime dialogue data.
 - A compact `NovelGraphSession` gameplay API for graph playback, variables, choices, events and saves.
+- A default player controller with backlog, auto, read-aware skip, persistent preferences and multi-device input.
+- Content/save provider interfaces with asynchronous chapter loading and save restoration.
 - One focused sample graph with character assets, UI setup and a playable scene.
 - A reusable layered template character with sprites for all ten supported emotions.
 
@@ -66,16 +75,35 @@ missing for the moment, you can get an idea on what to expect from this tool in 
 
 ## Requirements
 
-- Unity `6000.6.0f1`.
-- Unity Graph Toolkit, compatible with the selected Unity 6 installation.
-- Git LFS, required for image and other binary assets.
-- Universal Render Pipeline.
-- Input System.
+- Unity `6000.6.0f1` or a compatible Unity 6000.6 release.
+- Unity Graph Toolkit, included with the selected Unity Editor installation.
 - Unity UI (`com.unity.ugui`); no TextMesh Pro dependency is required.
+- Git LFS when cloning the full development project with its binary sample media.
+
+The full development project uses URP and Input System. Neither is required to
+install the Novelify package; an optional Input System adapter is available when
+that package is installed.
 
 If the Graph Toolkit package is not available in the project after opening it, install the compatible package through Unity's Package Manager before opening or creating a Novelify graph.
 
 ## Getting Started
+
+For an existing Unity project, use Unity Package Manager's **Add package from Git URL**
+with `https://github.com/artuanDev/Novelify_version_1.0.git?path=/Packages/com.artuandev.novelify`.
+Then open **Window > Novelify > Setup Wizard** to generate a playable scene,
+branching graph, character, choice style and localization table. Press Play,
+click to advance, and use the top-right
+Backlog, Auto, Skip and Settings controls. Package instructions
+are in `Packages/com.artuandev.novelify/README.md`.
+
+To prepare translations, open **Window > Novelify > Localization Workspace**.
+Choose a Story Graph and table; the workspace shows only that graph's lines,
+with speaker previews and current and localized rich-text editors for every
+dialogue and choice. Edit them inline, then save all translations together.
+It syncs stable line keys and source-formatted drafts for a selected language;
+translations can also be exported/imported as CSV. Assign the table to a runner
+and set its `Locale`.
+Missing translations use the original graph text.
 
 ### 1. Clone the Repository
 
@@ -421,10 +449,13 @@ Assets/Novelify/
 
 ## Roadmap
 
-- [ ] Package the framework for easier reuse in other Unity projects.
+- [x] Create an embedded UPM package and an art-free setup wizard.
 - [x] Add initial runtime flow controls and dialogue events (Wait and Dialogue Event nodes).
 - [x] Add custom character creator to preview emotions and examples and make tweaks to them.
-- [ ] Add localization support.
+- [x] Add stable line keys, translation tables, CSV exchange and a project-wide text browser.
+- [x] Add default backlog, auto, skip, preferences and multi-device player controls.
+- [x] Add pluggable content/save providers and asynchronous chapter loading.
+- [ ] Add localized font/voice variants, plural rules and RTL-aware presentation.
 - [x] Add bounded save/load, checkpoints, save slots and conversation history snapshots.
 - [x] Add utility nodes that ease scenes with more than one character.
 - [x] Add a layered template character with all supported expressions.

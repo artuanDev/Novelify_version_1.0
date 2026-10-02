@@ -1,0 +1,120 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88167c68efd744db86768d862641a794, type: 3}
+  m_Name: StarterLocalization
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelLocalizationTable
+  SourceGraph: {fileID: 3965311268370046156, guid: e7a34679c901f0a4daa7e270b01a37ff, type: 3}
+  SourceLocale: en
+  Lines:
+  - Key: a9159106e6923964f8a50c44a777e9a0:10a61345c0b08310c5696a11ad37e171
+    SourceText: <i>Wait.</i> The pattern repeats every seven seconds. Someone wanted us to find it.
+    Translations:
+    - Locale: es
+      Text: <i>Wait.</i> The pattern repeats every seven seconds. Someone wanted us to find it.
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:10a61345c0b08310c5696a11ad37e171:speaker
+    SourceText: Mara
+    Translations:
+    - Locale: es
+      Text: Mara
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:7ea4d2c6b87513970d6a6817a31620eb
+    SourceText: <b>There it is.</b> The light is answering us. <link="novelify-wave">Keep moving.</link>
+    Translations:
+    - Locale: es
+      Text: <b>There it is.</b> The light is answering us. <link="novelify-wave">Keep moving.</link>
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:7ea4d2c6b87513970d6a6817a31620eb:speaker
+    SourceText: Mara
+    Translations:
+    - Locale: es
+      Text: Mara
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:9ba6f71ff21ba92f09adbe293339b7be
+    SourceText: '<size=125%><b>THE LAST SIGNAL</b></size>
+
+      The observatory has been dark for years. Tonight, a pale light returns to its window.'
+    Translations:
+    - Locale: es
+      Text: '<size=125%><b>THE LAST SIGNAL</b></size>
+
+        The observatory has been dark for years. Tonight, a pale light returns to its window.'
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:f3ae2328d3196bbb6677d56c073f0a7a
+    SourceText: A signal pulses across the ridge. <i>What will you do?</i>
+    Translations:
+    - Locale: es
+      Text: A signal pulses across the ridge. <i>What will you do?</i>
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:f3ae2328d3196bbb6677d56c073f0a7a:choice:explore
+    SourceText: Follow the signal
+    Translations:
+    - Locale: es
+      Text: Follow the signal
+      NeedsReview: 1
+  - Key: a9159106e6923964f8a50c44a777e9a0:f3ae2328d3196bbb6677d56c073f0a7a:choice:stay
+    SourceText: Stay and decode it
+    Translations:
+    - Locale: es
+      Text: Stay and decode it
+      NeedsReview: 1
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:404469ec9e17b10e509dfa22090feec5
+    SourceText: "Bueno pues ah\xED ando... \xBFY t\xFA?"
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:404469ec9e17b10e509dfa22090feec5:speaker
+    SourceText: Hoki
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:5b47aec8ed64ed85a52b653fb3175f41
+    SourceText: perfecto!
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:5b47aec8ed64ed85a52b653fb3175f41:speaker
+    SourceText: Daisy
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:7091d16c22ce20ca979ab3e44af19cde
+    SourceText: Bueno... tampoco me apetece demasiado pero okay
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:7091d16c22ce20ca979ab3e44af19cde:speaker
+    SourceText: Hoki
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:7d9cfdb9537508257784022beb1a6b83
+    SourceText: "\xBFQu\xE9 har\xE1s?"
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:7d9cfdb9537508257784022beb1a6b83:choice:gimnasio
+    SourceText: Ir al gimnasio
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:7d9cfdb9537508257784022beb1a6b83:choice:helado
+    SourceText: "Ir a la helader\xEDa"
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:a06510c328599cc2125729e84523ed64
+    SourceText: <b><i><size=160%><color=#FF0000><link="novelify-wave">Buenas!</link></color></size></i></b><color=#FFFFFF> Que tal estas?</color>
+    Translations: []
+  - Key: e7a34679c901f0a4daa7e270b01a37ff:a06510c328599cc2125729e84523ed64:speaker
+    SourceText: Daisy
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:0981748f406c0762662f13c384c76b53
+    SourceText: There is a story here, too.
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:14a24f377b3fa4897ae2268f15f505a8
+    SourceText: Welcome to Novelify! Click to continue.
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5
+    SourceText: Which path should the story take?
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5:choice:explore
+    SourceText: Explore the world
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5:choice:stay
+    SourceText: Stay here
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:7b14ee7074517aa039bdcc92d563b341
+    SourceText: A new adventure begins.
+    Translations: []

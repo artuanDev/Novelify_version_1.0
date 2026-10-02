@@ -1,0 +1,22 @@
+{
+  "name": "com.artuandev.novelify",
+  "displayName": "Novelify",
+  "version": "0.1.0",
+  "unity": "6000.6",
+  "description": "Graph authoring, dialogue runtime, generated UI and localization tools for Unity games.",
+  "license": "See LICENSE.md",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Playable Showcase Guide",
+      "description": "Generate an editable visual novel scene, story, style and translation drafts with the Setup Wizard.",
+      "path": "Samples~/Starter Guide"
+    }
+  ],
+  "author": {
+    "name": "Antonio Mata Marín",
+    "url": "https://github.com/artuanDev"
+  }
+}

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c14d01d8d5e77ec4192e67897c930f9e, type: 3}
+  m_Name: Mara
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelCharacter
+  SpeakerName: Mara
+  PortraitBody: {fileID: 0}
+  PortraitMouth: {fileID: 0}
+  PortraitFaceDetails: {fileID: 0}
+  PortraitEyes: {fileID: 0}
+  PortraitMouthOpen: {fileID: 0}
+  MouthFrameInterval: 0.12
+  MouthTimingVariation: 0.35
+  MouthPauseChance: 0.12
+  MouthPauseMultiplier: 1.8
+  PortraitEyesClosed: {fileID: 0}
+  BlinkIntervalMin: 2.5
+  BlinkIntervalMax: 5
+  BlinkDuration: 0.12
+  TalkSound: {fileID: 0}
+  PitchMinVariation: -0.05
+  PitchMaxVariation: 0.05
+  PreviewWidth: 100
+  PreviewHeight: 150
+  PreviewZoom: 1
+  PreviewOffsetX: 0
+  PreviewOffsetY: 0
+  Expressions: []

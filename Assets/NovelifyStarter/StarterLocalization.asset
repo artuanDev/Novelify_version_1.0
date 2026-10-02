@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88167c68efd744db86768d862641a794, type: 3}
+  m_Name: StarterLocalization
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelLocalizationTable
+  SourceLocale: en
+  Lines:
+  - Key: 59acbf49490582849af0d11f5a59f3eb:0981748f406c0762662f13c384c76b53
+    SourceText: There is a story here, too.
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:14a24f377b3fa4897ae2268f15f505a8
+    SourceText: Welcome to Novelify! Click to continue.
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5
+    SourceText: Which path should the story take?
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5:choice:explore
+    SourceText: Explore the world
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:6f6a9f287067025f1412d5e0cac0c4b5:choice:stay
+    SourceText: Stay here
+    Translations: []
+  - Key: 59acbf49490582849af0d11f5a59f3eb:7b14ee7074517aa039bdcc92d563b341
+    SourceText: A new adventure begins.
+    Translations: []

@@ -1,0 +1,11 @@
+{
+	"name": "Novelify.Runtime",
+	"rootNamespace": "Novelify",
+	"references": [ "UnityEngine.UI" ],
+	"includePlatforms": [],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": false,
+	"autoReferenced": true,
+	"noEngineReferences": false
+}

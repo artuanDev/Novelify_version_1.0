@@ -1,0 +1,1231 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Novelify.Editor;
+using NUnit.Framework;
+using Unity.GraphToolkit.Editor;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.TestTools;
+
+namespace Novelify.Tests
+{
+    public class NovelGraphImportTests
+    {
+        private string _folder;
+        private NovelGraph _graph;
+        private NovelCharacter _character;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _folder = "Assets/NovelifyTest_" + Guid.NewGuid().ToString("N");
+            AssetDatabase.CreateFolder("Assets", _folder.Substring("Assets/".Length));
+            _character = ScriptableObject.CreateInstance<NovelCharacter>();
+            _character.SpeakerName = "Test Speaker";
+            AssetDatabase.CreateAsset(_character, _folder + "/Character.asset");
+            _graph = GraphDatabase.CreateGraph<NovelGraph>(_folder + "/Story.novelgraph");
+            _graph.UndoBeginRecordGraph("Build test graph");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (_graph != null) _graph.OnDisable();
+            AssetDatabase.DeleteAsset(_folder);
+        }
+
+        private T Add<T>() where T : Node, new()
+        {
+            var node = new T();
+            _graph.AddNode(node);
+            return node;
+        }
+
+        private void Connect(Node from, Node to) =>
+            Assert.That(_graph.Connect(from.GetOutputPortByName("out"), to.GetInputPortByName("in")), Is.True);
+
+        private RuntimeNovelGraph Import()
+        {
+            _graph.UndoEndRecordGraph();
+            GraphDatabase.SaveGraph(_graph);
+            AssetDatabase.ImportAsset(_folder + "/Story.novelgraph", ImportAssetOptions.ForceUpdate);
+            return AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(_folder + "/Story.novelgraph");
+        }
+
+        [Test]
+        public void CinematicNodesAndNarrationCompileWithStableFlow()
+        {
+            StartNode start = Add<StartNode>();
+            ScreenFlashNode flash = Add<ScreenFlashNode>();
+            ScreenShakeNode shake = Add<ScreenShakeNode>();
+            NarrationNode narration = Add<NarrationNode>();
+            EndNode end = Add<EndNode>();
+            flash.GetInputPortByName("Duration").TrySetValue(0.6f);
+            flash.GetNodeOptionByName("Color").TrySetValue(Color.red);
+            shake.GetInputPortByName("Amplitude").TrySetValue(24f);
+            narration.GetNodeOptionByName("Continue Automatically").TrySetValue(true);
+            narration.GetNodeOptionByName("Auto Continue Delay").TrySetValue(2f);
+            Connect(start, flash);
+            Connect(flash, shake);
+            Connect(shake, narration);
+            Connect(narration, end);
+
+            RuntimeNovelGraph graph = Import();
+            var compiledFlash = graph.AllNodes.OfType<RuntimeScreenFlashNode>().Single();
+            var compiledShake = graph.AllNodes.OfType<RuntimeScreenShakeNode>().Single();
+            var compiledNarration = graph.AllNodes.OfType<RuntimeNarrationNode>().Single();
+            Assert.That(graph.EntryNodeID, Is.EqualTo(compiledFlash.NodeID));
+            Assert.That(compiledFlash.Duration, Is.EqualTo(0.6f));
+            Assert.That(compiledFlash.Color, Is.EqualTo(Color.red));
+            Assert.That(compiledFlash.DurationValue, Is.TypeOf<RuntimeConstantExpression>());
+            Assert.That(compiledFlash.NextNodeID, Is.EqualTo(compiledShake.NodeID));
+            Assert.That(compiledShake.Amplitude, Is.EqualTo(24f));
+            Assert.That(compiledShake.NextNodeID, Is.EqualTo(compiledNarration.NodeID));
+            Assert.That(compiledNarration.AutoAdvanceDelay, Is.EqualTo(2f));
+            Assert.That(compiledNarration.LineID, Is.Not.Empty);
+        }
+
+        [Test]
+        public void LocalizationSyncSeedsRichMarkupAndPreservesReviewedTranslations()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            EndNode end = Add<EndNode>();
+            const string source = "<b>Look</b> at the <size=125%>light</size>.";
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(new RichDialogueText(source));
+            Connect(start, dialogue);
+            Connect(dialogue, end);
+            RuntimeNovelGraph graph = Import();
+            var table = ScriptableObject.CreateInstance<NovelLocalizationTable>();
+            AssetDatabase.CreateAsset(table, _folder + "/Translations.asset");
+            Assert.That(NovelLocalizationWorkspace.FindGraphFor(table), Is.EqualTo(graph));
+            List<NovelLineRecord> records = NovelLineIndex.Collect(graph);
+
+            Assert.That(NovelLineIndex.Sync(table, records, "es"), Is.EqualTo(1));
+            NovelLocalizedText translation = table.Lines.Single().Translations.Single();
+            Assert.That(translation.Text, Is.EqualTo(source));
+            Assert.That(translation.NeedsReview, Is.True);
+
+            records[0].Source = "<i>A changed line</i>";
+            NovelLineIndex.Sync(table, records, "es");
+            Assert.That(translation.Text, Is.EqualTo(records[0].Source));
+            translation.Text = "<i>Una línea traducida</i>";
+            translation.NeedsReview = false;
+            records[0].Source = "Changed again";
+            NovelLineIndex.Sync(table, records, "es");
+            Assert.That(translation.Text, Is.EqualTo("<i>Una línea traducida</i>"));
+        }
+
+        [Test]
+        public void LocalizationIndexOnlyCollectsTheSelectedGraph()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            EndNode end = Add<EndNode>();
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("First story"));
+            Connect(start, dialogue);
+            Connect(dialogue, end);
+            RuntimeNovelGraph first = Import();
+
+            NovelGraph secondGraph = GraphDatabase.CreateGraph<NovelGraph>(
+                _folder + "/OtherStory.novelgraph");
+            secondGraph.UndoBeginRecordGraph("Build other story");
+            var otherStart = new StartNode();
+            var otherDialogue = new SimpleDialogueNode();
+            var otherEnd = new EndNode();
+            secondGraph.AddNode(otherStart);
+            secondGraph.AddNode(otherDialogue);
+            secondGraph.AddNode(otherEnd);
+            otherDialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("Second story"));
+            Assert.That(secondGraph.Connect(otherStart.GetOutputPortByName("out"),
+                otherDialogue.GetInputPortByName("in")), Is.True);
+            Assert.That(secondGraph.Connect(otherDialogue.GetOutputPortByName("out"),
+                otherEnd.GetInputPortByName("in")), Is.True);
+            secondGraph.UndoEndRecordGraph();
+            GraphDatabase.SaveGraph(secondGraph);
+            AssetDatabase.ImportAsset(_folder + "/OtherStory.novelgraph",
+                ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph second = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(
+                _folder + "/OtherStory.novelgraph");
+            secondGraph.OnDisable();
+
+            List<NovelLineRecord> firstLines = NovelLineIndex.Collect(first);
+            List<NovelLineRecord> secondLines = NovelLineIndex.Collect(second);
+            Assert.That(firstLines.Select(line => line.Source), Does.Contain("First story"));
+            Assert.That(firstLines.Any(line => line.Source == "Second story"), Is.False);
+            Assert.That(secondLines.Select(line => line.Source), Does.Contain("Second story"));
+            Assert.That(secondLines.Any(line => line.Source == "First story"), Is.False);
+
+            var table = ScriptableObject.CreateInstance<NovelLocalizationTable>();
+            table.SourceGraph = first;
+            AssetDatabase.CreateAsset(table, _folder + "/ScopedTranslations.asset");
+            Assert.That(NovelLineIndex.Sync(table,
+                firstLines.Concat(secondLines).ToList(), "es"),
+                Is.EqualTo(firstLines.Count));
+            Assert.That(table.Lines.All(line => firstLines.Any(record => record.Key == line.Key)),
+                Is.True);
+        }
+
+        [Test]
+        public void LocalizationBulkSaveCommitsDialogueAndChoiceTogether()
+        {
+            RuntimeNovelGraph graph = ScriptableObject.CreateInstance<RuntimeNovelGraph>();
+            AssetDatabase.CreateAsset(graph, _folder + "/Compiled.asset");
+            var table = ScriptableObject.CreateInstance<NovelLocalizationTable>();
+            table.SourceGraph = graph;
+            AssetDatabase.CreateAsset(table, _folder + "/Translations.asset");
+            var records = new List<NovelLineRecord>
+            {
+                new NovelLineRecord
+                {
+                    Key = "line", Kind = "Dialogue", Source = "<b>Hello</b>", Graph = graph
+                },
+                new NovelLineRecord
+                {
+                    Key = "choice", Kind = "Choice", Source = "<i>Go</i>", Graph = graph
+                }
+            };
+            var edits = new Dictionary<string, string>
+            {
+                ["line"] = "<b>Hola</b>",
+                ["choice"] = "<i>Ir</i>"
+            };
+
+            Assert.That(NovelLineIndex.SaveTranslations(table, records, "es", edits),
+                Is.EqualTo(2));
+            Assert.That(table.Lines.Single(line => line.Key == "line")
+                .Translations.Single().Text, Is.EqualTo("<b>Hola</b>"));
+            Assert.That(table.Lines.Single(line => line.Key == "choice")
+                .Translations.Single().Text, Is.EqualTo("<i>Ir</i>"));
+            Assert.That(table.Lines.All(line => line.Translations.Single().NeedsReview == false),
+                Is.True);
+        }
+
+        [Test]
+        public void LocalizationShowsSpeakerAsContextWithoutCreatingANameTranslation()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            EndNode end = Add<EndNode>();
+            dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("Hello there"));
+            Connect(start, dialogue);
+            Connect(dialogue, end);
+
+            List<NovelLineRecord> records = NovelLineIndex.Collect(Import());
+            Assert.That(records.Count, Is.EqualTo(1));
+            Assert.That(records[0].Kind, Is.EqualTo("Dialogue"));
+            Assert.That(records[0].Speaker, Is.EqualTo("Test Speaker"));
+        }
+
+        [Test]
+        public void LocalizationRichTextDraftIsEditable()
+        {
+            NovelLocalizationWorkspace window = ScriptableObject.CreateInstance<NovelLocalizationWorkspace>();
+            try
+            {
+                MethodInfo getDraft = typeof(NovelLocalizationWorkspace).GetMethod("GetDraft",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(getDraft, Is.Not.Null);
+                object state = getDraft.Invoke(window, new object[]
+                {
+                    new NovelLineRecord { Key = "editable", Source = "Hello" }, null
+                });
+                var localizedDraft = (ScriptableObject)state.GetType()
+                    .GetField("LocalizedDraft", BindingFlags.Instance | BindingFlags.Public)
+                    .GetValue(state);
+                Assert.That(localizedDraft.hideFlags & HideFlags.NotEditable,
+                    Is.EqualTo(HideFlags.None));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void PublicCompilerInterfacesCompileExternalFlowAndValueNodes()
+        {
+            StartNode start = Add<StartNode>();
+            ExtensionWaitAuthoringNode wait = Add<ExtensionWaitAuthoringNode>();
+            ExtensionDoubleAuthoringNode twice = Add<ExtensionDoubleAuthoringNode>();
+            ScreenShakeNode shake = Add<ScreenShakeNode>();
+            EndNode end = Add<EndNode>();
+            wait.GetInputPortByName("Seconds").TrySetValue(0.2f);
+            twice.GetInputPortByName("Value").TrySetValue(0.4f);
+            Assert.That(_graph.Connect(twice.GetOutputPortByName("Result"),
+                shake.GetInputPortByName("Duration")), Is.True);
+            Connect(start, wait);
+            Connect(wait, shake);
+            Connect(shake, end);
+
+            RuntimeNovelGraph graph = Import();
+            RuntimeWaitNode compiledWait = graph.AllNodes.OfType<RuntimeWaitNode>().Single();
+            RuntimeScreenShakeNode compiledShake = graph.AllNodes.OfType<RuntimeScreenShakeNode>().Single();
+            Assert.That(compiledWait.Duration, Is.EqualTo(0.2f));
+            Assert.That(compiledWait.NodeID, Is.EqualTo(graph.EntryNodeID));
+            Assert.That(compiledWait.NextNodeID, Is.EqualTo(compiledShake.NodeID));
+            Assert.That(graph.AllNodes.Count, Is.EqualTo(3));
+            Assert.That(compiledShake.DurationValue, Is.TypeOf<RuntimeArithmeticExpression>());
+            var doubled = (RuntimeArithmeticExpression)compiledShake.DurationValue;
+            Assert.That(doubled.Operation, Is.EqualTo(RuntimeArithmeticOperation.Multiply));
+            Assert.That(((RuntimeConstantExpression)doubled.A).Value.FloatValue, Is.EqualTo(0.4f));
+            Assert.That(((RuntimeConstantExpression)doubled.B).Value.FloatValue, Is.EqualTo(2f));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void SetupWizardStarterCompilesToPlayableGraph(bool withChoices)
+        {
+            _graph.UndoEndRecordGraph();
+            NovelSetupWizard.PopulateStarterGraph(_graph, withChoices);
+            GraphDatabase.SaveGraph(_graph);
+            AssetDatabase.ImportAsset(_folder + "/Story.novelgraph", ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(
+                _folder + "/Story.novelgraph");
+
+            Assert.That(runtime, Is.Not.Null);
+            Assert.That(runtime.EntryNodeID, Is.Not.Empty);
+            Assert.That(runtime.AllNodes.OfType<RuntimeDialogueNode>().Count(),
+                Is.EqualTo(withChoices ? 4 : 1));
+            Assert.That(runtime.AllNodes.OfType<RuntimeChoiceNode>().Count(),
+                Is.EqualTo(withChoices ? 1 : 0));
+        }
+
+        [Test]
+        public void CharacterPassThroughAndMovementOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            TranslateSpeakerPortraitNode translate = Add<TranslateSpeakerPortraitNode>();
+            ShowCharacterNode show = Add<ShowCharacterNode>();
+            EndNode end = Add<EndNode>();
+            dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
+            _graph.Connect(dialogue.GetOutputPortByName("Current Speaker"), translate.GetInputPortByName("Character"));
+            _graph.Connect(translate.GetOutputPortByName("Character"), show.GetInputPortByName("Character"));
+            translate.GetNodeOptionByName("Smooth Movement").TrySetValue(true);
+            translate.GetNodeOptionByName("Duration").TrySetValue(0.75f);
+            translate.GetNodeOptionByName("OffsetX").TrySetValue(240f);
+            translate.GetNodeOptionByName("Instance ID").TrySetValue("second");
+            Connect(start, dialogue); Connect(dialogue, translate); Connect(translate, show); Connect(show, end);
+            RuntimeNovelGraph runtime = Import();
+            var move = runtime.AllNodes.OfType<RuntimeTranslateSpeakerPortraitNode>().Single();
+            Assert.That(move.Character, Is.EqualTo(_character));
+            Assert.That(move.InstanceID, Is.EqualTo("second"));
+            Assert.That(move.SmoothMovement, Is.True);
+            Assert.That(move.Duration, Is.EqualTo(0.75f));
+            Assert.That(move.OffsetX, Is.EqualTo(240f));
+            Assert.That(runtime.AllNodes.OfType<RuntimeShowCharacterNode>().Single().Character, Is.EqualTo(_character));
+            Assert.That(runtime.AllNodes.Any(node => node.NodeID == runtime.EntryNodeID), Is.True);
+            foreach (RuntimeNode node in runtime.AllNodes)
+                if (!string.IsNullOrEmpty(node.NextNodeID))
+                    Assert.That(runtime.AllNodes.Any(next => next.NodeID == node.NextNodeID), Is.True);
+        }
+
+        [Test]
+        public void ChoiceExtensionCompilesConditionsStableIdsPoliciesTransactionsAndFallback()
+        {
+            NovelVariableDefinition coins = ScriptableObject.CreateInstance<NovelVariableDefinition>();
+            coins.name = "Coins";
+            coins.DisplayName = "Coins";
+            coins.Type = NovelVariableType.Integer;
+            coins.Scope = NovelVariableScope.Story;
+            coins.EnsureID();
+            AssetDatabase.CreateAsset(coins, _folder + "/Coins.asset");
+            NovelChoiceTransactionDefinition transaction = ScriptableObject.CreateInstance<NovelChoiceTransactionDefinition>();
+            transaction.Changes.Add(new NovelChoiceStateChangeDefinition
+            {
+                Variable = coins,
+                Operation = NovelChoiceStateOperation.Spend,
+                IntegerValue = 20
+            });
+            AssetDatabase.CreateAsset(transaction, _folder + "/BuyKey.asset");
+
+            StartNode start = Add<StartNode>();
+            ChoiceNode choice = Add<ChoiceNode>();
+            EndNode purchaseEnd = Add<EndNode>();
+            EndNode leaveEnd = Add<EndNode>();
+            EndNode fallbackEnd = Add<EndNode>();
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "buy-key";
+            choices.Entries[0].Text = "Buy the key -- 20 coins";
+            choices.Entries[0].UnavailablePolicy = NovelChoiceUnavailablePolicy.Disable;
+            choices.Entries[0].DisabledReason = "Need 20 coins.";
+            choices.Entries[0].OnceOnly = true;
+            choices.Entries[0].Transaction = transaction;
+            choices.Entries[1].Text = "Leave";
+            choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices);
+            choice.DefineNode();
+            choice.GetInputPortByName("Condition 0").TrySetValue(false);
+            Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), purchaseEnd.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 1"), leaveEnd.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Fallback"), fallbackEnd.GetInputPortByName("in")), Is.True);
+
+            RuntimeChoiceNode runtime = Import().AllNodes.OfType<RuntimeChoiceNode>().Single();
+            ChoiceData purchase = runtime.Choices[0];
+            Assert.That(purchase.ChoiceID, Is.EqualTo("buy-key"));
+            Assert.That(purchase.Condition, Is.TypeOf<RuntimeConstantExpression>());
+            Assert.That(((RuntimeConstantExpression)purchase.Condition).Value.BooleanValue, Is.False);
+            Assert.That(purchase.UnavailablePolicy, Is.EqualTo(NovelChoiceUnavailablePolicy.Disable));
+            Assert.That(purchase.DisabledReason, Is.EqualTo("Need 20 coins."));
+            Assert.That(purchase.OnceOnly, Is.True);
+            Assert.That(purchase.StateChanges.Single().Operation, Is.EqualTo(NovelChoiceStateOperation.Spend));
+            Assert.That(((RuntimeConstantExpression)purchase.StateChanges.Single().Value).Value.IntegerValue, Is.EqualTo(20));
+            Assert.That(runtime.Choices[1].ChoiceID, Is.Not.Null.And.Not.Empty, "Blank IDs must derive a stable fallback ID.");
+            Assert.That(runtime.UnavailableDestinationNodeID, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void ChoiceDropdownUsesItsIdForTheOutputNameAndRuntimeChoice()
+        {
+            StartNode start = Add<StartNode>();
+            ChoiceNode choice = Add<ChoiceNode>();
+            EndNode end = Add<EndNode>();
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault();
+            choices.Entries[0].ID = "mall";
+            choices.Entries[0].Text = "Let's go to the mall";
+            Assert.That(choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices), Is.True);
+            choice.DefineNode();
+
+            Assert.That(choice.GetOutputPortByName("Choice 0").DisplayName, Is.EqualTo("mall"));
+            Assert.That(choice.GetInputPortByName("Condition 0"), Is.Not.Null,
+                "Only the non-redundant dynamic availability input should remain per choice.");
+            Assert.That(_graph.Connect(start.GetOutputPortByName("out"), choice.GetInputPortByName("in")), Is.True);
+            Assert.That(_graph.Connect(choice.GetOutputPortByName("Choice 0"), end.GetInputPortByName("in")), Is.True);
+
+            RuntimeChoiceNode runtime = Import().AllNodes.OfType<RuntimeChoiceNode>().Single();
+            Assert.That(runtime.Choices[0].ChoiceID, Is.EqualTo("mall"));
+            Assert.That(runtime.Choices[0].ChoiceText, Is.EqualTo("Let's go to the mall"));
+        }
+
+        [Test]
+        public void ImportedDialogueHasStableLocalizationKey()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("A line that can be translated."));
+            Connect(start, dialogue);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeDialogueNode line = runtime.AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(line.LineID, Is.EqualTo(
+                NovelLocalizationKey.Dialogue(runtime.GraphID, line.NodeID)));
+        }
+
+        [Test]
+        public void DialogueSoundMarkerCompilesToItsVisibleCharacterIndex()
+        {
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            dialogue.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("Hello <b>dear</b> <link=\"novelify-sound\">friend</link>."));
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.PlaySoundCharacterIndex, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void DialogueFontsAndFontMarkupSurviveImport()
+        {
+            Font font = AssetDatabase.LoadAssetAtPath<Font>(
+                "Packages/com.artuandev.novelify/Fonts/LiberationSans.ttf");
+            Assert.That(font, Is.Not.Null);
+
+            StartNode start = Add<StartNode>();
+            SimpleDialogueNode dialogue = Add<SimpleDialogueNode>();
+            var authored = new RichDialogueText(
+                $"Hello <font=\"{font.name}\">friend</font>.")
+            {
+                DefaultFont = font,
+                FontAssets = new List<Font> { font }
+            };
+            Assert.That(dialogue.GetNodeOptionByName("Dialogue").TrySetValue(authored), Is.True);
+            Connect(start, dialogue);
+
+            RuntimeDialogueNode runtime = Import().AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(runtime.DialogueFont, Is.SameAs(font));
+            Assert.That(runtime.DialogueFontAssets, Is.EquivalentTo(new[] { font }));
+            Assert.That(runtime.DialogueText, Does.Contain($"<font=\"{font.name}\">"));
+        }
+
+        [Test]
+        public void RandomNumberNodeCompilesAsANumericExpression()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            RandomNumberNode random = Add<RandomNumberNode>();
+            EndNode end = Add<EndNode>();
+            random.GetNodeOptionByName("Number Type").TrySetValue(NovelNumericType.Float);
+            random.DefineNode();
+            random.GetInputPortByName("Minimum").TrySetValue(-15f);
+            random.GetInputPortByName("Maximum").TrySetValue(15f);
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Assert.That(_graph.Connect(random.GetOutputPortByName("Result"),
+                transform.GetInputPortByName("Rotation")), Is.True);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode runtime = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            var expression = runtime.RotationValue as RuntimeRandomNumberExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.ValueKind, Is.EqualTo(RuntimeValueKind.Float));
+            Assert.That(((RuntimeConstantExpression)expression.Minimum).Value.FloatValue, Is.EqualTo(-15f));
+            Assert.That(((RuntimeConstantExpression)expression.Maximum).Value.FloatValue, Is.EqualTo(15f));
+        }
+
+        [Test]
+        public void TransformSpeakerPortraitOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            transform.GetInputPortByName("Position").TrySetValue(new Vector2(0.75f, -0.25f));
+            transform.GetInputPortByName("Rotation").TrySetValue(35f);
+            transform.GetInputPortByName("Scale").TrySetValue(new Vector2(1.5f, 0.8f));
+            transform.GetInputPortByName("Margin").TrySetValue(120f);
+            transform.GetInputPortByName("Opacity").TrySetValue(0.4f);
+            transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
+            transform.GetNodeOptionByName("Animate Transparency").TrySetValue(true);
+            transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.Custom);
+            transform.GetNodeOptionByName("Custom Easing Curve").TrySetValue(new AnimationCurve(
+                new Keyframe(0f, 0f),
+                new Keyframe(0.4f, 0.15f),
+                new Keyframe(1f, 1f)));
+            Connect(start, transform);
+            Connect(transform, dialogue);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeTransformSpeakerPortraitNode result = runtime.AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single(node => node is not RuntimeTranslateSpeakerPortraitNode);
+
+            Assert.That(result.Character, Is.EqualTo(_character));
+            Assert.That(result.PositionIsNormalized, Is.True);
+            Assert.That(result.OffsetX, Is.EqualTo(0.75f));
+            Assert.That(result.OffsetY, Is.EqualTo(-0.25f));
+            Assert.That(result.Rotation, Is.EqualTo(35f));
+            Assert.That(result.Scale, Is.EqualTo(new Vector2(1.5f, 0.8f)));
+            Assert.That(result.Margin, Is.EqualTo(120f));
+            Assert.That(result.Opacity, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.AnimateOpacity, Is.True);
+            Assert.That(result.OpacityValue, Is.TypeOf<RuntimeConstantExpression>());
+            Assert.That(result.SmoothMovement, Is.True);
+            Assert.That(result.UseEasingPreset, Is.True);
+            Assert.That(result.Easing, Is.EqualTo(PortraitTweenEasing.Custom));
+            Assert.That(result.CustomEasingCurve.length, Is.EqualTo(3));
+            Assert.That(result.CustomEasingCurve.keys[1].time, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(result.CustomEasingCurve.keys[1].value, Is.EqualTo(0.15f).Within(0.0001f));
+            Assert.That(result.PositionValue, Is.TypeOf<RuntimeConstantExpression>());
+        }
+
+        [Test]
+        public void DialogueAppearanceAndHideTransitionOptionsSurviveImport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
+            dialogue.GetNodeOptionByName("Character Appearance").TrySetValue(CharacterTransitionMode.FadeAndSlide);
+            dialogue.GetNodeOptionByName("Appear From").TrySetValue(CharacterTransitionDirection.Right);
+            dialogue.GetNodeOptionByName("Appearance Duration").TrySetValue(0.6f);
+            dialogue.GetNodeOptionByName("Appearance Easing").TrySetValue(PortraitTweenEasing.Bounce);
+            HideCharacterNode hide = Add<HideCharacterNode>();
+            hide.GetInputPortByName("Character").TrySetValue(_character);
+            hide.GetNodeOptionByName("Hide Transition").TrySetValue(CharacterTransitionMode.Fade);
+            hide.GetNodeOptionByName("Exit Toward").TrySetValue(CharacterTransitionDirection.Up);
+            hide.GetNodeOptionByName("Duration").TrySetValue(0.45f);
+            hide.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.EaseInOut);
+            hide.GetNodeOptionByName("Wait For Completion").TrySetValue(false);
+            Connect(start, dialogue);
+            Connect(dialogue, hide);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeDialogueNode line = runtime.AllNodes.OfType<RuntimeDialogueNode>().Single();
+            Assert.That(line.Appearance, Is.EqualTo(CharacterTransitionMode.FadeAndSlide));
+            Assert.That(line.AppearanceDirection, Is.EqualTo(CharacterTransitionDirection.Right));
+            Assert.That(line.AppearanceDuration, Is.EqualTo(0.6f));
+            Assert.That(line.AppearanceEasing, Is.EqualTo(PortraitTweenEasing.Bounce));
+
+            RuntimeHideCharacterNode exit = runtime.AllNodes.OfType<RuntimeHideCharacterNode>().Single();
+            Assert.That(exit.Transition, Is.EqualTo(CharacterTransitionMode.Fade));
+            Assert.That(exit.Direction, Is.EqualTo(CharacterTransitionDirection.Up));
+            Assert.That(exit.Duration, Is.EqualTo(0.45f));
+            Assert.That(exit.Easing, Is.EqualTo(PortraitTweenEasing.EaseInOut));
+            Assert.That(exit.WaitForCompletion, Is.False);
+        }
+
+        [Test]
+        public void AuthoredGraphAndNodeIdsRemainStableAcrossReimport()
+        {
+            StartNode start = Add<StartNode>();
+            DialogueNode dialogue = Add<DialogueNode>();
+            EndNode end = Add<EndNode>();
+            Connect(start, dialogue);
+            Connect(dialogue, end);
+
+            RuntimeNovelGraph firstImport = Import();
+            string graphID = firstImport.GraphID;
+            string[] nodeIDs = firstImport.AllNodes.Select(node => node.NodeID).OrderBy(id => id).ToArray();
+            string entryID = firstImport.EntryNodeID;
+
+            AssetDatabase.ImportAsset(_folder + "/Story.novelgraph", ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph secondImport = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(_folder + "/Story.novelgraph");
+
+            Assert.That(graphID, Is.Not.Null.And.Not.Empty);
+            Assert.That(secondImport.GraphID, Is.EqualTo(graphID));
+            Assert.That(secondImport.EntryNodeID, Is.EqualTo(entryID));
+            CollectionAssert.AreEqual(nodeIDs, secondImport.AllNodes.Select(node => node.NodeID).OrderBy(id => id).ToArray());
+            Assert.That(secondImport.SchemaVersion, Is.EqualTo(RuntimeNovelGraph.CurrentSchemaVersion));
+            Assert.That(secondImport.ContentVersion, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void SharedValueOutputCanFeedBothArithmeticOperands()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            AddFloatNode add = Add<AddFloatNode>();
+            EndNode end = Add<EndNode>();
+            IVariable amount = _graph.CreateVariable("Amount", typeof(float), 12f, VariableKind.Local);
+            IVariableNode amountNode = _graph.AddVariableNode(amount, Vector2.zero);
+
+            IPort amountOutput = amountNode.GetOutputPorts().Single();
+            Assert.That(_graph.Connect(amountOutput, add.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(amountOutput, add.GetInputPortByName("B")), Is.True);
+            Assert.That(_graph.Connect(add.GetOutputPortByName("Result"), transform.GetInputPortByName("Rotation")), Is.True);
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            var expression = result.RotationValue as RuntimeArithmeticExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(((RuntimeConstantExpression)expression.A).Value.FloatValue, Is.EqualTo(12f));
+            Assert.That(((RuntimeConstantExpression)expression.B).Value.FloatValue, Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void CyclicExpressionProducesAClearImportDiagnostic()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            AddFloatNode first = Add<AddFloatNode>();
+            AddFloatNode second = Add<AddFloatNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            Assert.That(_graph.Connect(first.GetOutputPortByName("Result"), second.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(second.GetOutputPortByName("Result"), first.GetInputPortByName("A")), Is.True);
+            Assert.That(_graph.Connect(first.GetOutputPortByName("Result"), transform.GetInputPortByName("Rotation")), Is.True);
+            Connect(start, transform);
+            Connect(transform, end);
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Cyclic value expression detected"));
+            Import();
+        }
+
+        [Test]
+        public void CharacterReferenceAndCoordinateSpaceCompileExplicitly()
+        {
+            StartNode start = Add<StartNode>();
+            MakeNovelCharacterReferenceNode make = Add<MakeNovelCharacterReferenceNode>();
+            ShowCharacterNode show = Add<ShowCharacterNode>();
+            EndNode end = Add<EndNode>();
+            make.GetInputPortByName("Character").TrySetValue(_character);
+            make.GetInputPortByName("Instance ID").TrySetValue("second");
+            show.GetNodeOptionByName("Coordinate Space").TrySetValue(CharacterPositionSpace.Normalized);
+            Assert.That(_graph.Connect(make.GetOutputPortByName("Character Reference"),
+                show.GetInputPortByName("Character Reference")), Is.True);
+            Connect(start, show);
+            Connect(show, end);
+
+            RuntimeShowCharacterNode result = Import().AllNodes.OfType<RuntimeShowCharacterNode>().Single();
+            Assert.That(result.PositionSpace, Is.EqualTo(CharacterPositionSpace.Normalized));
+            Assert.That(result.CharacterReferenceValue, Is.TypeOf<RuntimeMakeCharacterReferenceExpression>());
+        }
+
+        [Test]
+        public void VectorMathAndCharacterSplitCompileIntoLiveExpressions()
+        {
+            StartNode start = Add<StartNode>();
+            SplitNovelCharacterNode split = Add<SplitNovelCharacterNode>();
+            SubtractVector2Node subtract = Add<SubtractVector2Node>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+
+            split.GetInputPortByName("Character").TrySetValue(_character);
+            subtract.GetInputPortByName("B").TrySetValue(new Vector2(0.1f, 0f));
+            _graph.Connect(split.GetOutputPortByName("Character"), transform.GetInputPortByName("Character"));
+            _graph.Connect(split.GetOutputPortByName("Position (Normalized)"), subtract.GetInputPortByName("A"));
+            _graph.Connect(subtract.GetOutputPortByName("Result"), transform.GetInputPortByName("Position"));
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeTransformSpeakerPortraitNode result = runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            Assert.That(result.CharacterValue, Is.TypeOf<RuntimeCharacterComponentExpression>());
+            Assert.That(result.PositionValue, Is.TypeOf<RuntimeArithmeticExpression>());
+            Assert.That(runtime.AllNodes.Count, Is.EqualTo(2),
+                "Only Transform and End should be emitted; pure value nodes are expressions.");
+        }
+
+        [Test]
+        public void NovelFunctionAssetExposesInputsOutputsAndCompilesAsCallableNode()
+        {
+            string functionPath = _folder + "/MoveTarget.novelfunction";
+            NovelFunctionGraph function = GraphDatabase.CreateGraph<NovelFunctionGraph>(functionPath);
+            function.UndoBeginRecordGraph("Build function");
+            try
+            {
+                function.EnsureFlowInterface();
+                Assert.That(function.GetVariables().Any(variable =>
+                    variable.Name == NovelFunctionGraph.EnterVariableName && variable.VariableKind == VariableKind.Input), Is.True);
+                Assert.That(function.GetVariables().Any(variable =>
+                    variable.Name == NovelFunctionGraph.ContinueVariableName && variable.VariableKind == VariableKind.Output), Is.True);
+
+                IVariable target = function.CreateInterfaceVariable("Target", typeof(NovelCharacter), _character, VariableKind.Input);
+                IVariable destination = function.CreateInterfaceVariable("Destination", typeof(Vector2), Vector2.zero, VariableKind.Input);
+                IVariable finalPosition = function.CreateInterfaceVariable("Final Position", typeof(Vector2), Vector2.zero, VariableKind.Output);
+                var start = new StartNode();
+                var transform = new TransformSpeakerPortraitNode();
+                var split = new SplitNovelCharacterNode();
+                var end = new EndNode();
+                function.AddNode(start);
+                function.AddNode(transform);
+                function.AddNode(split);
+                function.AddNode(end);
+                IVariableNode targetNode = function.AddVariableNode(target, Vector2.zero);
+                IVariableNode destinationNode = function.AddVariableNode(destination, Vector2.zero);
+                IVariableNode outputNode = function.AddVariableNode(finalPosition, Vector2.zero);
+
+                Assert.That(function.Connect(start.GetOutputPortByName("out"), transform.GetInputPortByName("in")), Is.True);
+                Assert.That(function.Connect(transform.GetOutputPortByName("out"), end.GetInputPortByName("in")), Is.True);
+                Assert.That(function.Connect(targetNode.GetOutputPorts().Single(), transform.GetInputPortByName("Character")), Is.True);
+                Assert.That(function.Connect(targetNode.GetOutputPorts().Single(), split.GetInputPortByName("Character")), Is.True);
+                Assert.That(function.Connect(destinationNode.GetOutputPorts().Single(), transform.GetInputPortByName("Position")), Is.True);
+                Assert.That(function.Connect(split.GetOutputPortByName("Position (Normalized)"), outputNode.GetInputPorts().Single()), Is.True);
+
+                function.UndoEndRecordGraph();
+                GraphDatabase.SaveGraph(function);
+                AssetDatabase.ImportAsset(functionPath, ImportAssetOptions.ForceUpdate);
+                RuntimeNovelFunction compiledFunction = AssetDatabase.LoadAssetAtPath<RuntimeNovelFunction>(functionPath);
+                Assert.That(compiledFunction, Is.Not.Null);
+                Assert.That(compiledFunction.Inputs.Select(input => input.Name), Is.EquivalentTo(new[] { "Target", "Destination" }));
+                Assert.That(compiledFunction.Outputs.Single().Name, Is.EqualTo("Final Position"));
+
+                _graph.UndoEndRecordGraph();
+                GraphDatabase.SaveGraph(_graph);
+                _graph = GraphDatabase.LoadGraph<NovelGraph>(_folder + "/Story.novelgraph");
+                _graph.UndoBeginRecordGraph("Add function call");
+                var graphStart = new StartNode();
+                var graphEnd = new EndNode();
+                _graph.AddNode(graphStart);
+                _graph.AddNode(graphEnd);
+                INode call = _graph.AddSubgraphNode(function, Vector2.zero);
+                IPort targetPort = call.GetInputPorts().Single(port => port.DisplayName == "Target");
+                IPort destinationPort = call.GetInputPorts().Single(port => port.DisplayName == "Destination");
+                IPort enterPort = call.GetInputPorts().Single(port => port.DisplayName == "Enter");
+                IPort continuePort = call.GetOutputPorts().Single(port => port.DisplayName == "Continue");
+                targetPort.TrySetValue(_character);
+                destinationPort.TrySetValue(new Vector2(0.5f, 0f));
+                Assert.That(_graph.Connect(graphStart.GetOutputPortByName("out"), enterPort), Is.True);
+                Assert.That(_graph.Connect(continuePort, graphEnd.GetInputPortByName("in")), Is.True);
+
+                RuntimeNovelGraph compiledGraph = Import();
+                RuntimeCallNovelFunctionNode runtimeCall = compiledGraph.AllNodes.OfType<RuntimeCallNovelFunctionNode>().Single();
+                Assert.That(runtimeCall.Function, Is.SameAs(compiledFunction));
+                Assert.That(runtimeCall.Arguments.Select(argument => argument.Name), Is.EquivalentTo(new[] { "Target", "Destination" }));
+                RuntimeFunctionArgument targetArgument = runtimeCall.Arguments.Single(argument => argument.Name == "Target");
+                Assert.That(targetArgument.Value, Is.TypeOf<RuntimeConstantExpression>());
+                Assert.That(((RuntimeConstantExpression)targetArgument.Value).Value.ObjectValue, Is.SameAs(_character));
+                Assert.That(runtimeCall.NextNodeID, Is.Not.Null.And.Not.Empty);
+            }
+            finally
+            {
+                if (function != null) function.OnDisable();
+            }
+        }
+
+        [Test]
+        public void JumpResolvesItsLabelAndContinuesFromThere()
+        {
+            StartNode start = Add<StartNode>();
+            JumpNode jump = Add<JumpNode>();
+            LabelNode label = Add<LabelNode>();
+            DialogueNode destination = Add<DialogueNode>();
+            jump.GetInputPortByName("Label").TrySetValue("Ending");
+            label.GetInputPortByName("Label").TrySetValue("ending");
+            Connect(start, jump);
+            Connect(label, destination);
+
+            RuntimeNovelGraph runtime = Import();
+            var lookup = runtime.AllNodes.ToDictionary(node => node.NodeID);
+            RuntimeNode jumpRuntime = lookup[runtime.EntryNodeID];
+            RuntimeNode labelRuntime = lookup[jumpRuntime.NextNodeID];
+
+            Assert.That(lookup[labelRuntime.NextNodeID], Is.TypeOf<RuntimeDialogueNode>());
+        }
+
+        [Test]
+        public void SampleGraphImportsItsSpeechBubbleFlowAndCharacters()
+        {
+            const string path = "Assets/Novelify/Samples/NovelGraphs/Example.novelgraph";
+            if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) == null)
+                Assert.Ignore("The optional development-project artwork sample is not installed.");
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            RuntimeNovelGraph runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(path);
+
+            Assert.That(runtime, Is.Not.Null);
+            Assert.That(runtime.AllNodes.OfType<RuntimeCreateSpeechBubbleNode>().Count(), Is.EqualTo(2));
+            Assert.That(runtime.AllNodes.OfType<RuntimeSpeechBubbleNode>().Count(), Is.EqualTo(2));
+            Assert.That(runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Count(), Is.EqualTo(1));
+            Assert.That(
+                runtime.AllNodes.OfType<RuntimeSpeechBubbleNode>()
+                    .Select(node => node.NovelCharacter?.name),
+                Is.EquivalentTo(new[] { "Hoki", "Daisy" }));
+        }
+
+        [Test]
+        public void AllUtilityNodeTypesImportAndCharacterOutputsNeverBecomeStoryFlow()
+        {
+            StartNode start = Add<StartNode>();
+            ShowCharacterNode show = Add<ShowCharacterNode>();
+            show.GetInputPortByName("Character").TrySetValue(_character);
+            HideCharacterNode hide = Add<HideCharacterNode>();
+            _graph.Connect(show.GetOutputPortByName("Character"), hide.GetInputPortByName("Character"));
+            Connect(start, show);
+            Add<HideAllCharactersNode>(); Add<SetCharacterEmotionNode>(); Add<WaitNode>();
+            CheckpointNode checkpoint = Add<CheckpointNode>();
+            checkpoint.GetInputPortByName("Checkpoint ID").TrySetValue("chapter-one");
+            checkpoint.GetNodeOptionByName("Save Mode").TrySetValue(NovelCheckpointSaveMode.Autosave);
+            checkpoint.GetNodeOptionByName("Autosave Slot").TrySetValue("chapter_autosave");
+            Add<DialogueEventNode>(); Add<StopSoundNode>();
+            RuntimeNovelGraph runtime = Import();
+            Assert.That(runtime.AllNodes.OfType<RuntimeShowCharacterNode>().Single().NextNodeID, Is.Null.Or.Empty);
+            Assert.That(runtime.AllNodes.OfType<RuntimeHideCharacterNode>().Single().Character, Is.EqualTo(_character));
+            Assert.That(runtime.AllNodes.OfType<RuntimeHideAllCharactersNode>().Count(), Is.EqualTo(1));
+            Assert.That(runtime.AllNodes.OfType<RuntimeSetCharacterEmotionNode>().Count(), Is.EqualTo(1));
+            Assert.That(runtime.AllNodes.OfType<RuntimeWaitNode>().Count(), Is.EqualTo(1));
+            RuntimeCheckpointNode runtimeCheckpoint = runtime.AllNodes.OfType<RuntimeCheckpointNode>().Single();
+            Assert.That(runtimeCheckpoint.CheckpointID, Is.EqualTo("chapter-one"));
+            Assert.That(runtimeCheckpoint.SaveMode, Is.EqualTo(NovelCheckpointSaveMode.Autosave));
+            Assert.That(runtimeCheckpoint.AutosaveSlotID, Is.EqualTo("chapter_autosave"));
+            Assert.That(runtime.AllNodes.OfType<RuntimeDialogueEventNode>().Count(), Is.EqualTo(1));
+            Assert.That(runtime.AllNodes.OfType<RuntimeStopSoundNode>().Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SpeechBubblePresentationAndDialogueImportSeparately()
+        {
+            StartNode start = Add<StartNode>();
+            CreateSpeechBubbleNode create = Add<CreateSpeechBubbleNode>();
+            SpeechBubbleNode bubble = Add<SpeechBubbleNode>();
+            ChangeSpeechBubbleNode change = Add<ChangeSpeechBubbleNode>();
+            EndNode end = Add<EndNode>();
+            Assert.That(create.GetInputPortByName("Preview Character"),
+                Is.Not.Null);
+            Assert.That(create.GetInputPortByName(
+                "Preview Character Reference"), Is.Not.Null);
+            create.GetInputPortByName("Preview Character")
+                .TrySetValue(_character);
+            Assert.That(bubble.GetInputPortByName("Character"), Is.Not.Null);
+            Assert.That(bubble.GetInputPortByName("Character Reference"), Is.Not.Null);
+            bubble.GetInputPortByName("Character").TrySetValue(_character);
+            bubble.GetNodeOptionByName("Dialogue").TrySetValue(
+                new RichDialogueText("A saved speech-bubble line."));
+            bubble.GetNodeOptionByName("Thinking").TrySetValue(true);
+            create.GetNodeOptionByName("Minimum Width").TrySetValue(211f);
+            create.GetNodeOptionByName("Maximum Width").TrySetValue(477f);
+            create.GetNodeOptionByName("Placement").TrySetValue(
+                NovelSpeechBubblePlacement.ScreenAnchor);
+            create.GetNodeOptionByName("Screen Anchor").TrySetValue(
+                NovelDialogueAnchor.BottomRight);
+            create.GetNodeOptionByName("Horizontal Offset").TrySetValue(-33f);
+            create.GetNodeOptionByName("Vertical Offset").TrySetValue(27f);
+            create.GetNodeOptionByName("Auto Size").TrySetValue(false);
+            create.GetNodeOptionByName("Fixed Width").TrySetValue(410f);
+            create.GetNodeOptionByName("Fixed Height").TrySetValue(170f);
+            create.GetNodeOptionByName("Text Alignment").TrySetValue(
+                NovelTextAlignment.BottomRight);
+            create.GetNodeOptionByName("Maximum Height").TrySetValue(290f);
+            create.GetNodeOptionByName("Dialogue Font Size").TrySetValue(26f);
+            create.GetNodeOptionByName("Show Speaker Name").TrySetValue(true);
+            create.GetNodeOptionByName("Show Tail").TrySetValue(false);
+            create.GetNodeOptionByName("Tail Target").TrySetValue(
+                new Vector2(0.42f, 0.81f));
+            create.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
+            create.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
+            create.GetNodeOptionByName("Fill Texture").TrySetValue(
+                Texture2D.whiteTexture);
+            create.GetNodeOptionByName("Fill Tiling").TrySetValue(
+                new Vector2(3f, 2f));
+            create.GetNodeOptionByName("Fill Offset").TrySetValue(
+                new Vector2(0.2f, -0.1f));
+            create.GetNodeOptionByName("Outline").TrySetValue(true);
+            create.GetNodeOptionByName("Outline Transparency").TrySetValue(
+                0.35f);
+            create.GetNodeOptionByName("Outline Texture").TrySetValue(
+                Texture2D.grayTexture);
+            create.GetNodeOptionByName("Outline Tiling").TrySetValue(
+                new Vector2(5f, 1.5f));
+            change.GetNodeOptionByName("Tail Length").TrySetValue(42f);
+            Connect(start, create);
+            Connect(create, bubble);
+            Connect(bubble, change);
+            Connect(change, end);
+
+            RuntimeNovelGraph graph = Import();
+            RuntimeCreateSpeechBubbleNode runtimeCreate = graph.AllNodes
+                .OfType<RuntimeCreateSpeechBubbleNode>()
+                .Single();
+            RuntimeSpeechBubbleNode runtimeDialogue = graph.AllNodes
+                .OfType<RuntimeSpeechBubbleNode>()
+                .Single();
+            RuntimeChangeSpeechBubbleNode runtimeChange = graph.AllNodes
+                .OfType<RuntimeChangeSpeechBubbleNode>()
+                .Single();
+
+            Assert.That(runtimeDialogue.NovelCharacter, Is.EqualTo(_character));
+            Assert.That(runtimeDialogue.DialogueText,
+                Is.EqualTo("A saved speech-bubble line."));
+            Assert.That(runtimeDialogue.Thinking, Is.True);
+            Assert.That(runtimeDialogue.AnimateMouth, Is.False);
+            Assert.That(runtimeCreate.MinimumWidth, Is.EqualTo(211f));
+            Assert.That(runtimeCreate.MaximumWidth, Is.EqualTo(477f));
+            Assert.That(runtimeCreate.Placement,
+                Is.EqualTo(NovelSpeechBubblePlacement.ScreenAnchor));
+            Assert.That(runtimeCreate.ScreenAnchor,
+                Is.EqualTo(NovelDialogueAnchor.BottomRight));
+            Assert.That(runtimeCreate.HorizontalOffset, Is.EqualTo(-33f));
+            Assert.That(runtimeCreate.VerticalOffset, Is.EqualTo(27f));
+            Assert.That(runtimeCreate.AutoSize, Is.False);
+            Assert.That(runtimeCreate.FixedWidth, Is.EqualTo(410f));
+            Assert.That(runtimeCreate.FixedHeight, Is.EqualTo(170f));
+            Assert.That(runtimeCreate.TextAlignment,
+                Is.EqualTo(NovelTextAlignment.BottomRight));
+            Assert.That(runtimeCreate.MaximumHeight, Is.EqualTo(290f));
+            Assert.That(runtimeCreate.DialogueFontSize, Is.EqualTo(26f));
+            Assert.That(runtimeCreate.ShowSpeakerName, Is.True);
+            Assert.That(runtimeChange.ShowSpeakerName, Is.False);
+            Assert.That(runtimeCreate.ShowTail, Is.False);
+            Assert.That(runtimeCreate.TailTarget,
+                Is.EqualTo(new Vector2(0.42f, 0.81f)));
+            Assert.That(runtimeChange.TailTarget,
+                Is.EqualTo(new Vector2(0.5f, 0.5f)));
+            Assert.That(runtimeCreate.BubbleStyle.CornerRadius, Is.EqualTo(31f));
+            Assert.That(runtimeCreate.BubbleStyle.Opacity, Is.EqualTo(0.43f));
+            Assert.That(runtimeCreate.BubbleStyle.FillTexture,
+                Is.EqualTo(Texture2D.whiteTexture));
+            Assert.That(runtimeCreate.BubbleStyle.FillTiling,
+                Is.EqualTo(new Vector2(3f, 2f)));
+            Assert.That(runtimeCreate.BubbleStyle.FillOffset,
+                Is.EqualTo(new Vector2(0.2f, -0.1f)));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineEnabled, Is.True);
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTransparency,
+                Is.EqualTo(0.35f));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTexture,
+                Is.EqualTo(Texture2D.grayTexture));
+            Assert.That(runtimeCreate.BubbleStyle.OutlineTiling,
+                Is.EqualTo(new Vector2(5f, 1.5f)));
+            Assert.That(runtimeChange.TailLength, Is.EqualTo(42f));
+            Assert.That(runtimeCreate.NextNodeID,
+                Is.EqualTo(runtimeDialogue.NodeID));
+            Assert.That(runtimeDialogue.NextNodeID,
+                Is.EqualTo(runtimeChange.NodeID));
+        }
+
+        [Test]
+        public void TransformPortraitExpandsAndImportsAnyAuthoredTargetCount()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform =
+                Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetNodeOptionByName(
+                    TransformSpeakerPortraitNode.TargetsOptionID)
+                .TrySetValue(
+                    TransformTargetAuthoringList.CreateDefault(5));
+            transform.DefineNode();
+            transform.GetInputPortByName("Character")
+                .TrySetValue(_character);
+            for (int target = 2; target <= 5; target++)
+            {
+                transform.GetInputPortByName($"Character {target}")
+                    .TrySetValue(_character);
+                transform.GetInputPortByName($"Position {target}")
+                    .TrySetValue(new Vector2(target * 0.1f, 0f));
+                transform.GetNodeOptionByName($"Instance ID {target}")
+                    .TrySetValue($"target-{target}");
+            }
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single();
+            Assert.That(result.AdditionalTargets, Has.Count.EqualTo(4));
+            Assert.That(result.AdditionalTargets[3].InstanceID,
+                Is.EqualTo("target-5"));
+            Assert.That(result.AdditionalTargets[3].OffsetX,
+                Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void TransformPortraitRecoversNumberedPortsWhenTargetMetadataIsEmpty()
+        {
+            StartNode start = Add<StartNode>();
+            TransformSpeakerPortraitNode transform =
+                Add<TransformSpeakerPortraitNode>();
+            EndNode end = Add<EndNode>();
+            transform.GetInputPortByName("Character")
+                .TrySetValue(_character);
+            transform.GetInputPortByName("Character 2")
+                .TrySetValue(_character);
+            transform.GetInputPortByName("Position 2")
+                .TrySetValue(new Vector2(0.64f, -1f));
+
+            // Reproduces graphs saved while the authoring-list entry type was
+            // empty: numbered ports survived, but Targets serialized as [].
+            transform.GetNodeOptionByName(
+                    TransformSpeakerPortraitNode.TargetsOptionID)
+                .TrySetValue(new TransformTargetAuthoringList());
+            Connect(start, transform);
+            Connect(transform, end);
+
+            RuntimeTransformSpeakerPortraitNode result = Import().AllNodes
+                .OfType<RuntimeTransformSpeakerPortraitNode>()
+                .Single();
+            Assert.That(result.AdditionalTargets, Has.Count.EqualTo(1));
+            Assert.That(result.AdditionalTargets[0].Character,
+                Is.EqualTo(_character));
+            Assert.That(result.AdditionalTargets[0].OffsetX,
+                Is.EqualTo(0.64f).Within(0.001f));
+            Assert.That(result.AdditionalTargets[0].OffsetY,
+                Is.EqualTo(-1f).Within(0.001f));
+        }
+
+        [Test]
+        public void GeneratedDialogueNodesPreserveStyleAndFlow()
+        {
+            StartNode start = Add<StartNode>();
+            CreateDialogueBoxNode dialogue = Add<CreateDialogueBoxNode>();
+            CreateDialogueSpeakerBoxNode speaker =
+                Add<CreateDialogueSpeakerBoxNode>();
+            ChangeDialogueBackgroundStyleNode style =
+                Add<ChangeDialogueBackgroundStyleNode>();
+            EndNode end = Add<EndNode>();
+            dialogue.GetNodeOptionByName("Height").TrySetValue(205f);
+            dialogue.GetNodeOptionByName("Width").TrySetValue(920f);
+            dialogue.GetNodeOptionByName("Anchor")
+                .TrySetValue(NovelDialogueAnchor.TopRight);
+            dialogue.GetNodeOptionByName("Text Alignment")
+                .TrySetValue(NovelTextAlignment.BottomRight);
+            dialogue.GetNodeOptionByName("Base Font Size").TrySetValue(34f);
+            dialogue.GetNodeOptionByName("Auto Size").TrySetValue(true);
+            dialogue.GetNodeOptionByName("Minimum Font Size").TrySetValue(17f);
+            dialogue.GetNodeOptionByName("Maximum Font Size").TrySetValue(38f);
+            speaker.GetNodeOptionByName("Anchor")
+                .TrySetValue(NovelSpeakerAnchor.RightCenter);
+            speaker.GetNodeOptionByName("Font Size")
+                .TrySetValue(31f);
+            speaker.GetNodeOptionByName("Horizontal Padding")
+                .TrySetValue(22f);
+            speaker.GetNodeOptionByName("Vertical Padding")
+                .TrySetValue(9f);
+            style.GetNodeOptionByName("Target")
+                .TrySetValue(NovelBoxTarget.Speaker);
+            style.GetNodeOptionByName("Outline").TrySetValue(true);
+            style.GetNodeOptionByName("Outline Thickness").TrySetValue(5f);
+            Connect(start, dialogue);
+            Connect(dialogue, speaker);
+            Connect(speaker, style);
+            Connect(style, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeCreateDialogueBoxNode dialogueRuntime = runtime.AllNodes
+                .OfType<RuntimeCreateDialogueBoxNode>().Single();
+            RuntimeCreateDialogueSpeakerBoxNode speakerRuntime = runtime.AllNodes
+                .OfType<RuntimeCreateDialogueSpeakerBoxNode>().Single();
+            RuntimeChangeDialogueStyleNode styleRuntime = runtime.AllNodes
+                .OfType<RuntimeChangeDialogueStyleNode>().Single();
+
+            Assert.That(dialogueRuntime.Height, Is.EqualTo(205f));
+            Assert.That(dialogueRuntime.Width, Is.EqualTo(920f));
+            Assert.That(dialogueRuntime.Anchor,
+                Is.EqualTo(NovelDialogueAnchor.TopRight));
+            Assert.That(dialogueRuntime.TextAlignment,
+                Is.EqualTo(NovelTextAlignment.BottomRight));
+            Assert.That(dialogueRuntime.BaseFontSize, Is.EqualTo(34f));
+            Assert.That(dialogueRuntime.AutoSize, Is.True);
+            Assert.That(dialogueRuntime.MinimumFontSize, Is.EqualTo(17f));
+            Assert.That(dialogueRuntime.MaximumFontSize, Is.EqualTo(38f));
+            Assert.That(speakerRuntime.Anchor,
+                Is.EqualTo(NovelSpeakerAnchor.RightCenter));
+            Assert.That(speakerRuntime.FontSize, Is.EqualTo(31f));
+            Assert.That(speakerRuntime.HorizontalPadding,
+                Is.EqualTo(22f));
+            Assert.That(speakerRuntime.VerticalPadding,
+                Is.EqualTo(9f));
+            Assert.That(styleRuntime.Target, Is.EqualTo(NovelBoxTarget.Speaker));
+            Assert.That(styleRuntime.Style.OutlineEnabled, Is.True);
+            Assert.That(styleRuntime.Style.OutlineThickness, Is.EqualTo(5f));
+            Assert.That(dialogueRuntime.NextNodeID,
+                Is.EqualTo(speakerRuntime.NodeID));
+            Assert.That(speakerRuntime.NextNodeID,
+                Is.EqualTo(styleRuntime.NodeID));
+        }
+
+        [Test]
+        public void ChoiceLayoutImportsStylePlacementGroupingAndArrangement()
+        {
+            NovelChoiceStyle choiceStyle =
+                ScriptableObject.CreateInstance<NovelChoiceStyle>();
+            AssetDatabase.CreateAsset(
+                choiceStyle, _folder + "/ChoiceStyle.asset");
+            StartNode start = Add<StartNode>();
+            CreateChoiceLayoutNode layout = Add<CreateChoiceLayoutNode>();
+            EndNode end = Add<EndNode>();
+            layout.GetNodeOptionByName("Style Asset")
+                .TrySetValue(choiceStyle);
+            layout.GetNodeOptionByName("Screen Anchor")
+                .TrySetValue(NovelDialogueAnchor.BottomLeft);
+            layout.GetNodeOptionByName("Offset")
+                .TrySetValue(new Vector2(25f, 35f));
+            layout.GetNodeOptionByName("Panel Size")
+                .TrySetValue(new Vector2(900f, 500f));
+            layout.GetNodeOptionByName("Arrangement")
+                .TrySetValue(NovelChoiceArrangement.Circular);
+            layout.GetNodeOptionByName("Choices Per Group")
+                .TrySetValue(4);
+            layout.GetNodeOptionByName("Group Spacing")
+                .TrySetValue(55f);
+            layout.GetNodeOptionByName("Circle Radius")
+                .TrySetValue(240f);
+            layout.GetNodeOptionByName("Circle Start Angle")
+                .TrySetValue(45f);
+            layout.GetNodeOptionByName("Circle Arc")
+                .TrySetValue(180f);
+            Connect(start, layout);
+            Connect(layout, end);
+
+            RuntimeCreateChoiceLayoutNode runtime = Import().AllNodes
+                .OfType<RuntimeCreateChoiceLayoutNode>().Single();
+            Assert.That(runtime.Style, Is.SameAs(choiceStyle));
+            Assert.That(runtime.Anchor,
+                Is.EqualTo(NovelDialogueAnchor.BottomLeft));
+            Assert.That(runtime.Offset,
+                Is.EqualTo(new Vector2(25f, 35f)));
+            Assert.That(runtime.PanelSize,
+                Is.EqualTo(new Vector2(900f, 500f)));
+            Assert.That(runtime.Arrangement,
+                Is.EqualTo(NovelChoiceArrangement.Circular));
+            Assert.That(runtime.ChoicesPerGroup, Is.EqualTo(4));
+            Assert.That(runtime.GroupSpacing, Is.EqualTo(55f));
+            Assert.That(runtime.CircleRadius, Is.EqualTo(240f));
+            Assert.That(runtime.CircleStartAngle, Is.EqualTo(45f));
+            Assert.That(runtime.CircleArc, Is.EqualTo(180f));
+        }
+
+        [Test]
+        public void PlayMusicAndFadePortsCompileToRuntimeExpressions()
+        {
+            AudioClip clip = AudioClip.Create("Test music", 1, 1, 44100, false);
+            try
+            {
+                StartNode start = Add<StartNode>();
+                PlayMusicNode music = Add<PlayMusicNode>();
+                FadeOutNode fade = Add<FadeOutNode>();
+                EndNode end = Add<EndNode>();
+                music.GetInputPortByName(PlayMusicNode.ClipPort)
+                    .TrySetValue(clip);
+                music.GetInputPortByName(PlayMusicNode.VolumePort)
+                    .TrySetValue(0.63f);
+                music.GetInputPortByName(PlayMusicNode.PitchPort)
+                    .TrySetValue(1.17f);
+                music.GetNodeOptionByName("Channel")
+                    .TrySetValue(NovelAudioChannel.Ambience);
+                fade.GetInputPortByName(FadeAuthoringNode.DurationPort)
+                    .TrySetValue(2f);
+                fade.GetInputPortByName(FadeAuthoringNode.SpeedPort)
+                    .TrySetValue(4f);
+                Connect(start, music);
+                Connect(music, fade);
+                Connect(fade, end);
+
+                RuntimeNovelGraph runtime = Import();
+                RuntimePlayMusicNode runtimeMusic = runtime.AllNodes
+                    .OfType<RuntimePlayMusicNode>().Single();
+                RuntimeFadeOutNode runtimeFade = runtime.AllNodes
+                    .OfType<RuntimeFadeOutNode>().Single();
+
+                Assert.That(runtimeMusic.Clip, Is.EqualTo(clip));
+                Assert.That(runtimeMusic.Volume, Is.EqualTo(0.63f));
+                Assert.That(runtimeMusic.Pitch, Is.EqualTo(1.17f));
+                Assert.That(runtimeMusic.Channel,
+                    Is.EqualTo(NovelAudioChannel.Ambience));
+                Assert.That(runtimeMusic.ClipValue,
+                    Is.TypeOf<RuntimeConstantExpression>());
+                Assert.That(runtimeFade.Duration, Is.EqualTo(2f));
+                Assert.That(runtimeFade.Speed, Is.EqualTo(4f));
+                Assert.That(runtimeFade.DurationValue,
+                    Is.TypeOf<RuntimeConstantExpression>());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(clip);
+            }
+        }
+    }
+
+    [Serializable]
+    [Node("Novelify/Tests", null, "Extension Wait")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class ExtensionWaitAuthoringNode : ActionNode
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            base.OnDefinePorts(context);
+            context.AddInputPort<float>("Seconds").WithDefaultValue(0f).Build();
+        }
+    }
+
+    public sealed class ExtensionWaitCompiler : INovelFlowNodeCompiler
+    {
+        public bool CanCompile(INode node) => node is ExtensionWaitAuthoringNode;
+        public RuntimeNode Compile(INode node, NovelNodeCompileContext context) =>
+            new RuntimeWaitNode { Duration = context.PortValue<float>(node, "Seconds") };
+    }
+
+    [Serializable]
+    [Node("Novelify/Tests", null, "Extension Double")]
+    [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
+    public sealed class ExtensionDoubleAuthoringNode : Node
+    {
+        protected override void OnDefinePorts(IPortDefinitionContext context)
+        {
+            context.AddInputPort<float>("Value").WithDefaultValue(0f).Build();
+            context.AddOutputPort<float>("Result").Build();
+        }
+    }
+
+    public sealed class ExtensionDoubleCompiler : INovelValueNodeCompiler
+    {
+        public bool CanCompile(INode node) => node is ExtensionDoubleAuthoringNode;
+        public RuntimeValueExpression Compile(IPort output, NovelNodeCompileContext context) =>
+            new RuntimeArithmeticExpression
+            {
+                Operation = RuntimeArithmeticOperation.Multiply,
+                ValueKind = RuntimeValueKind.Float,
+                A = context.Expression(output.GetNode(), "Value"),
+                B = new RuntimeConstantExpression { Value = RuntimeValue.From(2f) }
+            };
+    }
+}
