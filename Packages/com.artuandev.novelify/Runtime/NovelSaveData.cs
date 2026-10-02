@@ -38,7 +38,7 @@ namespace Novelify
     [Serializable]
     public sealed class NovelSaveData
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
         public int SchemaVersion = CurrentSchemaVersion;
         public string TimestampUtc;
         public string CheckpointID;
@@ -144,7 +144,6 @@ namespace Novelify
         public float Rotation;
         public Vector2 Scale = Vector2.one;
         public CharacterFacing Facing = CharacterFacing.Right;
-        public bool HasOpacity;
         public float Opacity = 1f;
     }
 

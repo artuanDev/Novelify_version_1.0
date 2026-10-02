@@ -32,6 +32,31 @@ projects can use `NovelGraphRunner` directly with their own input and UI.
 auto-maintained lookup for graphs and save restoration. It is not the scene UI
 or an authoring folder; you normally do not edit it.
 
+## Camera shake and character animations
+
+**Screen Shake** moves the camera transform each frame and restores its position
+when the effect finishes or playback stops. Assign **Screen Shake Camera** on
+the runner to choose a camera; otherwise it uses the dialogue canvas camera,
+then the enabled **MainCamera**. Amplitude is measured in screen pixels.
+Screen Space canvases on the same display shake by the same pixel displacement,
+so the starter backdrop, portraits, and dialogue visibly move together. Nested
+UI receives the offset only once. Positions restore when the effect finishes,
+is replaced, or playback stops. Overlay UI also works without a camera.
+Canvas render modes, materials, and the scene hierarchy remain unchanged.
+
+Under **Novelify > Characters**, use **Bounce Character**, **Shake Character**,
+or **Sway Character**, followed by **Stop Character Animation** for the same
+Character / Character Reference and Instance ID. Bounce moves vertically,
+Shake offsets both axes, and Sway rocks the portrait around its Z axis.
+Amplitude uses canvas units for Bounce/Shake and degrees for Sway; Frequency
+controls speed. Starting an effect replaces the current effect on that instance.
+
+Duration **0** loops until stopped; a positive duration ends automatically.
+**Wait For Completion** pauses flow only for a positive duration, so loops
+can run throughout dialogue and reach their stop node. Effects compose with
+Transform Characters and preserve the authored position, rotation, and scale.
+Hiding a character or ending/disabling the runner also clears its effects.
+
 ## Default player controls
 
 The wizard adds `NovelPlayerController` beside `NovelGraphRunner`. It generates

@@ -21,8 +21,6 @@ namespace Novelify
         }
 
         public NovelGraphRunner Runner => _runner;
-        [Obsolete("Use Runner. NovelManager is now only the built-in example controller.")]
-        public NovelGraphRunner Manager => _runner;
         public RuntimeNovelGraph CurrentGraph => _runner.RuntimeGraph;
         public RuntimeNode CurrentNode => _runner.CurrentNode;
         public NovelStateStore State => _runner.StateStore;

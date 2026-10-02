@@ -82,15 +82,7 @@ namespace Novelify
         CenterRight = 5,
         BottomLeft = 6,
         BottomCenter = 7,
-        BottomRight = 8,
-
-
-        [Obsolete("Use TopLeft or CenterLeft.")]
-        Left = TopLeft,
-        [Obsolete("Use TopCenter or CenterCenter.")]
-        Center = CenterCenter,
-        [Obsolete("Use TopRight or CenterRight.")]
-        Right = TopRight
+        BottomRight = 8
     }
 
     // Position of the speaker box around the dialogue panel's edges.

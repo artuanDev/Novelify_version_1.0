@@ -108,10 +108,10 @@ once shipped in saved graph assets.
 
 ## Built-in cinematic nodes
 
-`Screen Flash` pulses a colored overlay. `Screen Shake` displaces Novelify's
-generated background, UI and character stage, restoring their original
-positions after the effect or when playback stops. Both support live duration
-inputs and optional wait-for-completion. `Narration` is a speakerless localized
+`Screen Flash` pulses a colored overlay. `Screen Shake` moves the selected camera
+transform each frame, restoring its position after the effect or when playback
+stops. Screen Space canvases on the same display also move, so backgrounds,
+portraits, and dialogue visibly shake together. Both support live duration inputs and optional wait-for-completion. `Narration` is a speakerless localized
 line with optional timed continuation. These nodes work in normal and function
 graphs. Flash and shake use the built-in generated presentation; a fully custom
 `INovelPresentation` should provide its own effects if it needs a different look.

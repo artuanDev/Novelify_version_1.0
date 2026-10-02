@@ -42,9 +42,6 @@ namespace Novelify
         private bool _wasRevealing;
         private string _skipStopReason;
         private float _readyAt;
-#if ENABLE_LEGACY_INPUT_MANAGER
-        private bool _hasInputSystemAdapter;
-#endif
         private int _overlayClosedFrame = -1;
 
         private void Awake()
@@ -88,9 +85,6 @@ namespace Novelify
             if (adapterType != null && typeof(MonoBehaviour).IsAssignableFrom(adapterType))
             {
                 if (GetComponent(adapterType) == null) gameObject.AddComponent(adapterType);
-#if ENABLE_LEGACY_INPUT_MANAGER
-                _hasInputSystemAdapter = true;
-#endif
             }
             if (AutoPlayOnStart && !_runner.Session.IsRunning && _runner.RuntimeGraph != null)
                 _runner.Session.Play(_runner.RuntimeGraph);
@@ -98,9 +92,6 @@ namespace Novelify
 
         private void Update()
         {
-#if ENABLE_LEGACY_INPUT_MANAGER
-            if (!_hasInputSystemAdapter) ReadLegacyInput();
-#endif
             if (!AutoMode && !SkipMode || IsOverlayOpen || !_runner.Session.IsRunning ||
                 _line == null || _runner.Session.CurrentNode != _line) return;
             if (_line is RuntimeChoiceNode)
@@ -129,26 +120,6 @@ namespace Novelify
             _readyAt = Time.unscaledTime + (SkipMode ? 0.12f : Preferences.AutoDelay);
         }
 
-#if ENABLE_LEGACY_INPUT_MANAGER
-        private void ReadLegacyInput()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape)) { CloseOverlays(); return; }
-            if (Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.JoystickButton1)) ToggleBacklog();
-            if (Input.GetKeyDown(KeyCode.PageUp)) ScrollBacklog(0.25f);
-            if (Input.GetKeyDown(KeyCode.PageDown)) ScrollBacklog(-0.25f);
-            if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.JoystickButton7)) ToggleSettings();
-            if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.JoystickButton2)) ToggleAuto();
-            if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.JoystickButton3)) ToggleSkip();
-            bool pointer = Input.GetMouseButtonDown(0) && !IsInteractiveUIAt(Input.mousePosition);
-            for (int index = 0; index < Input.touchCount; index++)
-            {
-                Touch touch = Input.GetTouch(index);
-                if (touch.phase == TouchPhase.Began && !IsInteractiveUIAt(touch.position)) pointer = true;
-            }
-            if (pointer || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) ||
-                Input.GetKeyDown(KeyCode.JoystickButton0)) Advance();
-        }
-#endif
 
         public void Advance()
         {

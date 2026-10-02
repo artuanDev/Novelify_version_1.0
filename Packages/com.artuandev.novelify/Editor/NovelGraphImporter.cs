@@ -2,16 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Unity.Burst.CompilerServices;
 using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Novelify.Editor
 {
-    [ScriptedImporter(25, NovelGraph.AssetExtension)]
+    [ScriptedImporter(26, NovelGraph.AssetExtension)]
     public class NovelGraphImporter : ScriptedImporter
     {
         protected Graph _editorGraph;
@@ -138,28 +136,6 @@ namespace Novelify.Editor
                         speechBubbleNode,
                         runtimeSpeechBubble,
                         nodeIDMap);
-                    IPort bubbleCharacter =
-                        speechBubbleNode.GetInputPortByName("Character");
-                    IPort bubbleCharacterReference =
-                        speechBubbleNode.GetInputPortByName(
-                            "Character Reference");
-                    NovelCharacter explicitBubbleCharacter =
-                        GetPortValue<NovelCharacter>(bubbleCharacter);
-                    RuntimeValueExpression explicitBubbleCharacterValue =
-                        BuildExpression(bubbleCharacter);
-                    RuntimeValueExpression explicitBubbleReferenceValue =
-                        BuildExpression(bubbleCharacterReference);
-                    if (explicitBubbleCharacter != null ||
-                        !IsMissingConstant(explicitBubbleCharacterValue) ||
-                        !IsMissingCharacterReference(explicitBubbleReferenceValue))
-                    {
-                        runtimeSpeechBubble.NovelCharacter =
-                            explicitBubbleCharacter;
-                        runtimeSpeechBubble.CharacterValue =
-                            explicitBubbleCharacterValue;
-                        runtimeSpeechBubble.CharacterReferenceValue =
-                            explicitBubbleReferenceValue;
-                    }
                     runtimeSpeechBubble.Thinking = GetOptionValue(
                         speechBubbleNode.GetNodeOptionByName("Thinking"),
                         false);
@@ -236,34 +212,13 @@ namespace Novelify.Editor
 
                     runtimeNode = soundRuntimeNode;
                 }
-                else if (editorNode is TranslateSpeakerPortraitNode legacyTranslateNode)
-                {
-                    var runtimeTranslateSpeakerPortrait =
-                        new RuntimeTranslateSpeakerPortraitNode
-                        {
-                            NodeID = nodeIDMap[editorNode]
-                        };
-
-                    ProcessTransformSpeakerNode(
-                        legacyTranslateNode,
-                        runtimeTranslateSpeakerPortrait,
-                        nodeIDMap);
-
-                    runtimeNode = runtimeTranslateSpeakerPortrait;
-                }
                 else if (editorNode is TransformSpeakerPortraitNode transformSpeakerPortraitNode)
                 {
-                    var runtimeTransformSpeakerPortrait =
-                        new RuntimeTransformSpeakerPortraitNode
-                        {
-                            NodeID = nodeIDMap[editorNode]
-                        };
-
-                    ProcessTransformSpeakerNode(
-                        transformSpeakerPortraitNode,
-                        runtimeTransformSpeakerPortrait,
-                        nodeIDMap);
-
+                    var runtimeTransformSpeakerPortrait = new RuntimeTransformSpeakerPortraitNode
+                    {
+                        NodeID = nodeIDMap[editorNode]
+                    };
+                    ProcessTransformSpeakerNode(transformSpeakerPortraitNode, runtimeTransformSpeakerPortrait, nodeIDMap);
                     runtimeNode = runtimeTransformSpeakerPortrait;
                 }
                 else if (editorNode is FlipCharacterNode flipCharacterNode)
@@ -516,9 +471,7 @@ namespace Novelify.Editor
                     choiceIndex < authoredChoices.Count ? authoredChoices[choiceIndex] : null;
                 IPort conditionPort = node.GetInputPortByName($"Condition {index}");
 
-                string authoredChoiceID = authored?.ID?.Trim();
-                string legacyChoiceID = GetPortValue<string>(node.GetInputPortByName($"Choice ID {index}"))?.Trim();
-                string choiceID = !string.IsNullOrEmpty(authoredChoiceID) ? authoredChoiceID : legacyChoiceID;
+                string choiceID = authored?.ID?.Trim();
                 if (string.IsNullOrEmpty(choiceID)) choiceID = $"{nodeIDMap[node]}:{index}";
                 if (!_choiceIDs.Add(choiceID))
                     _context?.LogImportError($"Duplicate Choice ID '{choiceID}'. Choice IDs must be unique within a graph.");
@@ -526,42 +479,24 @@ namespace Novelify.Editor
                 var choiceData = new ChoiceData
                 {
                     ChoiceID = choiceID,
-                    ChoiceText = !string.IsNullOrEmpty(authored?.Text)
-                        ? authored.Text
-                        : GetPortValue<string>(node.GetInputPortByName($"Choice Text {index}")),
-
-                    ChoiceTextValue = !string.IsNullOrEmpty(authored?.Text)
-                        ? Constant(authored.Text)
-                        : BuildExpression(node.GetInputPortByName($"Choice Text {index}")),
-
-                    Condition = conditionPort?.IsConnected == true || authored == null || authored.Condition
+                    ChoiceText = authored?.Text ?? string.Empty,
+                    ChoiceTextValue = node.GetInputPortByName($"Choice Text {index}")?.IsConnected == true
+                        ? BuildExpression(node.GetInputPortByName($"Choice Text {index}"))
+                        : Constant(authored?.Text ?? string.Empty),
+                    Condition = conditionPort?.IsConnected == true
                         ? BuildExpression(conditionPort)
-                        : Constant(false),
-
-                    UnavailablePolicy = authored != null &&
-                                        authored.UnavailablePolicy != NovelChoiceUnavailablePolicy.Hide
-                        ? authored.UnavailablePolicy
-                        : GetPortValue<NovelChoiceUnavailablePolicy>(
-                            node.GetInputPortByName($"Unavailable Policy {index}")),
-
-                    DisabledReason = !string.IsNullOrEmpty(authored?.DisabledReason)
-                        ? authored.DisabledReason
-                        : GetPortValue<string>(node.GetInputPortByName($"Disabled Reason {index}")),
-
-                    DisabledReasonValue = !string.IsNullOrEmpty(authored?.DisabledReason)
-                        ? Constant(authored.DisabledReason)
-                        : BuildExpression(node.GetInputPortByName($"Disabled Reason {index}")),
-
-                    OnceOnly = authored?.OnceOnly == true ||
-                               GetPortValue<bool>(node.GetInputPortByName($"Once Only {index}")),
+                        : Constant((authored?.Condition ?? true) && GetPortValue<bool>(conditionPort)),
+                    UnavailablePolicy = authored?.UnavailablePolicy ?? NovelChoiceUnavailablePolicy.Hide,
+                    DisabledReason = authored?.DisabledReason ?? string.Empty,
+                    DisabledReasonValue = node.GetInputPortByName($"Disabled Reason {index}")?.IsConnected == true
+                        ? BuildExpression(node.GetInputPortByName($"Disabled Reason {index}"))
+                        : Constant(authored?.DisabledReason ?? string.Empty),
+                    OnceOnly = authored?.OnceOnly ?? false,
 
                     DestinationNodeID = GetDestinationID(outputPort, nodeIDMap)
                 };
 
-                NovelChoiceTransactionDefinition transaction = authored?.Transaction != null
-                    ? authored.Transaction
-                    : GetPortValue<NovelChoiceTransactionDefinition>(
-                        node.GetInputPortByName($"Transaction {index}"));
+                NovelChoiceTransactionDefinition transaction = authored?.Transaction;
                 if (transaction != null)
                 {
                     string transactionPath = AssetDatabase.GetAssetPath(transaction);
@@ -622,44 +557,11 @@ namespace Novelify.Editor
             runtimeNode.Volume = GetOptionValue(node.GetNodeOptionByName("Volume"), 1.0f);
             runtimeNode.Pitch = GetOptionValue(node.GetNodeOptionByName("Pitch"), 1.0f);
 
-            IPort loopPort =
-                node.GetInputPortByName("Loop");
-
-            if (loopPort != null)
-            {
-                runtimeNode.Loop =
-                    GetPortValue<bool>(loopPort);
-            }
-
             // This is the exact input port shown in your graph.
             runtimeNode.ClipSound =
                 GetPortValue<AudioClip>(
                     node.GetInputPortByName("AudioToPlay"));
             runtimeNode.ClipValue = BuildExpression(node.GetInputPortByName("AudioToPlay"));
-
-            // Fallback names for future variations.
-            if (runtimeNode.ClipSound == null)
-            {
-                runtimeNode.ClipSound =
-                    GetFirstPortValue<AudioClip>(
-                        node,
-                        "Clip Sound",
-                        "Sound",
-                        "Audio Clip",
-                        "Clip");
-            }
-
-            if (runtimeNode.ClipSound == null)
-            {
-                runtimeNode.ClipSound =
-                    GetFirstOptionValue<AudioClip>(
-                        node,
-                        "AudioToPlay",
-                        "Clip Sound",
-                        "Sound",
-                        "Audio Clip",
-                        "Clip");
-            }
 
             if (runtimeNode.ClipSound == null && IsMissingConstant(runtimeNode.ClipValue))
             {
@@ -674,118 +576,49 @@ namespace Novelify.Editor
         }
 
         private void ProcessTransformSpeakerNode(
-            CharacterActionNode node,
+            TransformSpeakerPortraitNode node,
             RuntimeTransformSpeakerPortraitNode runtimeNode,
             Dictionary<INode, string> nodeIDMap)
         {
-            CharacterPositionSpace positionSpace = node is TransformSpeakerPortraitNode
-                ? GetOptionValue(node.GetNodeOptionByName("Coordinate Space"), CharacterPositionSpace.Normalized)
-                : CharacterPositionSpace.Canvas;
-            runtimeNode.PositionSpace = positionSpace;
-            runtimeNode.PositionIsNormalized = positionSpace == CharacterPositionSpace.Normalized;
+            runtimeNode.PositionSpace = GetOptionValue(node.GetNodeOptionByName("Coordinate Space"), CharacterPositionSpace.Normalized);
             runtimeNode.Character = GetPortValue<NovelCharacter>(node.GetInputPortByName("Character"));
             runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Character"));
             runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Character Reference"));
             runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
-
-            if (node is TransformSpeakerPortraitNode)
-            {
-                IPort positionPort = node.GetInputPortByName("Position");
-                IPort rotationPort = node.GetInputPortByName("Rotation");
-                IPort scalePort = node.GetInputPortByName("Scale");
-                IPort marginPort = node.GetInputPortByName("Margin");
-                IPort opacityPort = node.GetInputPortByName("Opacity");
-                Vector2 legacyPosition = new Vector2(
-                    GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0f),
-                    GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0f));
-                float legacyRotation = GetOptionValue(node.GetNodeOptionByName("Rotation"), 0f);
-                Vector2 legacyScale = GetOptionValue(node.GetNodeOptionByName("Scale"), Vector2.one);
-                float legacyMargin = GetOptionValue(node.GetNodeOptionByName("Margin"), 0f);
-                Vector2 position = GetPortValue<Vector2>(positionPort);
-                float rotation = GetPortValue<float>(rotationPort);
-                Vector2 scale = GetPortValue<Vector2>(scalePort);
-                float margin = GetPortValue<float>(marginPort);
-
-                bool useLegacyPosition = !positionPort.IsConnected && position == Vector2.zero && legacyPosition != Vector2.zero;
-                bool useLegacyRotation = !rotationPort.IsConnected && Mathf.Approximately(rotation, 0f) && !Mathf.Approximately(legacyRotation, 0f);
-                bool useLegacyScale = !scalePort.IsConnected && scale == Vector2.one && legacyScale != Vector2.one;
-                bool useLegacyMargin = !marginPort.IsConnected && Mathf.Approximately(margin, 0f) && !Mathf.Approximately(legacyMargin, 0f);
-
-                runtimeNode.PositionValue = useLegacyPosition ? Constant(legacyPosition) : BuildExpression(positionPort);
-                runtimeNode.RotationValue = useLegacyRotation ? Constant(legacyRotation) : BuildExpression(rotationPort);
-                runtimeNode.ScaleValue = useLegacyScale ? Constant(legacyScale) : BuildExpression(scalePort);
-                runtimeNode.MarginValue = useLegacyMargin ? Constant(legacyMargin) : BuildExpression(marginPort);
-                runtimeNode.OpacityValue = BuildExpression(opacityPort);
-                if (useLegacyPosition) position = legacyPosition;
-                if (useLegacyRotation) rotation = legacyRotation;
-                if (useLegacyScale) scale = legacyScale;
-                if (useLegacyMargin) margin = legacyMargin;
-                runtimeNode.OffsetX = position.x;
-                runtimeNode.OffsetY = position.y;
-                runtimeNode.Rotation = rotation;
-                runtimeNode.Scale = scale;
-                runtimeNode.Margin = Mathf.Max(0f, margin);
-                runtimeNode.Opacity = Mathf.Clamp01(GetPortValue<float>(opacityPort));
-            }
-            else
-            {
-                runtimeNode.OffsetX = GetOptionValue(node.GetNodeOptionByName("OffsetX"), 0f);
-                runtimeNode.OffsetY = GetOptionValue(node.GetNodeOptionByName("OffsetY"), 0f);
-                runtimeNode.Rotation = GetOptionValue(node.GetNodeOptionByName("Rotation"), 0f);
-                runtimeNode.Scale = GetOptionValue(node.GetNodeOptionByName("Scale"), Vector2.one);
-                runtimeNode.Margin = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Margin"), 0f));
-            }
-            runtimeNode.SmoothMovement = node is TranslateSpeakerPortraitNode
-                ? GetOptionValue(node.GetNodeOptionByName("Smooth Movement"), false)
-                : GetOptionValue(node.GetNodeOptionByName("Animate Transform"), false);
+            IPort position = node.GetInputPortByName("Position");
+            IPort rotation = node.GetInputPortByName("Rotation");
+            IPort scale = node.GetInputPortByName("Scale");
+            IPort margin = node.GetInputPortByName("Margin");
+            IPort opacity = node.GetInputPortByName("Opacity");
+            Vector2 targetPosition = GetPortValue<Vector2>(position);
+            runtimeNode.PositionValue = BuildExpression(position);
+            runtimeNode.RotationValue = BuildExpression(rotation);
+            runtimeNode.ScaleValue = BuildExpression(scale);
+            runtimeNode.MarginValue = BuildExpression(margin);
+            runtimeNode.OpacityValue = BuildExpression(opacity);
+            runtimeNode.OffsetX = targetPosition.x;
+            runtimeNode.OffsetY = targetPosition.y;
+            runtimeNode.Rotation = GetPortValue<float>(rotation);
+            runtimeNode.Scale = GetPortValue<Vector2>(scale);
+            runtimeNode.Margin = Mathf.Max(0f, GetPortValue<float>(margin));
+            runtimeNode.Opacity = Mathf.Clamp01(GetPortValue<float>(opacity));
+            runtimeNode.SmoothMovement = GetOptionValue(node.GetNodeOptionByName("Animate Transform"), false);
             runtimeNode.Duration = Mathf.Max(0f, GetOptionValue(node.GetNodeOptionByName("Duration"), 0.5f));
             runtimeNode.WaitForCompletion = GetOptionValue(node.GetNodeOptionByName("Wait For Completion"), true);
-            bool legacyEaseInOut = GetOptionValue(node.GetNodeOptionByName("Ease In Out"), true);
-            PortraitTweenEasing easing = node is TransformSpeakerPortraitNode
-                ? GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseInOut)
-                : legacyEaseInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None;
-            if (node is TransformSpeakerPortraitNode && easing == PortraitTweenEasing.EaseInOut && !legacyEaseInOut)
-                easing = PortraitTweenEasing.None;
-            runtimeNode.UseEasingPreset = node is TransformSpeakerPortraitNode;
-            runtimeNode.Easing = easing;
-            runtimeNode.CustomEasingCurve = CloneCurve(GetOptionValue(
-                node.GetNodeOptionByName("Custom Easing Curve"),
-                AnimationCurve.Linear(0f, 0f, 1f, 1f)));
-            runtimeNode.EaseInOut = easing != PortraitTweenEasing.None;
+            runtimeNode.Easing = GetOptionValue(node.GetNodeOptionByName("Easing"), PortraitTweenEasing.EaseInOut);
+            runtimeNode.CustomEasingCurve = CloneCurve(TransformSpeakerPortraitNode.GetCustomEasingCurve(node));
             runtimeNode.Relative = GetOptionValue(node.GetNodeOptionByName("Relative"), false);
-            runtimeNode.AnimateOpacity = node is TransformSpeakerPortraitNode &&
-                GetOptionValue(node.GetNodeOptionByName("Animate Transparency"), false);
-
-            if (node is TransformSpeakerPortraitNode transformNode)
+            runtimeNode.AnimateOpacity = GetOptionValue(node.GetNodeOptionByName("Animate Transparency"), false);
+            runtimeNode.AdditionalTargets.Clear();
+            for (int index = 2; index <= node.GetDesiredCharacterCount(); index++)
             {
-                runtimeNode.AdditionalTargets.Clear();
-                int characterCount = transformNode.GetDesiredCharacterCount();
-                for (int targetIndex = 2;
-                     targetIndex <= characterCount;
-                     targetIndex++)
-                {
-                    RuntimePortraitTransformTarget target =
-                        CompilePortraitTransformTarget(
-                            transformNode, targetIndex);
-                    if (!HasCharacterTarget(target))
-                        continue;
-                    runtimeNode.AdditionalTargets.Add(target);
-                    if (targetIndex == 2)
-                        CopyLegacySecondTarget(runtimeNode, target);
-                }
-
-                // Retain the old fields for already-built runtime graphs while
-                // new imports use the unbounded AdditionalTargets collection.
-                runtimeNode.TransformSecondCharacter =
-                    runtimeNode.AdditionalTargets.Count > 0;
+                RuntimePortraitTransformTarget target = CompilePortraitTransformTarget(node, index);
+                if (HasCharacterTarget(target)) runtimeNode.AdditionalTargets.Add(target);
             }
-
             if (runtimeNode.Character == null && IsMissingConstant(runtimeNode.CharacterValue) &&
                 IsMissingCharacterReference(runtimeNode.CharacterReferenceValue))
-                _context?.LogImportWarning("Transform Speaker Portrait needs a Character or Character Reference input.");
-
-            runtimeNode.NextNodeID =
-                GetNextNodeID(node, nodeIDMap);
+                _context?.LogImportWarning("Transform Characters needs a Character or Character Reference input.");
+            runtimeNode.NextNodeID = GetNextNodeID(node, nodeIDMap);
         }
 
         private RuntimePortraitTransformTarget CompilePortraitTransformTarget(
@@ -829,28 +662,6 @@ namespace Novelify.Editor
             (target.Character != null ||
              !IsMissingConstant(target.CharacterValue) ||
              !IsMissingCharacterReference(target.CharacterReferenceValue));
-
-        private static void CopyLegacySecondTarget(
-            RuntimeTransformSpeakerPortraitNode node,
-            RuntimePortraitTransformTarget target)
-        {
-            node.SecondCharacter = target.Character;
-            node.SecondInstanceID = target.InstanceID;
-            node.SecondOffsetX = target.OffsetX;
-            node.SecondOffsetY = target.OffsetY;
-            node.SecondRotation = target.Rotation;
-            node.SecondScale = target.Scale;
-            node.SecondMargin = target.Margin;
-            node.SecondOpacity = target.Opacity;
-            node.SecondCharacterValue = target.CharacterValue;
-            node.SecondCharacterReferenceValue =
-                target.CharacterReferenceValue;
-            node.SecondPositionValue = target.PositionValue;
-            node.SecondRotationValue = target.RotationValue;
-            node.SecondScaleValue = target.ScaleValue;
-            node.SecondMarginValue = target.MarginValue;
-            node.SecondOpacityValue = target.OpacityValue;
-        }
 
         private void ProcessFlipCharacterNode(
             FlipCharacterNode node,
@@ -1458,18 +1269,19 @@ namespace Novelify.Editor
             }
 
             if (node is DialogueNode && port.Name == "Current Speaker Reference")
-                return BuildEffectiveCharacterReference(node, "Speaker", "Speaker Reference", activePath);
+                return BuildEffectiveCharacterReference(node, node is SpeechBubbleNode ? "Character" : "Speaker",
+                    node is SpeechBubbleNode ? "Character Reference" : "Speaker Reference", activePath);
             if (node is CharacterActionNode && port.Name == "Character Reference")
                 return BuildEffectiveCharacterReference(node, "Character", "Character Reference", activePath);
 
             if (node is DialogueNode && port.Name == "Current Speaker" &&
-                node.GetInputPortByName("Speaker Reference")?.IsConnected == true)
-                return CharacterFromReference(node.GetInputPortByName("Speaker Reference"), activePath);
+                node.GetInputPortByName(node is SpeechBubbleNode ? "Character Reference" : "Speaker Reference")?.IsConnected == true)
+                return CharacterFromReference(node.GetInputPortByName(node is SpeechBubbleNode ? "Character Reference" : "Speaker Reference"), activePath);
             if (node is CharacterActionNode && port.Name == "Character" &&
                 node.GetInputPortByName("Character Reference")?.IsConnected == true)
                 return CharacterFromReference(node.GetInputPortByName("Character Reference"), activePath);
 
-            string passThrough = node is DialogueNode && port.Name == "Current Speaker" ? "Speaker" :
+            string passThrough = node is DialogueNode && port.Name == "Current Speaker" ? (node is SpeechBubbleNode ? "Character" : "Speaker") :
                 node is CharacterActionNode && port.Name == "Character" ? "Character" : null;
             return passThrough != null
                 ? BuildExpression(node.GetInputPortByName(passThrough), activePath)
@@ -1593,65 +1405,19 @@ namespace Novelify.Editor
         private static RuntimeConstantExpression Constant(NovelCharacterReference value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
         private static RuntimeConstantExpression Constant(UnityEngine.Object value) => new RuntimeConstantExpression { Value = RuntimeValue.From(value) };
 
-        private T GetFirstPortValue<T>(
-            INode node,
-            params string[] portNames)
-        {
-            foreach (string portName in portNames)
-            {
-                IPort port =
-                    node.GetInputPortByName(portName);
-
-                if (port == null)
-                {
-                    continue;
-                }
-
-                T value = GetPortValue<T>(port);
-
-                if (value != null)
-                {
-                    return value;
-                }
-            }
-
-            return default;
-        }
-
-        private T GetFirstOptionValue<T>(
-            INode node,
-            params string[] optionNames)
-        {
-            foreach (string optionName in optionNames)
-            {
-                INodeOption option =
-                    node.GetNodeOptionByName(optionName);
-
-                if (option == null)
-                {
-                    continue;
-                }
-
-                if (option.TryGetValue(out T value))
-                {
-                    return value;
-                }
-            }
-
-            return default;
-        }
-
         private void SetSpeaker(
             INode node,
             RuntimeDialogueNode runtimeNode)
         {
+            string characterPort = node is SpeechBubbleNode ? "Character" : "Speaker";
+            string referencePort = node is SpeechBubbleNode ? "Character Reference" : "Speaker Reference";
             NovelCharacter character =
                 GetPortValue<NovelCharacter>(
-                    node.GetInputPortByName("Speaker"));
+                    node.GetInputPortByName(characterPort));
 
             runtimeNode.NovelCharacter = character;
-            runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName("Speaker"));
-            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName("Speaker Reference"));
+            runtimeNode.CharacterValue = BuildExpression(node.GetInputPortByName(characterPort));
+            runtimeNode.CharacterReferenceValue = BuildExpression(node.GetInputPortByName(referencePort));
             runtimeNode.InstanceID = GetOptionValue(node.GetNodeOptionByName("Instance ID"), string.Empty);
 
             runtimeNode.SpeakerName =
@@ -1872,7 +1638,7 @@ namespace Novelify.Editor
         }
     }
 
-    [ScriptedImporter(17, NovelFunctionGraph.AssetExtension)]
+    [ScriptedImporter(18, NovelFunctionGraph.AssetExtension)]
     public class NovelFunctionGraphImporter : NovelGraphImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

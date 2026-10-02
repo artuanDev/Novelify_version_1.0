@@ -24,7 +24,7 @@ namespace Novelify.Editor
             if (source == null) return false;
             INode node = source.GetNode();
             if (node is IVariableNode variable) return variable.Variable.TryGetDefaultValue(out value);
-            string inputName = node is DialogueNode && source.Name == "Current Speaker" ? "Speaker" :
+            string inputName = node is DialogueNode && source.Name == "Current Speaker" ? (node is SpeechBubbleNode ? "Character" : "Speaker") :
                 node is CharacterActionNode && source.Name == "Character" ? "Character" : null;
             if (inputName == null) return false;
             value = Resolve<T>(graph, node.GetInputPortByName(inputName), visited);

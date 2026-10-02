@@ -1,5 +1,3 @@
-using Novelify;
-using Novelify.Editor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +5,6 @@ using Unity.GraphToolkit.Editor;
 using UnityEditor;
 using UnityEngine;
 using static Unity.GraphToolkit.Editor.Node;
-using static UnityEngine.Audio.IAudioGenerator;
 
 namespace Novelify.Editor
 {
@@ -334,16 +331,8 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public sealed class SpeechBubbleNode : DialogueNode
     {
-        protected override void OnDefinePorts(IPortDefinitionContext context)
-        {
-            base.OnDefinePorts(context);
-            context.AddInputPort<NovelCharacter>("Character")
-                .WithTooltip("Character this bubble belongs to. Its current transformed position is used for placement and preview.")
-                .Build();
-            context.AddInputPort<NovelCharacterReference>("Character Reference")
-                .WithTooltip("Exact character instance this bubble follows. Prefer this when using multiple copies of one character.")
-                .Build();
-        }
+        protected override string CharacterPortName => "Character";
+        protected override string CharacterReferencePortName => "Character Reference";
 
         protected override void OnDefineOptions(
             IOptionDefinitionContext context)

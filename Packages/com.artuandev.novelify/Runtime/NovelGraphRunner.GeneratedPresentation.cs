@@ -142,10 +142,12 @@ namespace Novelify
         {
             float duration = Mathf.Max(0f, AsFloat(Evaluate(node.DurationValue), node.Duration));
             float amplitude = Mathf.Max(0f, AsFloat(Evaluate(node.AmplitudeValue), node.Amplitude));
+            if (duration <= 0f || amplitude <= 0f) return false;
+            Camera camera = GeneratedPresentation.ResolveShakeCamera();
             bool wait = node.WaitForCompletion && duration > 0f && amplitude > 0f;
             if (wait) _isWaiting = true;
-            GeneratedPresentation.BeginShake(duration, amplitude, node.Frequency,
-                CharacterContainer as RectTransform,
+            GeneratedPresentation.BeginCameraShake(duration, amplitude, node.Frequency,
+                camera,
                 wait ? () => CompleteGeneratedVisualEffect(node, version) : null);
             return wait;
         }

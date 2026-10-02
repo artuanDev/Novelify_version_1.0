@@ -16,7 +16,7 @@ namespace Novelify
             Action<int, char> onCharacterShownAtIndex = null)
         {
             text ??= string.Empty;
-            textDisplay.richText = true;
+            textDisplay.supportRichText = true;
             textDisplay.SetText(text);
             textDisplay.maxVisibleCharacters = 0;
             int visibleCharacterCount = textDisplay.visibleCharacterCount;

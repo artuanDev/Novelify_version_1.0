@@ -114,7 +114,7 @@ namespace Novelify
                 Vector2 scale = data.Scale;
                 scale.x = Mathf.Abs(scale.x) * facingSign;
                 info.TransformTo(data.Position, data.Rotation, scale, false, 0f);
-                info.Opacity = data.HasOpacity ? Mathf.Clamp01(data.Opacity) : 1f;
+                info.Opacity = Mathf.Clamp01(data.Opacity);
                 info.SetEmotion(data.Emotion);
                 info.gameObject.SetActive(data.Visible);
             }
@@ -315,7 +315,6 @@ namespace Novelify
                     Rotation = info.Rotation,
                     Scale = new Vector2(Mathf.Abs(scale.x), scale.y),
                     Facing = scale.x < 0f ? CharacterFacing.Left : CharacterFacing.Right,
-                    HasOpacity = true,
                     Opacity = info.Opacity
                 });
             }
@@ -469,9 +468,9 @@ namespace Novelify
             if (graph == null)
                 return new NovelPersistenceResult(NovelPersistenceStatus.Incompatible,
                     $"Graph '{saved.GraphID}' is not available in the runtime catalog.");
-            if (saved.GraphSchemaVersion > graph.SchemaVersion)
+            if (saved.GraphSchemaVersion != graph.SchemaVersion)
                 return new NovelPersistenceResult(NovelPersistenceStatus.Incompatible,
-                    $"Graph '{saved.GraphID}' uses newer schema {saved.GraphSchemaVersion}.");
+                    $"Graph '{saved.GraphID}' uses unsupported schema {saved.GraphSchemaVersion}; expected {graph.SchemaVersion}.");
             changed = !string.Equals(saved.ContentVersion ?? string.Empty, graph.ContentVersion ?? string.Empty, StringComparison.Ordinal);
             return new NovelPersistenceResult(NovelPersistenceStatus.Success);
         }

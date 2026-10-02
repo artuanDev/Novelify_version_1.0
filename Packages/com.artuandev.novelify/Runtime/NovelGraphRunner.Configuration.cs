@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Novelify
@@ -51,10 +50,13 @@ namespace Novelify
         [Header("Sound Settings")]
         public AudioSource TalkSource;
         [Tooltip("Sound attached directly to dialogue nodes.")]
-        [FormerlySerializedAs("PlaySound")]
         public AudioSource NodeSoundSource;
         [Tooltip("Sound source used by Play Sound nodes.")]
         public AudioSource PlaySoundSource;
+
+        [Header("Screen Effects")]
+        [Tooltip("Optional camera moved by Screen Shake. Defaults to the dialogue canvas camera, then Camera.main. Screen Space canvases on the same display also shake. Amplitude is measured in screen pixels.")]
+        public Camera ScreenShakeCamera;
 
         [Header("Character Stage")]
         public GameObject CanvasDialogue;
@@ -73,16 +75,12 @@ namespace Novelify
 
         [Header("UI Components")]
         public GameObject DialoguePanel;
-        [HideInInspector] public GameObject CharacterPortrait;
         public GameObject BackgroundChoicesPanel;
         public GameObject NameBackground;
         public NovelText SpeakerNameText;
         public NovelText DialogueText;
 
         [Header("Choice Button UI")]
-        [HideInInspector]
-        [Tooltip("Legacy field retained for serialized-scene compatibility. Generated choices no longer use a prefab.")]
-        public Button ChoiceButtonPrefab;
         [Tooltip("Optional existing parent for generated choice buttons. Leave empty to let Novelify create it.")]
         public Transform ChoiceButtonContainer;
 

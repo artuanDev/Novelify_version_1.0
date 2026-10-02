@@ -44,12 +44,6 @@ namespace Novelify
         }
         protected virtual void OnEnable() => SubscribeToStateStore();
 
-        // Compatibility conveniences. New integrations can use Session directly.
-        public void PlayGraph(RuntimeNovelGraph graph) => Session.Play(graph);
-        public void Advance() => Session.Advance();
-        public void EndDialogue() => Session.Stop();
-        public void UseStateStore(NovelStateStore stateStore) => Session.UseStateStore(stateStore);
-
         protected virtual void OnDisable()
         {
             UnsubscribeFromStateStore();

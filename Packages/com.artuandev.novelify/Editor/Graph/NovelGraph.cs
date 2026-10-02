@@ -294,18 +294,6 @@ namespace Novelify.Editor
                         continue;
                     }
 
-                    if (node is ChoiceNode choice && choice.TryGetMigratedChoices(out ChoiceAuthoringList migrated))
-                    {
-                        if (!isRecordingUndo)
-                        {
-                            graph.UndoBeginRecordGraph("Migrate Choice Dropdowns");
-                            isRecordingUndo = true;
-                        }
-                        choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID)?.TrySetValue(migrated);
-                        choice.ClearMigratedLegacyChoiceValues();
-                        choice.DefineNode();
-                    }
-
                     if (node is ChoiceNode namedChoice && !namedChoice.ChoiceOutputNamesMatch())
                     {
                         if (!isRecordingUndo)
@@ -329,19 +317,6 @@ namespace Novelify.Editor
                                 graph,
                                 node.GetInputPortByName("Character"));
 
-                        // Compatibility for speech-bubble nodes authored before
-                        // the explicit Character ports were introduced.
-                        if (character == null)
-                        {
-                            reference = NovelGraphValues.Resolve<NovelCharacterReference>(
-                                graph,
-                                node.GetInputPortByName("Speaker Reference"));
-                            character = reference.Character != null
-                                ? reference.Character
-                                : NovelGraphValues.Resolve<NovelCharacter>(
-                                    graph,
-                                    node.GetInputPortByName("Speaker"));
-                        }
                     }
                     else
                     {

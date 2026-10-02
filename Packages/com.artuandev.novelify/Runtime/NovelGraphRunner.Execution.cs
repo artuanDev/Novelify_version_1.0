@@ -72,9 +72,17 @@ namespace Novelify
                 }
                 _currentNode = node;
                 Session.RaiseNodeEntered(RuntimeGraph, node);
+                if (version != _flowVersion || !_isGraphRunning || !isActiveAndEnabled) return;
                 StateStore.RecordVisit(RuntimeGraph != null ? RuntimeGraph.GraphID : string.Empty, node.NodeID);
                 _textCompletedFrame = -1;
-                if (TryExecuteRegisteredNode(node, out NovelNodeExecutionResult customResult))
+                if (++automaticNodes > MaxAutomaticNodesPerTraversal)
+                {
+                    Debug.LogError("Too many automatic nodes were chained. There may be a loop in the graph.", this);
+                    break;
+                }
+                bool handled = TryExecuteRegisteredNode(node, out NovelNodeExecutionResult customResult);
+                if (version != _flowVersion || !_isGraphRunning || !isActiveAndEnabled) return;
+                if (handled)
                 {
                     switch (customResult.Kind)
                     {
@@ -99,14 +107,16 @@ namespace Novelify
                     ShowDialogueNode(dialogue);
                     return;
                 }
-                if (++automaticNodes > MaxAutomaticNodesPerTraversal)
-                {
-                    Debug.LogError("Too many automatic nodes were chained. There may be a loop in the graph.", this);
-                    break;
-                }
-                HideDialoguePanel();
+                if (node is not RuntimeScreenShakeNode && node is not RuntimeScreenFlashNode)
+                    HideDialoguePanel();
                 switch (node)
                 {
+                    case RuntimeAnimateCharacterNode animation:
+                        if (BeginCharacterAnimation(animation, version)) return;
+                        break;
+                    case RuntimeStopCharacterAnimationNode stopAnimation:
+                        StopCharacterAnimation(stopAnimation);
+                        break;
                     case RuntimeTransformSpeakerPortraitNode move:
                         var movingCharacters = new List<CharacterInfo>();
                         CharacterInfo moving = ApplyPortraitTransform(
@@ -124,14 +134,6 @@ namespace Novelify
                                 if (additional != null)
                                     movingCharacters.Add(additional);
                             }
-                        }
-                        else if (move.TransformSecondCharacter)
-                        {
-                            CharacterInfo legacySecond =
-                                ApplyPortraitTransform(
-                                    move, LegacySecondTransformTarget(move));
-                            if (legacySecond != null)
-                                movingCharacters.Add(legacySecond);
                         }
                         if (move.WaitForCompletion &&
                             movingCharacters.Exists(character =>
@@ -359,27 +361,6 @@ namespace Novelify
             OpacityValue = move.OpacityValue
         };
 
-        private static RuntimePortraitTransformTarget
-            LegacySecondTransformTarget(
-                RuntimeTransformSpeakerPortraitNode move) => new()
-        {
-            Character = move.SecondCharacter,
-            InstanceID = move.SecondInstanceID,
-            OffsetX = move.SecondOffsetX,
-            OffsetY = move.SecondOffsetY,
-            Rotation = move.SecondRotation,
-            Scale = move.SecondScale,
-            Margin = move.SecondMargin,
-            Opacity = move.SecondOpacity,
-            CharacterValue = move.SecondCharacterValue,
-            CharacterReferenceValue = move.SecondCharacterReferenceValue,
-            PositionValue = move.SecondPositionValue,
-            RotationValue = move.SecondRotationValue,
-            ScaleValue = move.SecondScaleValue,
-            MarginValue = move.SecondMarginValue,
-            OpacityValue = move.SecondOpacityValue
-        };
-
         private CharacterInfo ApplyPortraitTransform(
             RuntimeTransformSpeakerPortraitNode move,
             RuntimePortraitTransformTarget transformTarget)
@@ -425,24 +406,13 @@ namespace Novelify
             if (normalized)
                 target = character.ClampToStageBounds(target, margin);
 
-            if (move is RuntimeTranslateSpeakerPortraitNode)
-            {
-                character.MoveTo(target, move.SmoothMovement,
-                    move.Duration, move.EaseInOut);
-                return character;
-            }
-
             character.TransformTo(
                 target,
                 rotation,
                 scale,
                 move.SmoothMovement,
                 move.Duration,
-                move.UseEasingPreset
-                    ? move.Easing
-                    : move.EaseInOut
-                        ? PortraitTweenEasing.EaseInOut
-                        : PortraitTweenEasing.None,
+                move.Easing,
                 move.CustomEasingCurve,
                 move.AnimateOpacity,
                 opacity);

@@ -284,24 +284,15 @@ MonoBehaviour:
           - __option_Text Speed (Characters/Second)
           - __option_Animate Mouth
           - __option_Animate Blinking
-          - __option_portCount
           - Speaker
           - Speaker Reference
           - Sound
-          - Choice ID 0
           - Choice Text 0
           - Condition 0
-          - Unavailable Policy 0
           - Disabled Reason 0
-          - Once Only 0
-          - Transaction 0
-          - Choice ID 1
           - Choice Text 1
           - Condition 1
-          - Unavailable Policy 1
           - Disabled Reason 1
-          - Once Only 1
-          - Transaction 1
           m_ValueList:
           - rid: 6798007747934421093
           - rid: 6798007747934421094
@@ -312,24 +303,15 @@ MonoBehaviour:
           - rid: 6798007747934421099
           - rid: 6798007747934421100
           - rid: 6798007747934421101
-          - rid: 6798007747934421102
           - rid: 6798007747934421103
           - rid: 6798007747934421104
           - rid: 6798007747934421105
-          - rid: 6798007747934421106
           - rid: 6798007747934421107
           - rid: 6798007747934421108
-          - rid: 6798007747934421109
           - rid: 6798007747934421110
-          - rid: 6798007747934421111
-          - rid: 6798007747934421112
-          - rid: 6798007747934421113
           - rid: 6798007747934421114
           - rid: 6798007747934421115
-          - rid: 6798007747934421116
           - rid: 6798007747934421117
-          - rid: 6798007747934421118
-          - rid: 6798007747934421119
         m_InputPortInfos:
           expandedPortsById:
             m_KeyList: []
@@ -775,10 +757,6 @@ MonoBehaviour:
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 1
-    - rid: 6798007747934421102
-      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 2
     - rid: 6798007747934421103
       type: {class: 'Constant`1[[Novelify.NovelCharacter, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -793,10 +771,6 @@ MonoBehaviour:
       type: {class: 'Constant`1[[UnityEngine.AudioClip, UnityEngine.AudioModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: {fileID: 0}
-    - rid: 6798007747934421106
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 
     - rid: 6798007747934421107
       type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
@@ -805,28 +779,7 @@ MonoBehaviour:
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 1
-    - rid: 6798007747934421109
-      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value:
-          m_EnumType:
-            m_Identification: Novelify.NovelChoiceUnavailablePolicy, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-          m_Value: 0
-        m_EnumType:
-          m_Identification: Novelify.NovelChoiceUnavailablePolicy, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     - rid: 6798007747934421110
-      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 
-    - rid: 6798007747934421111
-      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 0
-    - rid: 6798007747934421112
-      type: {class: 'Constant`1[[Novelify.NovelChoiceTransactionDefinition, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: {fileID: 0}
-    - rid: 6798007747934421113
       type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 
@@ -838,27 +791,10 @@ MonoBehaviour:
       type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 1
-    - rid: 6798007747934421116
-      type: {class: EnumConstant, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value:
-          m_EnumType:
-            m_Identification: Novelify.NovelChoiceUnavailablePolicy, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-          m_Value: 0
-        m_EnumType:
-          m_Identification: Novelify.NovelChoiceUnavailablePolicy, Novelify.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     - rid: 6798007747934421117
       type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
       data:
         m_Value: 
-    - rid: 6798007747934421118
-      type: {class: 'Constant`1[[System.Boolean, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: 0
-    - rid: 6798007747934421119
-      type: {class: 'Constant`1[[Novelify.NovelChoiceTransactionDefinition, Novelify.Runtime]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
-      data:
-        m_Value: {fileID: 0}
     - rid: 6798007747934421120
       type: {class: ChoiceNode, ns: Novelify.Editor, asm: Novelify.Editor}
       data: 

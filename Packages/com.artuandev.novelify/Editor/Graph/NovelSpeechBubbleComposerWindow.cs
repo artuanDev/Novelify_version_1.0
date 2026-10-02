@@ -2429,23 +2429,6 @@ namespace Novelify.Editor
             position = NovelGraphValues.Resolve<Vector2>(_graph, positionPort);
             rotation = NovelGraphValues.Resolve<float>(_graph, rotationPort);
             scale = NovelGraphValues.Resolve<Vector2>(_graph, scalePort);
-            if (matchingTarget == 1)
-            {
-                Vector2 legacyPosition = new Vector2(
-                    Read(node, "OffsetX", 0f), Read(node, "OffsetY", 0f));
-                float legacyRotation = Read(node, "Rotation", 0f);
-                Vector2 legacyScale = Read(node, "Scale", Vector2.one);
-                if (positionPort != null && !positionPort.IsConnected &&
-                    position == Vector2.zero && legacyPosition != Vector2.zero)
-                    position = legacyPosition;
-                if (rotationPort != null && !rotationPort.IsConnected &&
-                    Mathf.Approximately(rotation, 0f) &&
-                    !Mathf.Approximately(legacyRotation, 0f))
-                    rotation = legacyRotation;
-                if (scalePort != null && !scalePort.IsConnected &&
-                    scale == Vector2.one && legacyScale != Vector2.one)
-                    scale = legacyScale;
-            }
             relative = Read(node, "Relative", false);
             if (Read(node, "Coordinate Space", CharacterPositionSpace.Normalized) ==
                 CharacterPositionSpace.Canvas)
@@ -2507,16 +2490,6 @@ namespace Novelify.Editor
                     ? reference.Character
                     : NovelGraphValues.Resolve<NovelCharacter>(
                         _graph, _dialogueNode.GetInputPortByName("Character"));
-                if (character == null)
-                {
-                    reference = NovelGraphValues.Resolve<NovelCharacterReference>(
-                        _graph, _dialogueNode.GetInputPortByName(
-                            "Speaker Reference"));
-                    character = reference.Character != null
-                        ? reference.Character
-                        : NovelGraphValues.Resolve<NovelCharacter>(
-                            _graph, _dialogueNode.GetInputPortByName("Speaker"));
-                }
                 _previewInstanceID = reference.Character != null
                     ? reference.InstanceID ?? string.Empty
                     : Read(_dialogueNode, "Instance ID", string.Empty) ??

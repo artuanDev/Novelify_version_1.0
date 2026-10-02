@@ -34,6 +34,28 @@ namespace Novelify.Tests
             _manager.RuntimeGraph = _graph;
         }
 
+        [TestCase(-1)]
+        [TestCase(1)]
+        public void SavedGraphSchemaMustMatchCurrentGraph(int schemaDifference)
+        {
+            var catalog = ScriptableObject.CreateInstance<NovelGraphCatalog>();
+            try
+            {
+                _graph.GraphID = "schema-story";
+                catalog.ReplaceEntries(new[]
+                {
+                    new NovelGraphCatalog.Entry { GraphID = _graph.GraphID, Graph = _graph }
+                });
+                _manager.AssetCatalog = catalog;
+                Play(new RuntimeDialogueNode { NodeID = "line", ShowTextImmediately = true });
+                Assert.That(_manager.Session.Capture(out NovelSaveData snapshot).Succeeded, Is.True);
+                snapshot.CurrentGraph.GraphSchemaVersion += schemaDifference;
+                Assert.That(_manager.Session.Restore(snapshot).Status, Is.EqualTo(NovelPersistenceStatus.Incompatible));
+                Assert.That(_manager.Session.CurrentNodeID, Is.EqualTo("line"));
+            }
+            finally { Object.DestroyImmediate(catalog); }
+        }
+
         [Test]
         public void PortraitTweenTimingSupportsLinearPresetsAndCustomCurves()
         {
@@ -54,6 +76,7 @@ namespace Novelify.Tests
         {
             CharacterInfo speaker = _manager.ShowCharacter(_character, "speaker");
             CharacterInfo other = _manager.ShowCharacter(_character, "other");
+            speaker.transform.SetAsFirstSibling();
             Assert.That(other.transform.GetSiblingIndex(), Is.GreaterThan(speaker.transform.GetSiblingIndex()));
 
             Play(new RuntimeDialogueNode
@@ -80,6 +103,7 @@ namespace Novelify.Tests
                 Appearance = CharacterTransitionMode.FadeAndSlide,
                 AppearanceDirection = CharacterTransitionDirection.Left,
                 AppearanceDuration = 0.15f,
+                SlideOffset = 2f,
                 AppearanceEasing = PortraitTweenEasing.None
             });
 
@@ -120,7 +144,6 @@ namespace Novelify.Tests
                     Opacity = 0.25f,
                     Duration = 0.15f,
                     Easing = PortraitTweenEasing.None,
-                    UseEasingPreset = true
                 },
                 new RuntimeDialogueNode { NodeID = "line", ShowTextImmediately = true });
 
@@ -146,7 +169,7 @@ namespace Novelify.Tests
         {
             _graph.AllNodes = new List<RuntimeNode>(nodes);
             _graph.EntryNodeID = nodes[0].NodeID;
-            _manager.PlayGraph(_graph);
+            _manager.Session.Play(_graph);
         }
 
         [Test]
@@ -438,18 +461,18 @@ namespace Novelify.Tests
         }
 
         [UnityTest]
-        public IEnumerator TranslateCreatesItsTargetMovesAcrossFramesAndBlocksClicksUntilFinished()
+        public IEnumerator TransformCreatesItsTargetMovesAcrossFramesAndBlocksClicksUntilFinished()
         {
             int events = 0;
             _manager.OnDialogueEvent.AddListener(_ => ++events);
-            Play(new RuntimeTranslateSpeakerPortraitNode { NodeID = "move", NextNodeID = "event", Character = _character,
+            Play(new RuntimeTransformSpeakerPortraitNode { PositionSpace = CharacterPositionSpace.Canvas, NodeID = "move", NextNodeID = "event", Character = _character,
                     OffsetX = 300, SmoothMovement = true, Duration = 0.4f },
                 new RuntimeDialogueEventNode { NodeID = "event", NextNodeID = "line", EventName = "arrived" },
                 new RuntimeDialogueNode { NodeID = "line" });
             CharacterInfo info = _manager.ShowCharacter(_character);
             Assert.That(info.Position.x, Is.EqualTo(0));
             Assert.That(_manager.IsWaiting, Is.True);
-            _manager.Advance();
+            _manager.Session.Advance();
             Assert.That(events, Is.Zero);
             yield return new WaitForSecondsRealtime(0.1f);
             Assert.That(info.Position.x, Is.InRange(0.01f, 299.99f));
@@ -463,9 +486,9 @@ namespace Novelify.Tests
         public IEnumerator NonBlockingMovesRunTogetherAndUseUnscaledTime()
         {
             Time.timeScale = 0;
-            Play(new RuntimeTranslateSpeakerPortraitNode { NodeID = "left", NextNodeID = "right", Character = _character,
+            Play(new RuntimeTransformSpeakerPortraitNode { PositionSpace = CharacterPositionSpace.Canvas, NodeID = "left", NextNodeID = "right", Character = _character,
                     InstanceID = "left", OffsetX = -250, SmoothMovement = true, Duration = 0.3f, WaitForCompletion = false },
-                new RuntimeTranslateSpeakerPortraitNode { NodeID = "right", NextNodeID = "line", Character = _character,
+                new RuntimeTransformSpeakerPortraitNode { PositionSpace = CharacterPositionSpace.Canvas, NodeID = "right", NextNodeID = "line", Character = _character,
                     InstanceID = "right", OffsetX = 250, SmoothMovement = true, Duration = 0.3f, WaitForCompletion = false },
                 new RuntimeDialogueNode { NodeID = "line" });
             Assert.That(_manager.IsWaiting, Is.False);
@@ -485,8 +508,7 @@ namespace Novelify.Tests
         {
             _manager.TimeMode = DialogueTimeMode.Scaled;
             Time.timeScale = 0;
-            Play(new RuntimeTranslateSpeakerPortraitNode
-                {
+            Play(new RuntimeTransformSpeakerPortraitNode { PositionSpace = CharacterPositionSpace.Canvas,
                     NodeID = "move", NextNodeID = "line", Character = _character,
                     OffsetX = 200f, SmoothMovement = true, Duration = 0.15f
                 },
@@ -539,10 +561,10 @@ namespace Novelify.Tests
             _manager.OnDialogueEvent.AddListener(_ => ++events);
             Play(new RuntimeWaitNode { NodeID = "wait", NextNodeID = "event", Duration = 0.3f },
                 new RuntimeDialogueEventNode { NodeID = "event" });
-            _manager.Advance();
+            _manager.Session.Advance();
             Assert.That(_manager.IsWaiting, Is.True);
             yield return null;
-            _manager.EndDialogue();
+            _manager.Session.Stop();
             yield return new WaitForSecondsRealtime(0.4f);
             Assert.That(events, Is.Zero);
         }
@@ -580,7 +602,7 @@ namespace Novelify.Tests
                 Play(new RuntimePlaySoundNode { NodeID = "sound", NextNodeID = "first", ClipSound = clip, Loop = true },
                     new RuntimeDialogueNode { NodeID = "first", NextNodeID = "wait" },
                     new RuntimeWaitNode { NodeID = "wait", NextNodeID = "move", Duration = 0.1f },
-                    new RuntimeTranslateSpeakerPortraitNode { NodeID = "move", NextNodeID = "second", Character = _character,
+                    new RuntimeTransformSpeakerPortraitNode { PositionSpace = CharacterPositionSpace.Canvas, NodeID = "move", NextNodeID = "second", Character = _character,
                         SmoothMovement = true, OffsetX = 150, Duration = 0.2f },
                     new RuntimeDialogueNode { NodeID = "second", NextNodeID = "stop" },
                     new RuntimeStopSoundNode { NodeID = "stop", NextNodeID = "last" },
@@ -589,7 +611,7 @@ namespace Novelify.Tests
                 Assert.That(_manager.PlaySoundSource.clip, Is.SameAs(clip));
                 Assert.That(_manager.PlaySoundSource.isPlaying, Is.True);
                 yield return null;
-                _manager.Advance();
+                _manager.Session.Advance();
                 Assert.That(_manager.isActiveAndEnabled, Is.True);
                 Assert.That(panel.GetComponent<CanvasGroup>().alpha, Is.Zero);
                 Assert.That(_manager.IsWaiting, Is.True);
@@ -597,10 +619,10 @@ namespace Novelify.Tests
                 Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("second"));
                 Assert.That(panel.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f));
                 Assert.That(_manager.PlaySoundSource.isPlaying, Is.True);
-                _manager.Advance();
+                _manager.Session.Advance();
                 Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("last"));
                 Assert.That(_manager.PlaySoundSource.isPlaying, Is.False);
-                _manager.EndDialogue();
+                _manager.Session.Stop();
                 Assert.That(_manager.isActiveAndEnabled, Is.True);
                 Assert.That(panel.GetComponent<CanvasGroup>().alpha, Is.Zero);
             }
@@ -620,7 +642,7 @@ namespace Novelify.Tests
         public IEnumerator EventListenersCanStopTheGraphWithoutExecutingFollowingNodes()
         {
             int events = 0;
-            _manager.OnDialogueEvent.AddListener(_ => { ++events; _manager.EndDialogue(); });
+            _manager.OnDialogueEvent.AddListener(_ => { ++events; _manager.Session.Stop(); });
             Play(new RuntimeDialogueEventNode { NodeID = "first", NextNodeID = "second" },
                 new RuntimeDialogueEventNode { NodeID = "second" });
             Assert.That(events, Is.EqualTo(1));
@@ -831,7 +853,7 @@ namespace Novelify.Tests
                 Assert.That(_manager.SaveSlot("interview").Succeeded, Is.True);
 
                 Assert.That(_manager.StateStore.TrySet(coins, RuntimeValue.From(99), out string error), Is.True, error);
-                _manager.EndDialogue();
+                _manager.Session.Stop();
                 NovelPersistenceResult loaded = _manager.LoadSlot("interview");
                 Assert.That(loaded.Succeeded, Is.True, loaded.ToString());
                 Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("question-line"));
@@ -839,7 +861,7 @@ namespace Novelify.Tests
                 CollectionAssert.IsEmpty(events, "Loading must not replay caller-side rewards.");
 
                 yield return null;
-                _manager.Advance();
+                _manager.Session.Advance();
                 CollectionAssert.AreEqual(new[] { "reward" }, events);
                 Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
             }
@@ -1095,12 +1117,11 @@ namespace Novelify.Tests
             Assert.That(_manager.DialogueText, Is.Not.Null);
             Assert.That(_manager.DialogueText.alignment,
                 Is.EqualTo(TextAnchor.LowerRight));
-            Assert.That(_manager.DialogueText.enableAutoSizing, Is.True);
-            Assert.That(_manager.DialogueText.fontSizeMin, Is.EqualTo(17f));
-            Assert.That(_manager.DialogueText.fontSizeMax, Is.EqualTo(38f));
+            Assert.That(_manager.DialogueText.resizeTextForBestFit, Is.True);
+            Assert.That(_manager.DialogueText.resizeTextMinSize, Is.EqualTo(17f));
+            Assert.That(_manager.DialogueText.resizeTextMaxSize, Is.EqualTo(38f));
             Assert.That(_manager.NameBackground, Is.Not.Null);
             Assert.That(_manager.SpeakerNameText, Is.Not.Null);
-            Assert.That(_manager.ChoiceButtonPrefab, Is.Null);
             Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
             RectTransform dialogueRect = _manager.DialoguePanel.GetComponent<RectTransform>();
             Assert.That(dialogueRect.anchorMin,
@@ -1123,7 +1144,7 @@ namespace Novelify.Tests
                 Is.EqualTo(TextAnchor.MiddleCenter));
             Assert.That(_manager.SpeakerNameText.fontSize,
                 Is.EqualTo(31f));
-            Assert.That(_manager.SpeakerNameText.enableAutoSizing,
+            Assert.That(_manager.SpeakerNameText.resizeTextForBestFit,
                 Is.False);
             Vector2 preferred = _manager.SpeakerNameText.GetPreferredValues(
                 "Test Speaker", 10000f, 10000f);
@@ -1198,7 +1219,7 @@ namespace Novelify.Tests
 
             yield return null;
             Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Speech Bubble"));
-            _manager.Advance();
+            _manager.Session.Advance();
             Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("after"));
             Assert.That(_manager.DialoguePanel.name, Is.EqualTo("Dialogue Panel"));
         }
@@ -1258,7 +1279,7 @@ namespace Novelify.Tests
             Assert.That(_manager.DialogueText.alignment,
                 Is.EqualTo(TextAnchor.MiddleCenter));
 
-            _manager.Advance();
+            _manager.Session.Advance();
 
             Assert.That(_manager.CurrentNode.NodeID, Is.EqualTo("second"));
             Assert.That(graphic.color,
@@ -1335,10 +1356,15 @@ namespace Novelify.Tests
                     NextNodeID = "line",
                     Character = _character,
                     OffsetX = -0.5f,
-                    TransformSecondCharacter = true,
-                    SecondCharacter = _character,
-                    SecondInstanceID = "partner",
-                    SecondOffsetX = 0.5f,
+                    AdditionalTargets = new List<RuntimePortraitTransformTarget>
+                    {
+                        new RuntimePortraitTransformTarget
+                        {
+                            Character = _character,
+                            InstanceID = "partner",
+                            OffsetX = 0.5f
+                        }
+                    },
                     SmoothMovement = false
                 },
                 new RuntimeDialogueNode
@@ -1527,8 +1553,6 @@ namespace Novelify.Tests
                             new ChoiceData { ChoiceID = "d", ChoiceText = "D" }
                         }
                     });
-
-                Assert.That(_manager.ChoiceButtonPrefab, Is.Null);
                 Assert.That(_manager.ChoiceButtonContainer, Is.Not.Null);
                 NovelChoiceLayoutGroup layout = _manager.ChoiceButtonContainer
                     .GetComponent<NovelChoiceLayoutGroup>();

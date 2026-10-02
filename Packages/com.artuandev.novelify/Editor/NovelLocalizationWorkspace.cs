@@ -399,15 +399,7 @@ namespace Novelify.Editor
             {
                 var visibleKeys = new HashSet<string>(_records.Select(record => record.Key),
                     StringComparer.Ordinal);
-                int legacySpeakers = tableLines.Keys.Count(key =>
-                    key.EndsWith(":speaker", StringComparison.Ordinal));
-                if (legacySpeakers > 0)
-                    EditorGUILayout.HelpBox(
-                        $"{legacySpeakers} old speaker-name translations are preserved in this asset, " +
-                        "but are no longer shown or used. Names come from the character.",
-                        MessageType.Info);
-                int otherKeys = tableLines.Keys.Count(key => !visibleKeys.Contains(key) &&
-                    !key.EndsWith(":speaker", StringComparison.Ordinal));
+                int otherKeys = tableLines.Keys.Count(key => !visibleKeys.Contains(key));
                 if (otherKeys > 0)
                     EditorGUILayout.HelpBox(
                         $"This table has {otherKeys} entries outside the selected graph's current lines. " +

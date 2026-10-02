@@ -16,6 +16,22 @@
 - Added public flow/value node compiler interfaces with automatic editor
   discovery, import diagnostics and runtime value evaluators.
 - Added Screen Flash, Screen Shake and timed Narration nodes.
+- Fixed Screen Shake to move the camera transform each frame and restore its pose,
+  preserving dialogue during shake and flash effects. Camera selection supports
+  an explicit runner camera, the canvas camera, and MainCamera fallback.
+- Fixed visible Screen Shake in the starter scene by moving Screen Space canvas
+  content alongside the camera, including separate backdrop and portrait
+  canvases. Pixel displacement accounts for canvas scale and avoids nested
+  offsets; positions restore on completion, replacement, or graph stop.
+- Added Bounce Character, Shake Character, Sway Character, and Stop Character
+  Animation, with per-instance targets, value inputs, optional durations and
+  timed waits. Effects compose with transforms and clear on hide or graph stop.
+- Fixed custom Transform easing curve assignment and import, retaining legacy
+  graph options, and honor dialogue panel assignments made after initialization.
+- Bound automatic execution through custom handlers and respect session stops
+  from node-entry callbacks before executing further actions.
+- Added compilation checks for all built-in node types and visual-effect
+  regressions for timing, restoration, cancellation and nonblocking playback.
 - Reworked generated Backlog/Preferences controls with readable modal layouts
   and visible Auto/Skip states. Skip now defaults to all text so fresh stories
   can use it immediately; read-only skipping remains optional.

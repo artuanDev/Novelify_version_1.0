@@ -23,6 +23,14 @@ namespace Novelify.Editor
         public const string Vector2Math = Values + "/Math/Vector2";
     }
 
+    // Graph Toolkit cannot assign AnimationCurve directly through TrySetValue.
+    // Wrap it in authoring data so custom curves can be edited and serialized.
+    [Serializable]
+    public struct NovelEasingCurve
+    {
+        public AnimationCurve Curve;
+    }
+
     // Authoring nodes are editor-only; the importer creates their runtime equivalents.
 
     [Serializable]
@@ -150,36 +158,18 @@ namespace Novelify.Editor
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             base.OnDefineOptions(context);
-            // Keep the original serialized option IDs so graphs created before the
-            // value-port upgrade retain their transform values on reimport.
-            context.AddOption<float>("OffsetX").WithDisplayName("Legacy Offset X")
-                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
-            context.AddOption<float>("OffsetY").WithDisplayName("Legacy Offset Y")
-                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
-            context.AddOption<float>("Rotation").WithDisplayName("Legacy Rotation")
-                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
-            context.AddOption<Vector2>("Scale").WithDisplayName("Legacy Scale")
-                .WithDefaultValue(Vector2.one).ShowInInspectorOnly().Build();
-            context.AddOption<float>("Margin").WithDisplayName("Legacy Margin")
-                .WithDefaultValue(0f).ShowInInspectorOnly().Build();
             context.AddOption<CharacterPositionSpace>("Coordinate Space")
                 .WithDefaultValue(CharacterPositionSpace.Normalized)
-                .WithTooltip("Normalized maps the screen to -1..1. Canvas uses anchored canvas units for legacy layouts.")
+                .WithTooltip("Normalized maps the screen to -1..1. Canvas uses anchored canvas units.")
                 .Build();
             context.AddOption<bool>("Relative").WithTooltip("Add the X/Y displacement, in the selected coordinate space, to the current position. Rotation and scale remain absolute.").Build();
             context.AddOption<bool>("Animate Transform").WithTooltip("Animate position, rotation, and scale over Duration; disable to apply instantly.").WithDefaultValue(false).Build();
             context.AddOption<bool>("Animate Transparency").WithTooltip("Animate the portrait opacity to the Opacity value over the same duration and easing.").WithDefaultValue(false).Build();
             context.AddOption<float>("Duration").WithTooltip("Transform time in real-time seconds. Zero applies instantly.").WithDefaultValue(0.5f).Build();
             context.AddOption<PortraitTweenEasing>("Easing").WithTooltip("Timing preset for the portrait tween. None uses constant linear timing; Custom uses the editable curve.").WithDefaultValue(PortraitTweenEasing.EaseInOut).Build();
-            context.AddOption<AnimationCurve>("Custom Easing Curve").WithTooltip("Custom tween progress from time 0 to 1. Used only when Easing is Custom.").WithDefaultValue(AnimationCurve.Linear(0f, 0f, 1f, 1f)).ShowInInspectorOnly().Build();
-            // Retained for existing serialized graphs. New authoring uses Easing.
-            context.AddOption<bool>("Ease In Out").WithTooltip("Legacy timing setting retained for older graphs.").WithDefaultValue(true).ShowInInspectorOnly().Build();
+            context.AddOption<NovelEasingCurve>("Custom Easing Data")
+                .WithDefaultValue(default).ShowInInspectorOnly().Build();
             context.AddOption<bool>("Wait For Completion").WithTooltip("Wait for the transform before continuing. Disable to animate during following dialogue.").WithDefaultValue(true).Build();
-            context.AddOption<bool>("Transform Second Character")
-                .WithDefaultValue(false)
-                .WithDisplayName("Legacy Enable Character 2")
-                .ShowInInspectorOnly()
-                .Build();
             context.AddOption(
                     TargetsOptionID,
                     typeof(TransformTargetAuthoringList))
@@ -196,46 +186,21 @@ namespace Novelify.Editor
                     .Build();
         }
 
+        internal static AnimationCurve GetCustomEasingCurve(INode node)
+        {
+            INodeOption data = node.GetNodeOptionByName("Custom Easing Data");
+            if (data != null && data.TryGetValue(out NovelEasingCurve authored) && authored.Curve != null)
+                return authored.Curve;
+            return AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        }
+
         internal int GetDesiredCharacterCount()
         {
             INodeOption option = GetNodeOptionByName(TargetsOptionID);
-            if (option != null &&
-                option.TryGetValue(out TransformTargetAuthoringList targets) &&
-                targets?.Targets != null &&
-                targets.Targets.Count > 0)
-                return targets.Targets.Count;
-
-            // Versions that used an empty marker class could save Targets as
-            // an empty list even while Character 2+ ports remained authored.
-            // Recover the count from those real ports so import never drops a
-            // connected character or its transform.
-            int existingPortCount = GetExistingCharacterPortCount();
-            if (existingPortCount > 1)
-                return existingPortCount;
-
-            // Graphs authored before the expandable list had one optional
-            // second target. Preserve both port groups when they are upgraded.
-            return 2;
-        }
-
-        private int GetExistingCharacterPortCount()
-        {
-            int highest = 0;
-            foreach (IPort port in GetInputPorts())
-            {
-                if (port.Name == "Character")
-                {
-                    highest = Mathf.Max(highest, 1);
-                    continue;
-                }
-                const string prefix = "Character ";
-                if (port.Name.StartsWith(prefix, StringComparison.Ordinal) &&
-                    int.TryParse(
-                        port.Name.Substring(prefix.Length),
-                        out int number))
-                    highest = Mathf.Max(highest, number);
-            }
-            return Mathf.Max(1, highest);
+            return option != null &&
+                option.TryGetValue(out TransformTargetAuthoringList targets)
+                ? Mathf.Max(1, targets?.Targets?.Count ?? 1)
+                : 1;
         }
 
         internal bool TransformPortCountMatches()
@@ -251,24 +216,6 @@ namespace Novelify.Editor
                            out _);
             });
             return actual == GetDesiredCharacterCount();
-        }
-    }
-
-    // Retained so existing graph assets containing the old node type continue to load.
-    // New nodes should use TransformSpeakerPortraitNode above.
-    [Serializable]
-    public class TranslateSpeakerPortraitNode : CharacterActionNode
-    {
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            base.OnDefineOptions(context);
-            context.AddOption<float>("OffsetX").WithTooltip("Legacy target X in canvas units.").WithDefaultValue(0f).Build();
-            context.AddOption<float>("OffsetY").WithTooltip("Legacy target Y in canvas units.").WithDefaultValue(0f).Build();
-            context.AddOption<bool>("Relative").WithTooltip("Move by this offset from the current position.").Build();
-            context.AddOption<bool>("Smooth Movement").WithTooltip("Animate the move over Duration.").WithDefaultValue(false).Build();
-            context.AddOption<float>("Duration").WithDefaultValue(0.5f).Build();
-            context.AddOption<bool>("Ease In Out").WithDefaultValue(true).Build();
-            context.AddOption<bool>("Wait For Completion").WithDefaultValue(true).Build();
         }
     }
 
@@ -408,6 +355,8 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class DialogueNode: SimpleDialogueNode
     {
+        protected virtual string CharacterPortName => "Speaker";
+        protected virtual string CharacterReferencePortName => "Speaker Reference";
         public override void OnEnable()
         {
             base.OnEnable();
@@ -422,10 +371,10 @@ namespace Novelify.Editor
         {
             base .OnDefinePorts(context);
 
-            context.AddInputPort<NovelCharacter>("Speaker")
+            context.AddInputPort<NovelCharacter>(CharacterPortName)
                 .WithTooltip("Character whose name, portrait, voice, and timing are used.")
                 .Build();
-            context.AddInputPort<NovelCharacterReference>("Speaker Reference")
+            context.AddInputPort<NovelCharacterReference>(CharacterReferencePortName)
                 .WithTooltip("Optional speaker value containing both the character asset and instance ID.")
                 .Build();
 
@@ -488,7 +437,6 @@ namespace Novelify.Editor
     [UseWithGraph(typeof(NovelGraph), typeof(NovelFunctionGraph))]
     public class ChoiceNode: Node
     {
-        const string optionID = "portCount";
         public const string ChoicesOptionID = "Choices";
 
         public override void OnEnable()
@@ -519,35 +467,22 @@ namespace Novelify.Editor
                 .WithTooltip("Sound to play when this node is shown.")
                 .Build();
 
-            IReadOnlyList<ChoiceAuthoringEntry> authoredChoices = GetAuthoredChoices();
             int portCount = GetDesiredChoiceCount();
             for (int i = 0; i < portCount; i++)
             {
                 string outputName = GetChoiceOutputDisplayName(i);
-                // These ports remain serialized for graphs created before the
-                // foldout editor. Their views are hidden by the Novelify graph
-                // UI adapter, so authors see each field only once.
-                context.AddInputPort<string>($"Choice ID {i}")
-                    .WithDefaultValue(string.Empty)
-                    .Build();
                 context.AddInputPort<string>($"Choice Text {i}")
                     .WithDefaultValue(string.Empty)
+                    .WithTooltip("Optional dynamic text. Connect a value to override the text in Choices.")
                     .Build();
                 context.AddInputPort<bool>($"Condition {i}")
                     .WithDefaultValue(true)
                     .WithDisplayName($"Available when: {outputName}")
                     .WithTooltip("Optional dynamic condition for this choice. Leave true for an always-available choice.")
                     .Build();
-                context.AddInputPort<NovelChoiceUnavailablePolicy>($"Unavailable Policy {i}")
-                    .WithDefaultValue(NovelChoiceUnavailablePolicy.Hide)
-                    .Build();
                 context.AddInputPort<string>($"Disabled Reason {i}")
                     .WithDefaultValue(string.Empty)
-                    .Build();
-                context.AddInputPort<bool>($"Once Only {i}")
-                    .WithDefaultValue(false)
-                    .Build();
-                context.AddInputPort<NovelChoiceTransactionDefinition>($"Transaction {i}")
+                    .WithTooltip("Optional dynamic reason. Connect a value to override the reason in Choices.")
                     .Build();
                 context.AddOutputPort($"Choice {i}")
                     .WithDisplayName(outputName)
@@ -596,10 +531,6 @@ namespace Novelify.Editor
                 .WithDefaultValue(true)
                 .Build();
 
-            context.AddOption(optionID, typeof(int))
-                .WithDisplayName("Legacy Choice Count")
-                .WithTooltip("Retained for old graph assets. Add and remove choices with the Choices dropdown instead.")
-                .Delayed().WithDefaultValue(2).ShowInInspectorOnly().Build();
         }
 
         internal IReadOnlyList<ChoiceAuthoringEntry> GetAuthoredChoices()
@@ -610,14 +541,7 @@ namespace Novelify.Editor
                 : null;
         }
 
-        internal int GetDesiredChoiceCount()
-        {
-            int legacyPortCount = 0;
-            GetNodeOptionByName(optionID)?.TryGetValue(out legacyPortCount);
-            // Taking the larger count preserves every branch in graphs authored
-            // before the foldout-based choice editor was introduced.
-            return Mathf.Max(GetAuthoredChoices()?.Count ?? 0, legacyPortCount);
-        }
+        internal int GetDesiredChoiceCount() => GetAuthoredChoices()?.Count ?? 0;
 
         internal string GetChoiceOutputDisplayName(int index)
         {
@@ -626,9 +550,6 @@ namespace Novelify.Editor
                 !string.IsNullOrWhiteSpace(authored[index]?.ID))
                 return authored[index].ID.Trim();
 
-            IPort legacyID = GetInputPortByName($"Choice ID {index}");
-            if (legacyID != null && legacyID.TryGetValue(out string id) && !string.IsNullOrWhiteSpace(id))
-                return id.Trim();
             return $"Choice {index + 1}";
         }
 
@@ -644,69 +565,6 @@ namespace Novelify.Editor
             return GetOutputPorts().Count(port => port.Name.StartsWith("Choice ", StringComparison.Ordinal)) == count;
         }
 
-        internal bool TryGetMigratedChoices(out ChoiceAuthoringList migrated)
-        {
-            IReadOnlyList<ChoiceAuthoringEntry> current = GetAuthoredChoices();
-            var source = new ChoiceAuthoringList { Entries = current?.ToList() ?? new List<ChoiceAuthoringEntry>() };
-            migrated = source.Clone(GetDesiredChoiceCount());
-            bool changed = false;
-
-            for (int index = 0; index < migrated.Entries.Count; index++)
-            {
-                ChoiceAuthoringEntry entry = migrated.Entries[index];
-                IPort idPort = GetInputPortByName($"Choice ID {index}");
-                IPort textPort = GetInputPortByName($"Choice Text {index}");
-                IPort conditionPort = GetInputPortByName($"Condition {index}");
-                IPort policyPort = GetInputPortByName($"Unavailable Policy {index}");
-                IPort reasonPort = GetInputPortByName($"Disabled Reason {index}");
-                IPort oncePort = GetInputPortByName($"Once Only {index}");
-                IPort transactionPort = GetInputPortByName($"Transaction {index}");
-
-                if (string.IsNullOrWhiteSpace(entry.ID) && idPort?.TryGetValue(out string id) == true &&
-                    !string.IsNullOrWhiteSpace(id))
-                { entry.ID = id.Trim(); changed = true; }
-                if (string.IsNullOrEmpty(entry.Text) && textPort?.TryGetValue(out string text) == true &&
-                    !string.IsNullOrEmpty(text))
-                { entry.Text = text; changed = true; }
-                if (entry.Condition && conditionPort?.IsConnected != true &&
-                    conditionPort?.TryGetValue(out bool available) == true && !available)
-                { entry.Condition = false; changed = true; }
-                if (entry.UnavailablePolicy == NovelChoiceUnavailablePolicy.Hide &&
-                    policyPort?.TryGetValue(out NovelChoiceUnavailablePolicy policy) == true &&
-                    policy != NovelChoiceUnavailablePolicy.Hide)
-                { entry.UnavailablePolicy = policy; changed = true; }
-                if (string.IsNullOrEmpty(entry.DisabledReason) &&
-                    reasonPort?.TryGetValue(out string reason) == true && !string.IsNullOrEmpty(reason))
-                { entry.DisabledReason = reason; changed = true; }
-                if (!entry.OnceOnly && oncePort?.TryGetValue(out bool once) == true && once)
-                { entry.OnceOnly = true; changed = true; }
-                if (entry.Transaction == null &&
-                    transactionPort?.TryGetValue(out NovelChoiceTransactionDefinition transaction) == true &&
-                    transaction != null)
-                { entry.Transaction = transaction; changed = true; }
-            }
-            return changed;
-        }
-
-        internal void ClearMigratedLegacyChoiceValues()
-        {
-            for (int index = 0; index < GetDesiredChoiceCount(); index++)
-            {
-                ClearIfNotConnected(GetInputPortByName($"Choice ID {index}"), string.Empty);
-                ClearIfNotConnected(GetInputPortByName($"Choice Text {index}"), string.Empty);
-                ClearIfNotConnected(GetInputPortByName($"Condition {index}"), true);
-                ClearIfNotConnected(GetInputPortByName($"Unavailable Policy {index}"), NovelChoiceUnavailablePolicy.Hide);
-                ClearIfNotConnected(GetInputPortByName($"Disabled Reason {index}"), string.Empty);
-                ClearIfNotConnected(GetInputPortByName($"Once Only {index}"), false);
-                ClearIfNotConnected<NovelChoiceTransactionDefinition>(
-                    GetInputPortByName($"Transaction {index}"), null);
-            }
-        }
-
-        private static void ClearIfNotConnected<T>(IPort port, T value)
-        {
-            if (port?.IsConnected != true) port?.TrySetValue(value);
-        }
     }
 
     internal static class NovelNodePresentation

@@ -24,13 +24,6 @@ namespace Novelify
         {
             _playerController ??= GetComponent<NovelPlayerController>();
             if (_playerController != null && _playerController.isActiveAndEnabled) return;
-#if ENABLE_LEGACY_INPUT_MANAGER
-            if (UnityEngine.Input.GetMouseButtonDown(0))
-            {
-                Session.Advance();
-                return;
-            }
-#endif
             object mouse = CurrentMouse?.GetValue(null);
             object button = mouse != null ? LeftButton?.GetValue(mouse) : null;
             if (button?.GetType().GetProperty("wasPressedThisFrame")?.GetValue(button) is true)

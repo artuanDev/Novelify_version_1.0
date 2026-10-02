@@ -21,6 +21,12 @@ namespace Novelify.Tests
             _prefab.SetActive(false);
             foreach (string layer in new[] { "PortraitBackground", "PortraitEyes", "PortraitEyesDetails", "PortraitMouth" })
                 new GameObject(layer, typeof(RectTransform), typeof(Image)).transform.SetParent(_prefab.transform, false);
+            CharacterInfo info = _prefab.GetComponent<CharacterInfo>();
+            Image[] layers = _prefab.GetComponentsInChildren<Image>(true);
+            info.Body = layers[0];
+            info.Eyes = layers[1];
+            info.Details = layers[2];
+            info.Mouth = layers[3];
             _stage = new NovelCharacterStage(_root.transform, _prefab);
         }
 

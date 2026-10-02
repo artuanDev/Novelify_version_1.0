@@ -54,6 +54,38 @@ namespace Novelify.Tests
             return AssetDatabase.LoadAssetAtPath<RuntimeNovelGraph>(_folder + "/Story.novelgraph");
         }
 
+        private Texture2D SaveTexture(string name, Color color)
+        {
+            var texture = new Texture2D(2, 2);
+            texture.SetPixels(Enumerable.Repeat(color, 4).ToArray());
+            texture.Apply();
+            AssetDatabase.CreateAsset(texture, _folder + "/" + name + ".asset");
+            return texture;
+        }
+
+        private AudioClip SaveAudioClip()
+        {
+            string path = _folder + "/Music.wav";
+            using (var writer = new System.IO.BinaryWriter(System.IO.File.Create(path)))
+            {
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+                writer.Write(36 + 882);
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));
+                writer.Write(16);
+                writer.Write((short)1);
+                writer.Write((short)1);
+                writer.Write(44100);
+                writer.Write(88200);
+                writer.Write((short)2);
+                writer.Write((short)16);
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+                writer.Write(882);
+                writer.Write(new byte[882]);
+            }
+            AssetDatabase.ImportAsset(path);
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+        }
+
         [Test]
         public void CinematicNodesAndNarrationCompileWithStableFlow()
         {
@@ -85,6 +117,46 @@ namespace Novelify.Tests
             Assert.That(compiledShake.NextNodeID, Is.EqualTo(compiledNarration.NodeID));
             Assert.That(compiledNarration.AutoAdvanceDelay, Is.EqualTo(2f));
             Assert.That(compiledNarration.LineID, Is.Not.Empty);
+        }
+
+        [TestCase(typeof(BounceCharacterNode), NovelCharacterAnimation.Bounce)]
+        [TestCase(typeof(ShakeCharacterNode), NovelCharacterAnimation.Shake)]
+        [TestCase(typeof(SwayCharacterNode), NovelCharacterAnimation.Sway)]
+        public void CharacterAnimationAndStopCompileWithValuesAndCharacterReferences(Type type, NovelCharacterAnimation kind)
+        {
+            StartNode start = Add<StartNode>();
+            var animation = (CharacterAnimationNode)Activator.CreateInstance(type);
+            _graph.AddNode(animation);
+            StopCharacterAnimationNode stop = Add<StopCharacterAnimationNode>();
+            EndNode end = Add<EndNode>();
+            MakeNovelCharacterReferenceNode reference = Add<MakeNovelCharacterReferenceNode>();
+            reference.GetInputPortByName("Character").TrySetValue(_character);
+            reference.GetInputPortByName("Instance ID").TrySetValue("animated-copy");
+            AddFloatNode amplitude = Add<AddFloatNode>();
+            amplitude.GetInputPortByName("A").TrySetValue(20f);
+            amplitude.GetInputPortByName("B").TrySetValue(6f);
+            Assert.That(_graph.Connect(amplitude.GetOutputPortByName("Result"), animation.GetInputPortByName("Amplitude")), Is.True);
+            Assert.That(_graph.Connect(reference.GetOutputPortByName("Character Reference"), animation.GetInputPortByName("Character Reference")), Is.True);
+            Assert.That(_graph.Connect(animation.GetOutputPortByName("Character Reference"), stop.GetInputPortByName("Character Reference")), Is.True);
+            animation.GetInputPortByName("Frequency").TrySetValue(3f);
+            animation.GetInputPortByName("Duration").TrySetValue(0.6f);
+            animation.GetNodeOptionByName("Wait For Completion").TrySetValue(true);
+            Connect(start, animation);
+            Connect(animation, stop);
+            Connect(stop, end);
+
+            RuntimeNovelGraph runtime = Import();
+            RuntimeAnimateCharacterNode compiled = runtime.AllNodes.OfType<RuntimeAnimateCharacterNode>().Single();
+            RuntimeStopCharacterAnimationNode compiledStop = runtime.AllNodes.OfType<RuntimeStopCharacterAnimationNode>().Single();
+            Assert.That(compiled.Animation, Is.EqualTo(kind));
+            Assert.That(compiled.AmplitudeValue, Is.TypeOf<RuntimeArithmeticExpression>());
+            Assert.That(compiled.Frequency, Is.EqualTo(3f));
+            Assert.That(compiled.Duration, Is.EqualTo(0.6f));
+            Assert.That(compiled.WaitForCompletion, Is.True);
+            Assert.That(compiled.CharacterReferenceValue, Is.TypeOf<RuntimeMakeCharacterReferenceExpression>());
+            Assert.That(compiledStop.CharacterReferenceValue, Is.TypeOf<RuntimeMakeCharacterReferenceExpression>());
+            Assert.That(compiled.NextNodeID, Is.EqualTo(compiledStop.NodeID));
+            Assert.That(compiledStop.NextNodeID, Is.EqualTo(end.ID.ToString()));
         }
 
         [Test]
@@ -298,23 +370,73 @@ namespace Novelify.Tests
         }
 
         [Test]
+        public void ModernTransformCompilesInsideNovelFunction()
+        {
+            string functionPath = _folder + "/Transform.novelfunction";
+            NovelFunctionGraph function = GraphDatabase.CreateGraph<NovelFunctionGraph>(functionPath);
+            try
+            {
+                function.UndoBeginRecordGraph("Author modern transform");
+                var start = new StartNode();
+                var transform = new TransformSpeakerPortraitNode();
+                var end = new EndNode();
+                function.AddNode(start);
+                function.AddNode(transform);
+                function.AddNode(end);
+                transform.GetInputPortByName("Character").TrySetValue(_character);
+                transform.GetInputPortByName("Position").TrySetValue(new Vector2(0.4f, -0.7f));
+                transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.None);
+                Assert.That(function.Connect(start.GetOutputPortByName("out"), transform.GetInputPortByName("in")), Is.True);
+                Assert.That(function.Connect(transform.GetOutputPortByName("out"), end.GetInputPortByName("in")), Is.True);
+                function.UndoEndRecordGraph();
+                GraphDatabase.SaveGraph(function);
+                AssetDatabase.ImportAsset(functionPath, ImportAssetOptions.ForceUpdate);
+                RuntimeNovelFunction runtime = AssetDatabase.LoadAssetAtPath<RuntimeNovelFunction>(functionPath);
+                Assert.That(runtime, Is.Not.Null);
+                RuntimeTransformSpeakerPortraitNode move = runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+                Assert.That(move.OffsetX, Is.EqualTo(0.4f));
+                Assert.That(move.OffsetY, Is.EqualTo(-0.7f));
+                Assert.That(move.Easing, Is.EqualTo(PortraitTweenEasing.None));
+                Assert.That(move.PositionSpace, Is.EqualTo(CharacterPositionSpace.Normalized));
+            }
+            finally { function.OnDisable(); }
+        }
+
+        [Test]
+        public void RemovingAuthoredChoicesRemovesTheirBranches()
+        {
+            ChoiceNode choice = Add<ChoiceNode>();
+            ChoiceAuthoringList choices = ChoiceAuthoringList.CreateDefault(5);
+            choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices);
+            choice.DefineNode();
+            Assert.That(choice.GetOutputPortByName("Choice 4"), Is.Not.Null);
+            choices = ChoiceAuthoringList.CreateDefault(1);
+            choice.GetNodeOptionByName(ChoiceNode.ChoicesOptionID).TrySetValue(choices);
+            choice.DefineNode();
+            Assert.That(choice.GetOutputPortByName("Choice 0"), Is.Not.Null);
+            Assert.That(choice.GetOutputPortByName("Choice 1"), Is.Null);
+            Assert.That(choice.GetOutputPortByName("Choice 4"), Is.Null);
+        }
+
+        [Test]
         public void CharacterPassThroughAndMovementOptionsSurviveImport()
         {
             StartNode start = Add<StartNode>();
             DialogueNode dialogue = Add<DialogueNode>();
-            TranslateSpeakerPortraitNode translate = Add<TranslateSpeakerPortraitNode>();
+            TransformSpeakerPortraitNode translate = Add<TransformSpeakerPortraitNode>();
             ShowCharacterNode show = Add<ShowCharacterNode>();
             EndNode end = Add<EndNode>();
             dialogue.GetInputPortByName("Speaker").TrySetValue(_character);
             _graph.Connect(dialogue.GetOutputPortByName("Current Speaker"), translate.GetInputPortByName("Character"));
             _graph.Connect(translate.GetOutputPortByName("Character"), show.GetInputPortByName("Character"));
-            translate.GetNodeOptionByName("Smooth Movement").TrySetValue(true);
+            translate.GetNodeOptionByName("Animate Transform").TrySetValue(true);
             translate.GetNodeOptionByName("Duration").TrySetValue(0.75f);
-            translate.GetNodeOptionByName("OffsetX").TrySetValue(240f);
+            translate.GetInputPortByName("Position").TrySetValue(new Vector2(240f, 0f));
+            translate.GetNodeOptionByName("Coordinate Space").TrySetValue(CharacterPositionSpace.Canvas);
             translate.GetNodeOptionByName("Instance ID").TrySetValue("second");
             Connect(start, dialogue); Connect(dialogue, translate); Connect(translate, show); Connect(show, end);
             RuntimeNovelGraph runtime = Import();
-            var move = runtime.AllNodes.OfType<RuntimeTranslateSpeakerPortraitNode>().Single();
+            var move = runtime.AllNodes.OfType<RuntimeTransformSpeakerPortraitNode>().Single();
             Assert.That(move.Character, Is.EqualTo(_character));
             Assert.That(move.InstanceID, Is.EqualTo("second"));
             Assert.That(move.SmoothMovement, Is.True);
@@ -497,20 +619,20 @@ namespace Novelify.Tests
             transform.GetNodeOptionByName("Animate Transform").TrySetValue(true);
             transform.GetNodeOptionByName("Animate Transparency").TrySetValue(true);
             transform.GetNodeOptionByName("Easing").TrySetValue(PortraitTweenEasing.Custom);
-            transform.GetNodeOptionByName("Custom Easing Curve").TrySetValue(new AnimationCurve(
+            Assert.That(transform.GetNodeOptionByName("Custom Easing Data").TrySetValue(new NovelEasingCurve { Curve = new AnimationCurve(
                 new Keyframe(0f, 0f),
                 new Keyframe(0.4f, 0.15f),
-                new Keyframe(1f, 1f)));
+                new Keyframe(1f, 1f)) }), Is.True);
             Connect(start, transform);
             Connect(transform, dialogue);
 
             RuntimeNovelGraph runtime = Import();
             RuntimeTransformSpeakerPortraitNode result = runtime.AllNodes
                 .OfType<RuntimeTransformSpeakerPortraitNode>()
-                .Single(node => node is not RuntimeTranslateSpeakerPortraitNode);
+                .Single();
 
             Assert.That(result.Character, Is.EqualTo(_character));
-            Assert.That(result.PositionIsNormalized, Is.True);
+            Assert.That(result.PositionSpace, Is.EqualTo(CharacterPositionSpace.Normalized));
             Assert.That(result.OffsetX, Is.EqualTo(0.75f));
             Assert.That(result.OffsetY, Is.EqualTo(-0.25f));
             Assert.That(result.Rotation, Is.EqualTo(35f));
@@ -520,7 +642,6 @@ namespace Novelify.Tests
             Assert.That(result.AnimateOpacity, Is.True);
             Assert.That(result.OpacityValue, Is.TypeOf<RuntimeConstantExpression>());
             Assert.That(result.SmoothMovement, Is.True);
-            Assert.That(result.UseEasingPreset, Is.True);
             Assert.That(result.Easing, Is.EqualTo(PortraitTweenEasing.Custom));
             Assert.That(result.CustomEasingCurve.length, Is.EqualTo(3));
             Assert.That(result.CustomEasingCurve.keys[1].time, Is.EqualTo(0.4f).Within(0.0001f));
@@ -825,6 +946,8 @@ namespace Novelify.Tests
         [Test]
         public void SpeechBubblePresentationAndDialogueImportSeparately()
         {
+            Texture2D fill = SaveTexture("Fill", Color.white);
+            Texture2D outline = SaveTexture("Outline", Color.gray);
             StartNode start = Add<StartNode>();
             CreateSpeechBubbleNode create = Add<CreateSpeechBubbleNode>();
             SpeechBubbleNode bubble = Add<SpeechBubbleNode>();
@@ -864,7 +987,7 @@ namespace Novelify.Tests
             create.GetNodeOptionByName("Corner Radius").TrySetValue(31f);
             create.GetNodeOptionByName("Opacity").TrySetValue(0.43f);
             create.GetNodeOptionByName("Fill Texture").TrySetValue(
-                Texture2D.whiteTexture);
+                fill);
             create.GetNodeOptionByName("Fill Tiling").TrySetValue(
                 new Vector2(3f, 2f));
             create.GetNodeOptionByName("Fill Offset").TrySetValue(
@@ -873,7 +996,7 @@ namespace Novelify.Tests
             create.GetNodeOptionByName("Outline Transparency").TrySetValue(
                 0.35f);
             create.GetNodeOptionByName("Outline Texture").TrySetValue(
-                Texture2D.grayTexture);
+                outline);
             create.GetNodeOptionByName("Outline Tiling").TrySetValue(
                 new Vector2(5f, 1.5f));
             change.GetNodeOptionByName("Tail Length").TrySetValue(42f);
@@ -923,7 +1046,7 @@ namespace Novelify.Tests
             Assert.That(runtimeCreate.BubbleStyle.CornerRadius, Is.EqualTo(31f));
             Assert.That(runtimeCreate.BubbleStyle.Opacity, Is.EqualTo(0.43f));
             Assert.That(runtimeCreate.BubbleStyle.FillTexture,
-                Is.EqualTo(Texture2D.whiteTexture));
+                Is.EqualTo(fill));
             Assert.That(runtimeCreate.BubbleStyle.FillTiling,
                 Is.EqualTo(new Vector2(3f, 2f)));
             Assert.That(runtimeCreate.BubbleStyle.FillOffset,
@@ -932,7 +1055,7 @@ namespace Novelify.Tests
             Assert.That(runtimeCreate.BubbleStyle.OutlineTransparency,
                 Is.EqualTo(0.35f));
             Assert.That(runtimeCreate.BubbleStyle.OutlineTexture,
-                Is.EqualTo(Texture2D.grayTexture));
+                Is.EqualTo(outline));
             Assert.That(runtimeCreate.BubbleStyle.OutlineTiling,
                 Is.EqualTo(new Vector2(5f, 1.5f)));
             Assert.That(runtimeChange.TailLength, Is.EqualTo(42f));
@@ -979,37 +1102,23 @@ namespace Novelify.Tests
         }
 
         [Test]
-        public void TransformPortraitRecoversNumberedPortsWhenTargetMetadataIsEmpty()
+        public void EmptyTransformTargetListUsesOnlyPrimaryCharacter()
         {
             StartNode start = Add<StartNode>();
-            TransformSpeakerPortraitNode transform =
-                Add<TransformSpeakerPortraitNode>();
+            TransformSpeakerPortraitNode transform = Add<TransformSpeakerPortraitNode>();
             EndNode end = Add<EndNode>();
-            transform.GetInputPortByName("Character")
-                .TrySetValue(_character);
-            transform.GetInputPortByName("Character 2")
-                .TrySetValue(_character);
-            transform.GetInputPortByName("Position 2")
-                .TrySetValue(new Vector2(0.64f, -1f));
-
-            // Reproduces graphs saved while the authoring-list entry type was
-            // empty: numbered ports survived, but Targets serialized as [].
-            transform.GetNodeOptionByName(
-                    TransformSpeakerPortraitNode.TargetsOptionID)
+            transform.GetInputPortByName("Character").TrySetValue(_character);
+            transform.GetInputPortByName("Character 2").TrySetValue(_character);
+            transform.GetNodeOptionByName(TransformSpeakerPortraitNode.TargetsOptionID)
                 .TrySetValue(new TransformTargetAuthoringList());
+            transform.DefineNode();
+            Assert.That(transform.GetInputPortByName("Character 2"), Is.Null);
             Connect(start, transform);
             Connect(transform, end);
-
             RuntimeTransformSpeakerPortraitNode result = Import().AllNodes
-                .OfType<RuntimeTransformSpeakerPortraitNode>()
-                .Single();
-            Assert.That(result.AdditionalTargets, Has.Count.EqualTo(1));
-            Assert.That(result.AdditionalTargets[0].Character,
-                Is.EqualTo(_character));
-            Assert.That(result.AdditionalTargets[0].OffsetX,
-                Is.EqualTo(0.64f).Within(0.001f));
-            Assert.That(result.AdditionalTargets[0].OffsetY,
-                Is.EqualTo(-1f).Within(0.001f));
+                .OfType<RuntimeTransformSpeakerPortraitNode>().Single();
+            Assert.That(result.Character, Is.EqualTo(_character));
+            Assert.That(result.AdditionalTargets, Is.Empty);
         }
 
         [Test]
@@ -1137,7 +1246,7 @@ namespace Novelify.Tests
         [Test]
         public void PlayMusicAndFadePortsCompileToRuntimeExpressions()
         {
-            AudioClip clip = AudioClip.Create("Test music", 1, 1, 44100, false);
+            AudioClip clip = SaveAudioClip();
             try
             {
                 StartNode start = Add<StartNode>();
@@ -1180,7 +1289,7 @@ namespace Novelify.Tests
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(clip);
+                AssetDatabase.DeleteAsset(_folder + "/Music.wav");
             }
         }
     }

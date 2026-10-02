@@ -353,3 +353,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Novelify.Runtime::Novelify.CharacterInfo
   character: {fileID: 0}
+  Body: {fileID: 307777458145787204}
+  Eyes: {fileID: 3275109946683510465}
+  Details: {fileID: 4869023049658888524}
+  Mouth: {fileID: 2040404942827773934}

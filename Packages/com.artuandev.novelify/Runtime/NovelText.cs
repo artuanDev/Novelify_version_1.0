@@ -64,32 +64,6 @@ namespace Novelify
         public int visibleCharacterCount => _document.Characters.Count;
         public bool hasAnimatedEffects => _document.HasAnimatedEffects;
 
-        // Compatibility-shaped properties keep the presentation code concise
-        // while using UnityEngine.UI.Text internally.
-        public bool richText
-        {
-            get => supportRichText;
-            set => supportRichText = value;
-        }
-
-        public bool enableAutoSizing
-        {
-            get => resizeTextForBestFit;
-            set => resizeTextForBestFit = value;
-        }
-
-        public float fontSizeMin
-        {
-            get => resizeTextMinSize;
-            set => resizeTextMinSize = Mathf.Max(1, Mathf.RoundToInt(value));
-        }
-
-        public float fontSizeMax
-        {
-            get => resizeTextMaxSize;
-            set => resizeTextMaxSize = Mathf.Max(1, Mathf.RoundToInt(value));
-        }
-
         public new float fontSize
         {
             get => base.fontSize;

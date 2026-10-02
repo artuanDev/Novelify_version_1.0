@@ -43,7 +43,7 @@ namespace Novelify
             if (DialogueText != null)
             {
                 _defaultDialogueFont = DialogueText.font;
-                DialogueText.richText = true;
+                DialogueText.supportRichText = true;
                 DialogueText.maxVisibleCharacters = int.MaxValue;
                 if (DialogueText.GetComponent<NovelTextEffects>() == null)
                     DialogueText.gameObject.AddComponent<NovelTextEffects>();
@@ -105,7 +105,6 @@ namespace Novelify
             if (_customPresentation != null)
             {
                 _speaker = null;
-                CharacterPortrait = null;
                 _isTextRevealing = false;
                 var presentation = new NovelDialoguePresentation(
                     Session,
@@ -154,7 +153,6 @@ namespace Novelify
                 InactiveCharacterTint,
                 SpeakerFocusTransitionDuration);
             Stage.BringToFront(_speaker);
-            CharacterPortrait = _speaker != null ? _speaker.gameObject : null;
             _speaker?.BeginDialogue(node);
             if (_speaker != null && node.Appearance != CharacterTransitionMode.Instant)
                 _speaker.TransitionIn(node.Appearance, node.AppearanceDirection,
@@ -306,6 +304,7 @@ namespace Novelify
             StopNodePresentation();
             StopAudio(PlaySoundSource);
             _generatedPresentation?.StopGraphEffects();
+            _stage?.StopSimpleAnimations();
             _currentNode = null;
             HideDialoguePanel();
             if (HideCharactersOnEnd) _stage?.HideAll();

@@ -54,7 +54,8 @@ namespace Novelify.Editor
         {
             base.OnDefinePorts(context);
             context.AddInputPort<float>("Duration").WithDefaultValue(0.35f).Build();
-            context.AddInputPort<float>("Amplitude").WithDefaultValue(18f).Build();
+            context.AddInputPort<float>("Amplitude").WithDefaultValue(18f)
+                .WithTooltip("Maximum screen displacement in pixels. Shakes the camera, backgrounds, portraits, and dialogue together, including Screen Space UI.").Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)

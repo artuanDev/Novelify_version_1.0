@@ -329,5 +329,56 @@ namespace Novelify.Tests
             Assert.That(_runner.Session.IsWaiting, Is.False);
             Assert.That(presentation.LastDialogue.Text, Is.EqualTo("After the impact."));
         }
+
+        [Test]
+        public void StoppingFromNodeEnteredPreventsItsAction()
+        {
+            int events = 0;
+            _runner.Session.EventRaised += _ => events++;
+            _runner.Session.NodeEntered += (_, __) => _runner.Session.Stop();
+            _graph.EntryNodeID = "event";
+            _graph.AllNodes = new List<RuntimeNode>
+            {
+                new RuntimeDialogueEventNode { NodeID = "event", EventName = "must-not-run" }
+            };
+            _runner.Session.Play(_graph);
+            Assert.That(events, Is.Zero);
+            Assert.That(_runner.Session.IsRunning, Is.False);
+        }
+
+        [Test]
+        public void RegisteredHandlersCannotBypassTheAutomaticLoopLimit()
+        {
+            _graph.EntryNodeID = "loop";
+            _graph.AllNodes = new List<RuntimeNode> { new RuntimeNode { NodeID = "loop", NextNodeID = "loop" } };
+            using (_runner.Session.RegisterNodeHandler<RuntimeNode>((_, __) => NovelNodeExecutionResult.Continue()))
+            {
+                LogAssert.Expect(LogType.Error, "Too many automatic nodes were chained. There may be a loop in the graph.");
+                _runner.Session.Play(_graph);
+                Assert.That(_runner.Session.IsRunning, Is.False);
+            }
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void HandlerThatStopsTheSessionCannotContinueIntoTheNextNode(bool handled)
+        {
+            int events = 0;
+            _runner.Session.EventRaised += _ => events++;
+            _graph.EntryNodeID = "handled";
+            _graph.AllNodes = new List<RuntimeNode>
+            {
+                new RuntimeNode { NodeID = "handled", NextNodeID = "event" },
+                new RuntimeDialogueEventNode { NodeID = "event", EventName = "must-not-run" }
+            };
+            using (_runner.Session.RegisterNodeHandler<RuntimeNode>((_, __) =>
+            {
+                _runner.Session.Stop();
+                return handled ? NovelNodeExecutionResult.Continue() : NovelNodeExecutionResult.NotHandled();
+            }))
+                _runner.Session.Play(_graph);
+            Assert.That(events, Is.Zero);
+            Assert.That(_runner.Session.IsRunning, Is.False);
+        }
     }
 }

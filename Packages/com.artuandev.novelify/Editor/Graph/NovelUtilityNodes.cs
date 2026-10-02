@@ -52,7 +52,7 @@ namespace Novelify.Editor
         {
             base.OnDefinePorts(context);
             context.AddInputPort<NovelCharacter>("Character")
-                .WithTooltip("Legacy target asset. Use Character Reference when a specific instance must travel through a graph.").Build();
+                .WithTooltip("Character asset to target. Use Character Reference when a specific instance must travel through a graph.").Build();
             context.AddInputPort<NovelCharacterReference>("Character Reference")
                 .WithTooltip("Optional target containing both the character asset and its instance ID.").Build();
             context.AddOutputPort<NovelCharacter>("Character")
@@ -107,7 +107,7 @@ namespace Novelify.Editor
             context.AddOption<Vector2>("Position").WithTooltip("Initial position interpreted in the selected coordinate space.").Build();
             context.AddOption<CharacterPositionSpace>("Coordinate Space")
                 .WithDefaultValue(CharacterPositionSpace.Canvas)
-                .WithTooltip("Canvas preserves legacy anchored-position behavior. Normalized maps (-1,-1) to bottom-left and (1,1) to top-right.")
+                .WithTooltip("Canvas uses anchored positions in canvas units. Normalized maps (-1,-1) to bottom-left and (1,1) to top-right.")
                 .Build();
             context.AddOption<CharacterEmotion>("Emotion").WithDefaultValue(CharacterEmotion.Neutral).Build();
         }

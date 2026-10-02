@@ -144,5 +144,11 @@ namespace Novelify
             foreach (CharacterInfo info in _characters.Values)
                 if (info != null) info.StopMovement();
         }
+
+        public void StopSimpleAnimations()
+        {
+            foreach (CharacterInfo info in _characters.Values)
+                if (info != null) info.StopSimpleAnimation();
+        }
     }
 }

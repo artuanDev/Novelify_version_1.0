@@ -1505,10 +1505,10 @@ namespace Novelify.Editor
                     _measurementObject.GetComponent<NovelText>();
                 _measurementText.font = Resources.GetBuiltinResource<Font>(
                     "LegacyRuntime.ttf");
-                _measurementText.enableAutoSizing = false;
+                _measurementText.resizeTextForBestFit = false;
                 _measurementText.horizontalOverflow =
                     UnityEngine.HorizontalWrapMode.Overflow;
-                _measurementText.richText = true;
+                _measurementText.supportRichText = true;
             }
             _measurementText.fontSize = Mathf.Max(1f, fontSize);
             return _measurementText.GetPreferredValues(

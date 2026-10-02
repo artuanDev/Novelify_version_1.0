@@ -1,4 +1,3 @@
-using Novelify;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -126,8 +125,20 @@ namespace Novelify
         private int _flashGeneration;
         private Coroutine _shakeCoroutine;
         private int _shakeGeneration;
-        private readonly List<RectTransform> _shakeTargets = new List<RectTransform>();
-        private readonly List<Vector2> _shakeOrigins = new List<Vector2>();
+        private Camera _shakeCamera;
+        private Vector3 _cameraShakeOrigin;
+        private Vector3 _cameraShakePosition;
+        private bool _cameraOffsetApplied;
+        private readonly List<ScreenShakeTarget> _screenShakeTargets = new List<ScreenShakeTarget>();
+
+        private sealed class ScreenShakeTarget
+        {
+            public RectTransform Rect;
+            public Canvas Canvas;
+            public Vector2 Origin;
+            public Vector2 Position;
+            public bool Applied;
+        }
         private readonly Image[] _backgroundImages = new Image[2];
         private readonly AspectRatioFitter[] _backgroundFitters =
             new AspectRatioFitter[2];
@@ -163,6 +174,7 @@ namespace Novelify
                 throw new InvalidOperationException(
                     "NovelGeneratedPresentation must be initialized first.");
 
+            AdoptAssignedDialoguePanel();
             EnsureCanvasAndLayers();
             EnsureDialogueBox();
             EnsureSpeakerBox();
@@ -173,6 +185,30 @@ namespace Novelify
 
             if (_trackedBubble == null)
                 BindStandardSurface();
+        }
+
+        private void AdoptAssignedDialoguePanel()
+        {
+            RectTransform assigned = _runner.DialoguePanel != null
+                ? _runner.DialoguePanel.transform as RectTransform : null;
+            if (assigned == null || assigned == _standardPanel || assigned == _bubbleWrapper)
+                return;
+
+            // Public UI assignments made after Awake must survive the next node.
+            RectTransform previous = _standardPanel;
+            if (previous != null)
+            {
+                CanvasGroup group = previous.GetComponent<CanvasGroup>();
+                if (group != null) group.alpha = 0f;
+            }
+            _standardPanel = assigned;
+            NovelText text = _runner.DialogueText;
+            _standardDialogueText = text != null &&
+                (previous == null || !text.transform.IsChildOf(previous)) && text != _bubbleDialogueText
+                ? text : assigned.GetComponentInChildren<NovelText>(true);
+            if (_standardSpeakerBox != null && previous != null &&
+                _standardSpeakerBox.transform.IsChildOf(previous))
+                _standardSpeakerBox.transform.SetParent(assigned, false);
         }
 
         public void CreateDialogueBox(RuntimeCreateDialogueBoxNode node)
@@ -212,7 +248,7 @@ namespace Novelify
                 Mathf.Max(0f, node.VerticalPadding);
             _standardSpeakerText.fontSize =
                 Mathf.Max(1f, node.FontSize);
-            _standardSpeakerText.enableAutoSizing = false;
+            _standardSpeakerText.resizeTextForBestFit = false;
             _standardSpeakerText.alignment = TextAnchor.MiddleCenter;
             ApplyStyle(_standardSpeakerBox, _speakerStyle);
             if (!string.IsNullOrEmpty(_standardSpeakerText.text))
@@ -426,7 +462,7 @@ namespace Novelify
             float vertical = Mathf.Max(
                 0f, _speakerVerticalPadding);
             _standardSpeakerText.alignment = TextAnchor.MiddleCenter;
-            _standardSpeakerText.enableAutoSizing = false;
+            _standardSpeakerText.resizeTextForBestFit = false;
             RectTransform textRect =
                 _standardSpeakerText.rectTransform;
             textRect.offsetMin = new Vector2(horizontal, vertical);
@@ -767,7 +803,9 @@ namespace Novelify
             ++_shakeGeneration;
             if (_shakeCoroutine != null) StopCoroutine(_shakeCoroutine);
             _shakeCoroutine = null;
-            RestoreShakeTargets();
+            RestoreCameraShake();
+            _shakeCamera = null;
+            _screenShakeTargets.Clear();
             ++_backgroundGeneration;
             if (_backgroundCoroutine != null)
                 StopCoroutine(_backgroundCoroutine);
@@ -833,43 +871,117 @@ namespace Novelify
             completed?.Invoke();
         }
 
-        public void BeginShake(float seconds, float amplitude, float frequency,
-            RectTransform characterStage, Action completed)
+        public Camera ResolveShakeCamera()
         {
-            EnsureCanvasAndLayers();
+            if (_runner.ScreenShakeCamera != null) return _runner.ScreenShakeCamera;
+            Canvas canvas = _runner.CanvasDialogue != null
+                ? _runner.CanvasDialogue.GetComponentInParent<Canvas>() : _canvas;
+            return canvas != null && canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+        }
+
+        // Retain the earlier public signature for integrations calling it directly.
+        public void BeginShake(float seconds, float amplitude, float frequency,
+            RectTransform characterStage, Action completed) =>
+            BeginCameraShake(seconds, amplitude, frequency, ResolveShakeCamera(), completed);
+
+        public void BeginCameraShake(float seconds, float amplitude, float frequency,
+            Camera camera, Action completed)
+        {
             ++_shakeGeneration;
             if (_shakeCoroutine != null) StopCoroutine(_shakeCoroutine);
             _shakeCoroutine = null;
-            RestoreShakeTargets();
-            AddShakeTarget(_backgroundLayer);
-            AddShakeTarget(_generatedRoot);
-            if (characterStage != null &&
-                (_generatedRoot == null || !characterStage.IsChildOf(_generatedRoot)))
-                AddShakeTarget(characterStage);
-            if (seconds <= 0f || amplitude <= 0f || _shakeTargets.Count == 0)
+            RestoreCameraShake();
+            _shakeCamera = camera;
+            _screenShakeTargets.Clear();
+            if (seconds <= 0f || amplitude <= 0f ||
+                float.IsNaN(seconds) || float.IsInfinity(seconds) ||
+                float.IsNaN(amplitude) || float.IsInfinity(amplitude))
             {
-                RestoreShakeTargets();
+                _shakeCamera = null;
                 completed?.Invoke();
                 return;
             }
+            CaptureScreenShakeTargets(camera);
             _shakeCoroutine = StartCoroutine(ShakeRoutine(_shakeGeneration,
-                seconds, amplitude, Mathf.Max(0.01f, frequency), completed));
+                seconds, amplitude, float.IsNaN(frequency) || float.IsInfinity(frequency) ? 25f : Mathf.Max(0.01f, frequency), completed));
         }
 
-        private void AddShakeTarget(RectTransform target)
+        private void OnDisable()
         {
-            if (target == null || _shakeTargets.Contains(target)) return;
-            _shakeTargets.Add(target);
-            _shakeOrigins.Add(target.anchoredPosition);
+            StopGraphEffects();
         }
 
-        private void RestoreShakeTargets()
+        private void ApplyCameraShake(Vector2 offset)
         {
-            for (int i = 0; i < _shakeTargets.Count; i++)
-                if (_shakeTargets[i] != null)
-                    _shakeTargets[i].anchoredPosition = _shakeOrigins[i];
-            _shakeTargets.Clear();
-            _shakeOrigins.Clear();
+            RestoreCameraShake();
+            foreach (ScreenShakeTarget target in _screenShakeTargets)
+            {
+                if (target.Rect == null || target.Canvas == null) continue;
+                target.Origin = target.Rect.anchoredPosition;
+                target.Rect.anchoredPosition = target.Origin - offset / Mathf.Max(0.0001f, target.Canvas.scaleFactor);
+                // Stretched RectTransforms can round the assigned position.
+                // Compare against Unity's actual stored value when restoring.
+                target.Position = target.Rect.anchoredPosition;
+                target.Applied = true;
+            }
+            Camera camera = _shakeCamera;
+            if (camera == null) return;
+            float depth = _canvas != null && _canvas.worldCamera == camera ? _canvas.planeDistance : 10f;
+            float verticalSize = camera.orthographic ? 2f * camera.orthographicSize :
+                2f * Mathf.Max(camera.nearClipPlane, depth) * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float unitsPerPixel = verticalSize / Mathf.Max(1, camera.pixelHeight);
+            _cameraShakeOrigin = camera.transform.position;
+            _cameraShakePosition = _cameraShakeOrigin + (camera.transform.right * offset.x +
+                camera.transform.up * offset.y) * unitsPerPixel;
+            camera.transform.position = _cameraShakePosition;
+            _cameraOffsetApplied = true;
+        }
+
+        private void RestoreCameraShake()
+        {
+            foreach (ScreenShakeTarget target in _screenShakeTargets)
+            {
+                if (target.Applied && target.Rect != null)
+                {
+                    // Camera-space canvas rebuilds can slightly round a stretched
+                    // root's position. Treat subpixel differences as our offset,
+                    // so a skipped restore cannot compound it on the next frame.
+                    // A deliberate new layout position still belongs to its owner.
+                    float tolerance = 0.25f / Mathf.Max(0.0001f,
+                        target.Canvas != null ? target.Canvas.scaleFactor : 1f);
+                    if ((target.Rect.anchoredPosition - target.Position).sqrMagnitude <= tolerance * tolerance)
+                        target.Rect.anchoredPosition = target.Origin;
+                }
+                target.Applied = false;
+            }
+            // Remove our previous offset unless another script has already
+            // supplied a new camera position. The next step uses that new pose.
+            if (_cameraOffsetApplied && _shakeCamera != null &&
+                _shakeCamera.transform.position == _cameraShakePosition)
+                _shakeCamera.transform.position = _cameraShakeOrigin;
+            _cameraOffsetApplied = false;
+        }
+
+        private void CaptureScreenShakeTargets(Camera camera)
+        {
+            // A camera cannot move screen-space UI. Offset each root canvas's
+            // children once, including separate backdrop and portrait canvases.
+            Canvas.ForceUpdateCanvases();
+            int display = camera != null ? camera.targetDisplay : _canvas != null ? _canvas.targetDisplay : 0;
+            foreach (Canvas canvas in FindObjectsByType<Canvas>())
+            {
+                if (!canvas.isActiveAndEnabled || !canvas.isRootCanvas ||
+                    canvas.renderMode == RenderMode.WorldSpace || canvas.targetDisplay != display)
+                    continue;
+                if (canvas.renderMode == RenderMode.ScreenSpaceCamera &&
+                    canvas.worldCamera != null && canvas.worldCamera != camera)
+                    continue;
+                foreach (Transform child in canvas.transform)
+                {
+                    if (child is RectTransform rect)
+                        _screenShakeTargets.Add(new ScreenShakeTarget { Rect = rect, Canvas = canvas });
+                }
+            }
         }
 
         private IEnumerator ShakeRoutine(int generation, float seconds,
@@ -880,18 +992,17 @@ namespace Novelify
             {
                 if (generation != _shakeGeneration) yield break;
                 float strength = amplitude * (1f - elapsed / seconds);
-                var offset = new Vector2(
+                ApplyCameraShake(new Vector2(
                     (Mathf.PerlinNoise(elapsed * frequency, 13.7f) * 2f - 1f) * strength,
-                    (Mathf.PerlinNoise(elapsed * frequency, 47.3f) * 2f - 1f) * strength);
-                for (int i = 0; i < _shakeTargets.Count; i++)
-                    if (_shakeTargets[i] != null)
-                        _shakeTargets[i].anchoredPosition = _shakeOrigins[i] + offset;
+                    (Mathf.PerlinNoise(elapsed * frequency, 47.3f) * 2f - 1f) * strength));
                 yield return null;
                 elapsed += _runner.TimeMode == DialogueTimeMode.Unscaled
                     ? Time.unscaledDeltaTime : Time.deltaTime;
             }
             if (generation != _shakeGeneration) yield break;
-            RestoreShakeTargets();
+            RestoreCameraShake();
+            _shakeCamera = null;
+            _screenShakeTargets.Clear();
             _shakeCoroutine = null;
             completed?.Invoke();
         }
@@ -1306,14 +1417,10 @@ namespace Novelify
                 return;
             }
 
-#if ENABLE_LEGACY_INPUT_MANAGER
-            _ownedEventSystem.AddComponent<StandaloneInputModule>();
-#else
             Debug.LogWarning(
                 "Novelify created an EventSystem, but no supported input module is available. " +
                 "Install the Input System package or provide an EventSystem in the scene.",
                 _runner);
-#endif
         }
 
         private void EnsureTalkAudio()
@@ -1925,9 +2032,9 @@ namespace Novelify
             float minimum = Mathf.Max(1f, minimumFontSize);
             float maximum = Mathf.Max(minimum, maximumFontSize);
             text.fontSize = Mathf.Max(1f, baseFontSize);
-            text.enableAutoSizing = autoSize;
-            text.fontSizeMin = minimum;
-            text.fontSizeMax = maximum;
+            text.resizeTextForBestFit = autoSize;
+            text.resizeTextMinSize = Mathf.Max(1, Mathf.RoundToInt(minimum));
+            text.resizeTextMaxSize = Mathf.Max(text.resizeTextMinSize, Mathf.RoundToInt(maximum));
         }
 
         private static void ApplyStyle(GameObject target, NovelBoxStyle style)
@@ -1973,12 +2080,13 @@ namespace Novelify
             text.color = Color.white;
             text.alignment = alignment;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.richText = true;
+            text.supportRichText = true;
             text.raycastTarget = false;
             return text;
         }
         private void OnDestroy()
         {
+            RestoreCameraShake();
             if (_ownedEventSystem != null)
                 DestroyOwned(_ownedEventSystem);
             if (_ownsCanvas && _canvas != null)

@@ -6,7 +6,7 @@ namespace Novelify
 {
     public class RuntimeNovelGraph : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 12;
+        public const int CurrentSchemaVersion = 13;
 
         [Tooltip("Persistent identity of the authored graph asset.")]
         public string GraphID;
@@ -328,13 +328,10 @@ namespace Novelify
         public float Rotation;
         public Vector2 Scale = Vector2.one;
         public float Margin;
-        public bool PositionIsNormalized = true;
         public CharacterPositionSpace PositionSpace = CharacterPositionSpace.Normalized;
         public bool SmoothMovement;
         public float Duration = 0.5f;
         public bool WaitForCompletion = true;
-        public bool EaseInOut = true;
-        public bool UseEasingPreset;
         public PortraitTweenEasing Easing = PortraitTweenEasing.EaseInOut;
         public AnimationCurve CustomEasingCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         public bool Relative;
@@ -348,25 +345,6 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression ScaleValue;
         [SerializeReference] public RuntimeValueExpression MarginValue;
         [SerializeReference] public RuntimeValueExpression OpacityValue;
-
-        // Optional second target. Both targets start on the same frame and use
-        // the same timing settings, which makes paired blocking easy to author.
-        public bool TransformSecondCharacter;
-        public NovelCharacter SecondCharacter;
-        public string SecondInstanceID;
-        public float SecondOffsetX;
-        public float SecondOffsetY;
-        public float SecondRotation;
-        public Vector2 SecondScale = Vector2.one;
-        public float SecondMargin;
-        public float SecondOpacity = 1f;
-        [SerializeReference] public RuntimeValueExpression SecondCharacterValue;
-        [SerializeReference] public RuntimeValueExpression SecondCharacterReferenceValue;
-        [SerializeReference] public RuntimeValueExpression SecondPositionValue;
-        [SerializeReference] public RuntimeValueExpression SecondRotationValue;
-        [SerializeReference] public RuntimeValueExpression SecondScaleValue;
-        [SerializeReference] public RuntimeValueExpression SecondMarginValue;
-        [SerializeReference] public RuntimeValueExpression SecondOpacityValue;
 
         // Expandable authoring targets. There is intentionally no fixed target
         // count; every entry shares this node's timing and begins together.
@@ -394,16 +372,6 @@ namespace Novelify
         [SerializeReference] public RuntimeValueExpression Condition;
         public string TrueNodeID;
         public string FalseNodeID;
-    }
-
-    [Serializable]
-    public class RuntimeTranslateSpeakerPortraitNode : RuntimeTransformSpeakerPortraitNode
-    {
-        public RuntimeTranslateSpeakerPortraitNode()
-        {
-            PositionIsNormalized = false;
-            PositionSpace = CharacterPositionSpace.Canvas;
-        }
     }
 
     [Serializable]

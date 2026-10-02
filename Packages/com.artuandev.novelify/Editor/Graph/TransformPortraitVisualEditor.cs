@@ -122,41 +122,22 @@ namespace Novelify.Editor
                         element.AddToClassList(PortHookClass);
                         HideRedundantChoicePort(element, port);
                     }
-                    ConfigureLegacyBubbleSpeakerPort(element, port);
                 }
             }
             for (int i = 0; i < element.hierarchy.childCount; i++)
                 ConfigureGraphPorts(element.hierarchy[i]);
         }
 
-        private static void ConfigureLegacyBubbleSpeakerPort(
-            VisualElement view, IPort port)
-        {
-            if (port.GetNode() is not SpeechBubbleNode)
-                return;
-            string name = ReadStringMember(port, "UniqueName") ??
-                          port.Name ?? string.Empty;
-            if (name != "Speaker" && name != "Speaker Reference")
-                return;
-
-            // Speech bubbles use their explicit Character ports. Keep an old
-            // Speaker wire visible so existing graphs remain understandable.
-            view.style.display = port.IsConnected
-                ? DisplayStyle.Flex
-                : DisplayStyle.None;
-        }
-
         private static void HideRedundantChoicePort(VisualElement view, IPort port)
         {
             if (port.GetNode() is not ChoiceNode || port.IsConnected) return;
             string name = ReadStringMember(port, "UniqueName") ?? port.Name ?? string.Empty;
-            string[] legacyPrefixes =
+            string[] dynamicTextPrefixes =
             {
-                "Choice ID ", "Choice Text ", "Unavailable Policy ",
-                "Disabled Reason ", "Once Only ", "Transaction "
+                "Choice Text ", "Disabled Reason "
             };
 
-            foreach (string prefix in legacyPrefixes)
+            foreach (string prefix in dynamicTextPrefixes)
             {
                 if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 view.style.display = DisplayStyle.None;
@@ -1237,10 +1218,8 @@ namespace Novelify.Editor
             _animateTransform = GetOption(_node, "Animate Transform", false);
             _animateOpacity = GetOption(_node, "Animate Transparency", false);
             _easing = ResolveEasing(_node);
-            _customCurve = SanitizeCustomCurve(GetOption(
-                _node,
-                "Custom Easing Curve",
-                AnimationCurve.Linear(0f, 0f, 1f, 1f)));
+            _customCurve = SanitizeCustomCurve(
+                TransformSpeakerPortraitNode.GetCustomEasingCurve(_node));
         }
 
         private void ResolveComposerTargets()
@@ -1570,73 +1549,17 @@ namespace Novelify.Editor
         private static string TargetSuffix(int number) =>
             number <= 1 ? string.Empty : $" {number}";
 
-        private Vector2 ResolvePosition(
-            TransformSpeakerPortraitNode node,
-            int number = 1)
-        {
-            string suffix = TargetSuffix(number);
-            IPort port = node.GetInputPortByName("Position" + suffix);
-            if (port == null) return new Vector2(
-                GetOption(node, "OffsetX", 0f), GetOption(node, "OffsetY", 0f));
-            Vector2 value = NovelGraphValues.Resolve<Vector2>(_graph, port);
-            if (number > 1)
-                return value;
-            Vector2 legacy = new Vector2(
-                GetOption(node, "OffsetX", 0f), GetOption(node, "OffsetY", 0f));
-            return !port.IsConnected && value == Vector2.zero && legacy != Vector2.zero ? legacy : value;
-        }
+        private Vector2 ResolvePosition(TransformSpeakerPortraitNode node, int number = 1) =>
+            NovelGraphValues.Resolve<Vector2>(_graph, node.GetInputPortByName("Position" + TargetSuffix(number)));
 
-        private float ResolveRotation(
-            TransformSpeakerPortraitNode node,
-            int number = 1)
-        {
-            IPort port = node.GetInputPortByName(
-                "Rotation" + TargetSuffix(number));
-            if (number > 1)
-                return port == null
-                    ? 0f
-                    : NovelGraphValues.Resolve<float>(_graph, port);
-            float legacy = GetOption(node, "Rotation", 0f);
-            if (port == null) return legacy;
-            float value = NovelGraphValues.Resolve<float>(_graph, port);
-            return !port.IsConnected && Mathf.Approximately(value, 0f) && !Mathf.Approximately(legacy, 0f)
-                ? legacy
-                : value;
-        }
+        private float ResolveRotation(TransformSpeakerPortraitNode node, int number = 1) =>
+            NovelGraphValues.Resolve<float>(_graph, node.GetInputPortByName("Rotation" + TargetSuffix(number)));
 
-        private Vector2 ResolveScale(
-            TransformSpeakerPortraitNode node,
-            int number = 1)
-        {
-            IPort port = node.GetInputPortByName(
-                "Scale" + TargetSuffix(number));
-            if (number > 1)
-                return port == null
-                    ? Vector2.one
-                    : NovelGraphValues.Resolve<Vector2>(_graph, port);
-            Vector2 legacy = GetOption(node, "Scale", Vector2.one);
-            if (port == null) return legacy;
-            Vector2 value = NovelGraphValues.Resolve<Vector2>(_graph, port);
-            return !port.IsConnected && value == Vector2.one && legacy != Vector2.one ? legacy : value;
-        }
+        private Vector2 ResolveScale(TransformSpeakerPortraitNode node, int number = 1) =>
+            NovelGraphValues.Resolve<Vector2>(_graph, node.GetInputPortByName("Scale" + TargetSuffix(number)));
 
-        private float ResolveMargin(
-            TransformSpeakerPortraitNode node,
-            int number = 1)
-        {
-            IPort port = node.GetInputPortByName(
-                "Margin" + TargetSuffix(number));
-            if (number > 1)
-                return port == null
-                    ? 0f
-                    : NovelGraphValues.Resolve<float>(_graph, port);
-            float legacy = GetOption(node, "Margin", 0f);
-            if (port == null) return legacy;
-            float value = NovelGraphValues.Resolve<float>(_graph, port);
-            return !port.IsConnected && Mathf.Approximately(value, 0f) && !Mathf.Approximately(legacy, 0f)
-                ? legacy
-                : value;
-        }
+        private float ResolveMargin(TransformSpeakerPortraitNode node, int number = 1) =>
+            NovelGraphValues.Resolve<float>(_graph, node.GetInputPortByName("Margin" + TargetSuffix(number)));
 
         private float ResolveOpacity(
             TransformSpeakerPortraitNode node,
@@ -3646,7 +3569,8 @@ namespace Novelify.Editor
                 _node.GetNodeOptionByName("Animate Transparency")?.TrySetValue(_animateOpacity);
                 _node.GetNodeOptionByName("Duration")?.TrySetValue(Mathf.Max(0f, _durationField.value));
                 _node.GetNodeOptionByName("Easing")?.TrySetValue(_easing);
-                _node.GetNodeOptionByName("Custom Easing Curve")?.TrySetValue(CloneCurve(_customCurve));
+                _node.GetNodeOptionByName("Custom Easing Data")?.TrySetValue(
+                    new NovelEasingCurve { Curve = CloneCurve(_customCurve) });
                 _node.GetNodeOptionByName("Ease In Out")?.TrySetValue(_easing != PortraitTweenEasing.None);
                 _node.GetNodeOptionByName("Wait For Completion")?.TrySetValue(_waitToggle.value);
             }
@@ -3708,11 +3632,7 @@ namespace Novelify.Editor
 
         private static PortraitTweenEasing ResolveEasing(INode node)
         {
-            PortraitTweenEasing easing = GetOption(node, "Easing", PortraitTweenEasing.EaseInOut);
-            bool legacyEaseInOut = GetOption(node, "Ease In Out", true);
-            return easing == PortraitTweenEasing.EaseInOut && !legacyEaseInOut
-                ? PortraitTweenEasing.None
-                : easing;
+            return GetOption(node, "Easing", PortraitTweenEasing.EaseInOut);
         }
 
         private void RefreshEasingControls()

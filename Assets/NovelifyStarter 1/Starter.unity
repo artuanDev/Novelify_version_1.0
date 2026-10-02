@@ -1209,12 +1209,10 @@ MonoBehaviour:
   InactiveCharacterTint: {r: 0.42, g: 0.42, b: 0.48, a: 1}
   SpeakerFocusTransitionDuration: 0.15
   DialoguePanel: {fileID: 0}
-  CharacterPortrait: {fileID: 0}
   BackgroundChoicesPanel: {fileID: 0}
   NameBackground: {fileID: 0}
   SpeakerNameText: {fileID: 0}
   DialogueText: {fileID: 0}
-  ChoiceButtonPrefab: {fileID: 0}
   ChoiceButtonContainer: {fileID: 0}
   OnDialogueEvent:
     m_PersistentCalls:

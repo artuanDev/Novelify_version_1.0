@@ -32,7 +32,7 @@ namespace Novelify.Tests
         }
 
         [Test]
-        public void SessionIsStableAndCompatibilityFacadeUsesIt()
+        public void SessionIsStableAndControlsPlayback()
         {
             Assert.That(_manager.Session, Is.SameAs(_manager.Session));
 
@@ -47,13 +47,13 @@ namespace Novelify.Tests
                 }
             };
 
-            _manager.PlayGraph(_graph);
+            _manager.Session.Play(_graph);
 
             Assert.That(_manager.Session.IsRunning, Is.True);
             Assert.That(_manager.Session.CurrentGraph, Is.SameAs(_graph));
             Assert.That(_manager.Session.CurrentNodeID, Is.EqualTo("line"));
 
-            _manager.EndDialogue();
+            _manager.Session.Stop();
             Assert.That(_manager.Session.IsRunning, Is.False);
         }
 
@@ -142,6 +142,7 @@ namespace Novelify.Tests
         public void ReadOnlySkipStopsAtUnreadLineButAllowsPreviouslyReadLine()
         {
             var controller = _managerObject.AddComponent<NovelPlayerController>();
+            controller.Preferences.SkipReadOnly = true;
             _graph.EntryNodeID = "line";
             _graph.AllNodes = new List<RuntimeNode>
             {

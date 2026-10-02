@@ -49,7 +49,7 @@ namespace Novelify
         }
     }
 
-    public class CharacterInfo : MonoBehaviour
+    public partial class CharacterInfo : MonoBehaviour
     {
         [System.NonSerialized] public DialogueTimeMode TimeMode = DialogueTimeMode.Unscaled;
         public NovelCharacter character;
@@ -91,18 +91,25 @@ namespace Novelify
 
         public Vector2 Position
         {
-            get => transform is RectTransform rect ? rect.anchoredPosition : (Vector2)transform.localPosition;
+            get => IsAnimating ? _animationBasePosition :
+                transform is RectTransform rect ? rect.anchoredPosition : (Vector2)transform.localPosition;
             set
             {
-                if (transform is RectTransform rect) rect.anchoredPosition = value;
-                else transform.localPosition = new Vector3(value.x, value.y, transform.localPosition.z);
+                if (IsAnimating) _animationBasePosition = value;
+                Vector2 visualPosition = value + _animationPositionOffset;
+                if (transform is RectTransform rect) rect.anchoredPosition = visualPosition;
+                else transform.localPosition = new Vector3(visualPosition.x, visualPosition.y, transform.localPosition.z);
             }
         }
 
         public float Rotation
         {
-            get => transform.localEulerAngles.z;
-            set => transform.localRotation = Quaternion.Euler(0f, 0f, value);
+            get => IsAnimating ? _animationBaseRotation : transform.localEulerAngles.z;
+            set
+            {
+                if (IsAnimating) _animationBaseRotation = Mathf.Repeat(value, 360f);
+                transform.localRotation = Quaternion.Euler(0f, 0f, value + _animationRotationOffset);
+            }
         }
 
         public Vector2 Scale
@@ -145,16 +152,8 @@ namespace Novelify
 
         private void ResolveLayers()
         {
-            // Named fallback keeps existing portrait prefabs working. Custom prefabs can assign references.
             foreach (Image layer in GetComponentsInChildren<Image>(true))
             {
-                switch (layer.name)
-                {
-                    case "PortraitBackground": if (Body == null) Body = layer; break;
-                    case "PortraitEyes": if (Eyes == null) Eyes = layer; break;
-                    case "PortraitEyesDetails": if (Details == null) Details = layer; break;
-                    case "PortraitMouth": if (Mouth == null) Mouth = layer; break;
-                }
                 layer.raycastTarget = false;
                 if (!_baseLayerColors.ContainsKey(layer))
                     _baseLayerColors.Add(layer, layer.color);
@@ -368,9 +367,9 @@ namespace Novelify
             SetLayer(Mouth, Portrait.Mouth);
         }
 
-        public void MoveTo(Vector2 target, bool smooth, float duration, bool easeInOut = true)
+        public void MoveTo(Vector2 target, bool smooth, float duration, PortraitTweenEasing easing = PortraitTweenEasing.EaseInOut)
         {
-            TransformTo(target, Rotation, Scale, smooth, duration, easeInOut);
+            TransformTo(target, Rotation, Scale, smooth, duration, easing);
         }
 
         public Vector2 NormalizedToAnchoredPosition(Vector2 normalizedPosition, float margin)
@@ -446,26 +445,8 @@ namespace Novelify
             Vector2 targetScale,
             bool smooth,
             float duration,
-            bool easeInOut = true)
-        {
-            TransformTo(
-                targetPosition,
-                targetRotation,
-                targetScale,
-                smooth,
-                duration,
-                easeInOut ? PortraitTweenEasing.EaseInOut : PortraitTweenEasing.None,
-                null);
-        }
-
-        public void TransformTo(
-            Vector2 targetPosition,
-            float targetRotation,
-            Vector2 targetScale,
-            bool smooth,
-            float duration,
-            PortraitTweenEasing easing,
-            AnimationCurve customCurve)
+            PortraitTweenEasing easing = PortraitTweenEasing.EaseInOut,
+            AnimationCurve customCurve = null)
         {
             TransformTo(targetPosition, targetRotation, targetScale, smooth, duration,
                 easing, customCurve, false, Opacity);
@@ -690,6 +671,7 @@ namespace Novelify
 
         private void OnDisable()
         {
+            StopSimpleAnimation();
             StopMovement();
             StopSpeaking();
             _eyesClosed = false;

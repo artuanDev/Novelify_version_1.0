@@ -75,8 +75,6 @@ namespace Novelify
         public static string Dialogue(string graphID, string nodeID) =>
             (graphID ?? string.Empty) + ":" + (nodeID ?? string.Empty);
 
-        public static string Speaker(string lineID) => (lineID ?? string.Empty) + ":speaker";
-
         public static string Choice(string lineID, string choiceID) =>
             (lineID ?? string.Empty) + ":choice:" + (choiceID ?? string.Empty);
 
