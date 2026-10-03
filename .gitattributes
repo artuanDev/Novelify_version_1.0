@@ -169,3 +169,9 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# UPM Git installs need actual sample media, without a separate Git LFS checkout.
+Packages/com.artuandev.novelify/Samples~/**/*.PNG -filter -diff -merge -text
+Packages/com.artuandev.novelify/Samples~/**/*.png -filter -diff -merge -text
+Packages/com.artuandev.novelify/Samples~/**/*.mp3 -filter -diff -merge -text
+Packages/com.artuandev.novelify/Samples~/**/*.wav -filter -diff -merge -text

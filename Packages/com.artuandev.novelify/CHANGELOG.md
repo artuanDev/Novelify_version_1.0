@@ -2,6 +2,11 @@
 
 ## [0.1.0] - Unreleased
 
+- Package installation now copies editable sample characters, the example graph,
+  sample scene and their supporting assets into `Assets/NovelifyGenerated/Samples`.
+  Sample GUIDs are separate from the development assets, and subsequent reloads
+  preserve project edits. The packaged scene works without URP and selects the
+  installed input backend.
 - Removed development-only screen-shake diagnostic probes, test sources and
   test assemblies so package installation does not require development assets.
 - Initial embedded UPM package preserving existing asset GUIDs.

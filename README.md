@@ -22,8 +22,9 @@ Novelify is a visual dialogue framework built for Unity. Stories are authored in
 The editor graph and runtime presentation are intentionally separated: graph nodes are used for authoring, while the importer generates a `RuntimeNovelGraph` that can be consumed by normal Unity components during play mode.
 
 This repository contains a Unity development project and an installable package at
-`Packages/com.artuandev.novelify`. The package sample is a guide; the Setup Wizard
-creates an editable, art-free showcase scene in the consuming project.
+`Packages/com.artuandev.novelify`. Importing the package installs sample characters,
+the example novelgraph and a playable sample scene in `Assets/NovelifyGenerated/Samples`.
+The Setup Wizard also creates an editable, art-free showcase scene in the consuming project.
 
 The package uses the [Novelify Free Use License 1.0](Packages/com.artuandev.novelify/LICENSE.md):
 commercial finished games are allowed, but the plugin or a Unity project that

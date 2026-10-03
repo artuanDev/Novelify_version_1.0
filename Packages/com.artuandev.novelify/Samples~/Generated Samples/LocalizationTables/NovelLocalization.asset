@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88167c68efd744db86768d862641a794, type: 3}
+  m_Name: NovelLocalization
+  m_EditorClassIdentifier: Novelify.Runtime::Novelify.NovelLocalizationTable
+  SourceLocale: en
+  Lines:
+  - Key: d54a12ae590022f7ff81a12c7e47531c:404469ec9e17b10e509dfa22090feec5
+    SourceText: "Bueno pues ah\xED ando... \xBFY t\xFA?"
+    Translations:
+    - Locale: eng
+      Text: Well... so and so... what about you?
+  - Key: d54a12ae590022f7ff81a12c7e47531c:404469ec9e17b10e509dfa22090feec5:speaker
+    SourceText: Hoki
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:5b47aec8ed64ed85a52b653fb3175f41
+    SourceText: perfecto!
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:5b47aec8ed64ed85a52b653fb3175f41:speaker
+    SourceText: Daisy
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:7091d16c22ce20ca979ab3e44af19cde
+    SourceText: Bueno... tampoco me apetece demasiado pero okay
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:7091d16c22ce20ca979ab3e44af19cde:speaker
+    SourceText: Hoki
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:7d9cfdb9537508257784022beb1a6b83
+    SourceText: "\xBFQu\xE9 har\xE1s?"
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:7d9cfdb9537508257784022beb1a6b83:choice:gimnasio
+    SourceText: Ir al gimnasio
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:7d9cfdb9537508257784022beb1a6b83:choice:helado
+    SourceText: "Ir a la helader\xEDa"
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:a06510c328599cc2125729e84523ed64
+    SourceText: <b><i><size=160%><color=#FF0000><link="novelify-wave">Buenas!</link></color></size></i></b><color=#FFFFFF> Que tal estas?</color>
+    Translations: []
+  - Key: d54a12ae590022f7ff81a12c7e47531c:a06510c328599cc2125729e84523ed64:speaker
+    SourceText: Daisy
+    Translations: []

@@ -17,6 +17,14 @@ packages, including URP; those are not required by Novelify.
 
 ## First conversation
 
+Installing the package copies editable sample content into
+`Assets/NovelifyGenerated/Samples`: Daisy, Hoki and Template characters,
+`NovelGraphs/Example.novelgraph`, and `Scenes/TestScene.unity`, together with
+their portraits, audio, styles, prefabs and localization table. Open the sample
+scene and press Play. The scene supports Unity's built-in renderer and uses
+the Input System when installed, or legacy input otherwise.
+Existing sample copies are preserved on subsequent editor reloads and package updates.
+
 Open **Window > Novelify > Setup Wizard**. Select **Dialogue** or **Visual Novel**
 and click **Create starter scene**. Press Play. Click to advance the text and
 select a choice when one appears. The wizard creates an editable `.novelgraph`,
@@ -29,8 +37,8 @@ object is named **Story UI (runtime)**; it is not story content to edit. Existin
 projects can use `NovelGraphRunner` directly with their own input and UI.
 
 `Assets/NovelifyGenerated/Resources/NovelGraphCatalog.asset` is a separate
-auto-maintained lookup for graphs and save restoration. It is not the scene UI
-or an authoring folder; you normally do not edit it.
+auto-maintained lookup for graphs and save restoration; you normally do not
+edit it. The editable sample content is in the sibling `Samples` folder.
 
 ## Camera shake and character animations
 

@@ -28,7 +28,8 @@ namespace Novelify.Editor
                 EditorApplication.delayCall += CreateDefaultCatalogWhenReady;
                 return;
             }
-            if (AssetDatabase.LoadAssetAtPath<NovelGraphCatalog>(CatalogPath) == null)
+            bool samplesImported = NovelSampleInstaller.EnsureSamplesExist();
+            if (samplesImported || AssetDatabase.LoadAssetAtPath<NovelGraphCatalog>(CatalogPath) == null)
                 RebuildCatalog();
         }
 
