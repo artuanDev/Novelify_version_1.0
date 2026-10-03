@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 const root = 'Packages/com.artuandev.novelify';
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -23,7 +23,12 @@ const guids = new Map();
 function visit(dir) {
   for (const item of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, item.name);
+    const packageFolder = relative(root, path).split(sep)[0];
     if (item.isDirectory()) visit(path);
+    else if (item.name.endsWith('.cs') && packageFolder !== 'Samples~' &&
+             readFileSync(path, 'utf8').includes('Assets/Novelify/Samples/')) {
+      throw new Error(`Package code depends on development sample assets: ${path}`);
+    }
     else if (item.name.endsWith('.meta')) {
       const guid = /^guid:\s*([a-f0-9]{32})$/m.exec(readFileSync(path, 'utf8'))?.[1];
       if (!guid) throw new Error(`Missing GUID in ${path}`);

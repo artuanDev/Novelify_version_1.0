@@ -2,6 +2,8 @@
 
 ## [0.1.0] - Unreleased
 
+- Removed development-only screen-shake diagnostic probes, test sources and
+  test assemblies so package installation does not require development assets.
 - Initial embedded UPM package preserving existing asset GUIDs.
 - Added an optional Input System adapter and an input-independent runtime assembly.
 - Added a setup wizard that creates an art-free playable starter scene.

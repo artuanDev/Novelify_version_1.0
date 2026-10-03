@@ -418,7 +418,6 @@ Assets/Novelify/
 │   └── NovelTextEffects.cs    # Wave and shake text animation
 ├── Resources/                 # Runtime graph catalog and generated UI shader
 ├── Settings/                  # Render-pipeline and input assets used by the sample
-├── Tests/                     # Editor and runtime regression tests
 ├── Fonts/                     # Standard Unity fonts used by the sample UI
 └── Samples/
     ├── BoxesStyles/           # Reusable NovelPresentationStyle asset
@@ -462,10 +461,6 @@ Assets/Novelify/
 - [x] Add a focused playable sample with layered characters and speech bubbles.
 
 ## Contributing
-
-### Tests
-
-Open Unity's **Window > General > Test Runner**. Run `Novelify.Editor.Tests` in Edit Mode and `Novelify.Runtime.Tests` in Play Mode. These cover independent character instances, expression fallback, graph import and character connections, smooth and simultaneous movement, wait cancellation, event callbacks and stage visibility.
 
 Suggestions, bug reports and improvements are welcome. Please open an issue with reproduction steps and the Unity version you are using. For code changes, create a feature branch and submit a pull request.
 
